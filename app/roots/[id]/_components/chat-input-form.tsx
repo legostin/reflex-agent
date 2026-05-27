@@ -44,6 +44,10 @@ import {
   type CommandDef,
 } from "@/lib/server/agents/commands-registry";
 import {
+  listCommandArgsAction,
+  type ArgItem,
+} from "@/lib/server/agents/argument-providers";
+import {
   clearProjectAction,
   deleteCurrentTopicCommand,
   openUtilityAction,
@@ -145,6 +149,18 @@ export function ChatInputForm({
     index: number;
   } | null>(null);
 
+  // Arg autocomplete — kicks in after the first space when the command has
+  // a provider (e.g. /skill <id>, /util <id>). Replaces the partial arg.
+  const [argPalette, setArgPalette] = useState<{
+    cmd: CommandDef;
+    items: ArgItem[];
+    index: number;
+    start: number; // inclusive — first char after the leading space
+    end: number; // exclusive — caret position
+    loading: boolean;
+  } | null>(null);
+  const argRequestId = useRef(0);
+
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -213,33 +229,108 @@ export function ChatInputForm({
    * Filtering: simple prefix match against `trigger`.
    */
   const evaluateCommand = useCallback(
-    (value: string) => {
+    (value: string, caret: number) => {
       if (!value.startsWith("/")) {
         setCommandPalette(null);
+        setArgPalette(null);
         return;
       }
-      // Once a space appears we're past the command word — close palette.
       const firstSpace = value.indexOf(" ");
-      if (firstSpace >= 0) {
-        setCommandPalette(null);
+      // Phase 1: still typing the command word.
+      if (firstSpace < 0) {
+        setArgPalette(null);
+        const query = value.slice(1).toLowerCase();
+        const items = COMMANDS.filter((c) =>
+          c.trigger.startsWith(query) ||
+          c.label.toLowerCase().includes(query) ||
+          c.description.toLowerCase().includes(query),
+        );
+        setCommandPalette(items.length ? { items, index: 0 } : null);
         return;
       }
-      const query = value.slice(1).toLowerCase();
-      const items = COMMANDS.filter((c) =>
-        c.trigger.startsWith(query) ||
-        c.label.toLowerCase().includes(query) ||
-        c.description.toLowerCase().includes(query),
-      );
-      if (items.length === 0) {
-        setCommandPalette(null);
+      // Phase 2: past the space — close command palette, maybe open arg palette.
+      setCommandPalette(null);
+      const head = value.slice(1, firstSpace);
+      const cmd = COMMANDS.find((c) => c.trigger === head);
+      if (!cmd) {
+        setArgPalette(null);
         return;
       }
-      setCommandPalette({ items, index: 0 });
+      // Only the first argument autocompletes; ignore further spaces in the payload.
+      const argStart = firstSpace + 1;
+      const argEnd = caret >= argStart ? caret : value.length;
+      // Caret must be inside or right after the first whitespace-separated token.
+      const restAfterCaret = value.slice(argEnd);
+      const tokenBreak = restAfterCaret.indexOf(" ");
+      if (tokenBreak >= 0) {
+        // Caret moved into the second token (or beyond) — drop the palette.
+        setArgPalette(null);
+        return;
+      }
+      const query = value.slice(argStart, argEnd);
+      const reqId = ++argRequestId.current;
+      setArgPalette((cur) => ({
+        cmd,
+        items: cur?.cmd.id === cmd.id ? cur.items : [],
+        index: 0,
+        start: argStart,
+        end: argEnd,
+        loading: true,
+      }));
+      void (async () => {
+        const res = await listCommandArgsAction({
+          commandId: cmd.id,
+          query,
+          rootId,
+        });
+        if (argRequestId.current !== reqId) return;
+        if (!res.ok || !res.supported) {
+          setArgPalette(null);
+          return;
+        }
+        if (res.items.length === 0) {
+          setArgPalette(null);
+          return;
+        }
+        setArgPalette({
+          cmd,
+          items: res.items,
+          index: 0,
+          start: argStart,
+          end: argEnd,
+          loading: false,
+        });
+      })();
     },
-    [],
+    [rootId],
   );
 
-  const closeCommand = useCallback(() => setCommandPalette(null), []);
+  const closeCommand = useCallback(() => {
+    setCommandPalette(null);
+    setArgPalette(null);
+  }, []);
+
+  const insertArg = useCallback(
+    (item: ArgItem) => {
+      const ta = textareaRef.current;
+      setArgPalette((cur) => {
+        if (!cur) return null;
+        const before = text.slice(0, cur.start);
+        const after = text.slice(cur.end);
+        const insert = `${item.value} `;
+        const next = before + insert + after;
+        setText(next);
+        const newPos = before.length + insert.length;
+        requestAnimationFrame(() => {
+          if (!ta) return;
+          ta.focus();
+          ta.setSelectionRange(newPos, newPos);
+        });
+        return null;
+      });
+    },
+    [text],
+  );
 
   const insertCommand = useCallback(
     (cmd: CommandDef) => {
@@ -449,17 +540,17 @@ export function ChatInputForm({
             onChange={(e) => {
               setText(e.target.value);
               evaluateMention(e.target.value, e.target.selectionStart);
-              evaluateCommand(e.target.value);
+              evaluateCommand(e.target.value, e.target.selectionStart);
             }}
             onKeyUp={(e) => {
               const target = e.currentTarget;
               evaluateMention(target.value, target.selectionStart);
-              evaluateCommand(target.value);
+              evaluateCommand(target.value, target.selectionStart);
             }}
             onClick={(e) => {
               const target = e.currentTarget;
               evaluateMention(target.value, target.selectionStart);
-              evaluateCommand(target.value);
+              evaluateCommand(target.value, target.selectionStart);
             }}
             onBlur={() => {
               // Delay so click on a picker row registers first.
@@ -498,6 +589,38 @@ export function ChatInputForm({
                 if (e.key === "Escape") {
                   e.preventDefault();
                   closeCommand();
+                  return;
+                }
+              }
+              if (argPalette && argPalette.items.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setArgPalette((cur) =>
+                    cur
+                      ? {
+                          ...cur,
+                          index: Math.min(cur.items.length - 1, cur.index + 1),
+                        }
+                      : null,
+                  );
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setArgPalette((cur) =>
+                    cur ? { ...cur, index: Math.max(0, cur.index - 1) } : null,
+                  );
+                  return;
+                }
+                if (e.key === "Tab") {
+                  e.preventDefault();
+                  const item = argPalette.items[argPalette.index];
+                  if (item) insertArg(item);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setArgPalette(null);
                   return;
                 }
               }
@@ -565,6 +688,17 @@ export function ChatInputForm({
                 setCommandPalette((cur) => (cur ? { ...cur, index: i } : null))
               }
               topicAvailable={!!topicId}
+            />
+          )}
+          {argPalette && !mentionRange && !commandPalette && (
+            <ArgPalette
+              cmd={argPalette.cmd}
+              items={argPalette.items}
+              index={argPalette.index}
+              onPick={insertArg}
+              onHover={(i) =>
+                setArgPalette((cur) => (cur ? { ...cur, index: i } : null))
+              }
             />
           )}
         </div>
@@ -916,4 +1050,63 @@ function formatSize(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ArgPalette({
+  cmd,
+  items,
+  index,
+  onPick,
+  onHover,
+}: {
+  cmd: CommandDef;
+  items: ArgItem[];
+  index: number;
+  onPick: (item: ArgItem) => void;
+  onHover: (i: number) => void;
+}) {
+  const Icon = ICONS[cmd.icon] ?? Sparkles;
+  return (
+    <div className="absolute bottom-full left-0 right-0 mb-2 z-50 max-h-80 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-lg">
+      <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b flex items-center gap-2">
+        <Icon className="h-3 w-3" />
+        <span>
+          {cmd.label} · {cmd.usage.replace(/^\/\S+\s*/, "")}
+        </span>
+      </div>
+      <ul>
+        {items.map((item, i) => (
+          <li key={item.value}>
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onPick(item);
+              }}
+              onMouseEnter={() => onHover(i)}
+              className={cn(
+                "w-full flex items-start gap-2 px-3 py-2 text-left",
+                i === index ? "bg-accent" : "hover:bg-accent/60",
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0 text-violet-600" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="font-medium text-sm">{item.label}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">
+                    {item.value}
+                  </span>
+                </div>
+                {item.description && (
+                  <p className="text-[11px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                    {item.description}
+                  </p>
+                )}
+              </div>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
