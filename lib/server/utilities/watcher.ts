@@ -2,6 +2,7 @@ import "server-only";
 import { EventEmitter } from "node:events";
 import path from "node:path";
 import chokidar, { type FSWatcher } from "chokidar";
+import { reflexHome } from "@/lib/reflex/home";
 import {
   globalUtilitiesDir,
   listUtilities,
@@ -94,8 +95,7 @@ function findUtilityFromPath(filePath: string): ChangedUtility | null {
   const id = segs[idx + 1];
   if (!id) return null;
   const parent = segs.slice(0, idx).join(path.sep);
-  const isGlobal = parent.endsWith(path.join(".reflex"));
-  if (isGlobal && parent === path.join(require("node:os").homedir(), ".reflex")) {
+  if (parent === reflexHome()) {
     return { id, scope: "global" };
   }
   // project scope — caller would need rootId; we leave it undefined here, the

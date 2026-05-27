@@ -1,12 +1,12 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
 import {
   McpConfigSchema,
   type McpConfig,
 } from "@/lib/server/utilities/mcp";
+import { reflexHome } from "@/lib/reflex/home";
 
 /**
  * Reflex-wide MCP server registry. One JSON file at
@@ -23,7 +23,7 @@ import {
  *     than "this utility owns this MCP config".
  */
 
-const REGISTRY_DIR = path.join(os.homedir(), ".reflex", "mcp");
+const REGISTRY_DIR = path.join(reflexHome(), "mcp");
 const REGISTRY_FILE = path.join(REGISTRY_DIR, "servers.json");
 
 export const McpServerEntrySchema = z.object({

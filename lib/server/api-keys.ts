@@ -1,7 +1,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { reflexHome } from "@/lib/reflex/home";
 
 /**
  * Per-provider API keys (Gemini, OpenAI, Anthropic, …). Each lives in its
@@ -29,7 +29,7 @@ export interface ApiKeyMeta {
 
 type ApiKeyFile = ApiKeyMeta;
 
-const ROOT = path.join(os.homedir(), ".reflex", "api-keys");
+const ROOT = path.join(reflexHome(), "api-keys");
 
 function fileFor(provider: ApiKeyProvider): string {
   return path.join(ROOT, `${provider}.json`);

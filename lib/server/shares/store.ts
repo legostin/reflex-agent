@@ -1,16 +1,16 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import crypto from "node:crypto";
+import { reflexHome } from "@/lib/reflex/home";
 import type { Share, ShareFile, ShareKind } from "./types";
 
 /**
- * Disk-backed share registry. Lives at `~/.reflex/shares.json` (mode
+ * Disk-backed share registry. Lives at `<REFLEX_HOME>/shares.json` (mode
  * 0600) so an OS-level user owns the secrets. The file is small —
  * shares are personal links, expect tens not thousands.
  */
-const SHARES_FILE = path.join(os.homedir(), ".reflex", "shares.json");
+const SHARES_FILE = path.join(reflexHome(), "shares.json");
 
 async function readFile(): Promise<ShareFile> {
   try {

@@ -1,11 +1,11 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import crypto from "node:crypto";
+import { reflexHome } from "@/lib/reflex/home";
 import type { AuditEntry, AuditFilter } from "./types";
 
-const AUDIT_DIR = path.join(os.homedir(), ".reflex", "audit");
+const AUDIT_DIR = path.join(reflexHome(), "audit");
 
 function fileFor(date: string): string {
   return path.join(AUDIT_DIR, `${date}.jsonl`);

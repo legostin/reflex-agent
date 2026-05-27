@@ -1,8 +1,8 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import type { McpAddDirective } from "./protocol";
+import { reflexHome } from "@/lib/reflex/home";
 
 /**
  * Persisted scratch for in-flight `<<reflex:mcp-add>>` proposals so they
@@ -25,7 +25,7 @@ export interface PendingEntry {
   createdAt: string;
 }
 
-const FILE = path.join(os.homedir(), ".reflex", "pending-mcp-adds.json");
+const FILE = path.join(reflexHome(), "pending-mcp-adds.json");
 const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 interface File {

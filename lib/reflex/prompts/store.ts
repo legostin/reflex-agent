@@ -1,13 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
+import { reflexHome } from "../home.js";
 import {
   DEFAULT_TEMPLATES,
   TEMPLATE_NAMES,
   type TemplateName,
 } from "./defaults.js";
 
-const PROMPTS_DIR = path.join(os.homedir(), ".reflex", "prompts");
+const PROMPTS_DIR = path.join(reflexHome(), "prompts");
 
 function pathFor(name: TemplateName): string {
   return path.join(PROMPTS_DIR, `${name}.md`);

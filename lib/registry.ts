@@ -1,14 +1,14 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import crypto from "node:crypto";
+import { reflexHome } from "./reflex/home.js";
 
 /**
- * Registry of Reflex-managed roots. Stored at `~/.reflex/registry.json` so it
- * survives across web-UI sessions and is shared with the CLI if needed.
+ * Registry of Reflex-managed roots. Stored at `<REFLEX_HOME>/registry.json` so
+ * it survives across web-UI sessions and is shared with the CLI if needed.
  */
 
-const REGISTRY_DIR = path.join(os.homedir(), ".reflex");
+const REGISTRY_DIR = reflexHome();
 const REGISTRY_FILE = path.join(REGISTRY_DIR, "registry.json");
 
 export interface RegistryEntry {

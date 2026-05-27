@@ -1,11 +1,11 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import {
   listOAuthProviders,
   type OAuthProviderId,
 } from "./providers";
+import { reflexHome } from "@/lib/reflex/home";
 
 /**
  * On-disk state for OAuth — two files per provider:
@@ -19,7 +19,7 @@ import {
  * credentials and so a missing token file is unambiguously "not authorized".
  */
 
-const ROOT = path.join(os.homedir(), ".reflex", "oauth");
+const ROOT = path.join(reflexHome(), "oauth");
 const CLIENTS_DIR = path.join(ROOT, "clients");
 const TOKENS_DIR = path.join(ROOT, "tokens");
 

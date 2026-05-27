@@ -2,7 +2,7 @@ import "server-only";
 import { spawn, type ChildProcess } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
+import { reflexHome } from "@/lib/reflex/home";
 
 /**
  * Thin wrapper around the `ngrok` CLI binary. Reflex uses ngrok to expose
@@ -82,7 +82,7 @@ export async function startTunnel(args: {
     return { ok: false, error: "Tunnel already running — stop it first." };
   }
   // Stash the authtoken in a temp config file so we don't leak it via argv.
-  const cfgDir = path.join(os.homedir(), ".reflex");
+  const cfgDir = reflexHome();
   await fs.mkdir(cfgDir, { recursive: true });
   const cfgPath = path.join(cfgDir, "ngrok.yml");
   await fs.writeFile(

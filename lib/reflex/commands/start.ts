@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { reflexHome } from "../home.js";
 
 interface StartOptions {
   port: number;
@@ -36,6 +37,7 @@ export async function runStart(opts: StartOptions): Promise<void> {
     server.listen(opts.port, opts.host, () => {
       const url = `http://${displayHost(opts.host)}:${opts.port}`;
       process.stdout.write(`Reflex running at ${url}\n`);
+      process.stdout.write(`Data dir: ${reflexHome()}\n`);
       if (opts.open) openBrowser(url);
     });
     const shutdown = (signal: NodeJS.Signals) => {

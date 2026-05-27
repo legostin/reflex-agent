@@ -1,7 +1,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { reflexHome } from "@/lib/reflex/home";
 import { listKbFiles } from "./kb";
 import { listTopics } from "./topics";
 import { agentManager } from "./agents/manager";
@@ -56,7 +56,7 @@ const FRESH_TTL_MS = 24 * 60 * 60 * 1000;
 
 function cacheFile(rootId: string): string {
   const safe = rootId.replace(/[^A-Za-z0-9_.-]/g, "_");
-  return path.join(os.homedir(), ".reflex", "roots", safe, "suggestions.json");
+  return path.join(reflexHome(), "roots", safe, "suggestions.json");
 }
 
 export async function readSuggestionsCache(

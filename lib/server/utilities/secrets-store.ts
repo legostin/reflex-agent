@@ -1,8 +1,8 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import { reflexHome } from "@/lib/reflex/home";
 import type { UtilityScope } from "./types";
 
 /**
@@ -29,7 +29,7 @@ interface SecretsFile {
   values: Record<string, string>;
 }
 
-const SECRETS_ROOT = path.join(os.homedir(), ".reflex", "secrets");
+const SECRETS_ROOT = path.join(reflexHome(), "secrets");
 
 function bucketFor(scope: UtilityScope, rootId?: string): string {
   if (scope === "global") return "_";

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import "./preload.js";
 import { Command } from "commander";
 import { runInit } from "../lib/reflex/commands/init.js";
 import { runWatch } from "../lib/reflex/commands/watch.js";

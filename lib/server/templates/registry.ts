@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { addRoot } from "@/lib/registry";
+import { reflexHome } from "@/lib/reflex/home";
 import { createTopic } from "@/lib/server/topics";
 import {
   buildRecord,
@@ -163,7 +164,7 @@ export async function materializeSpace(args: {
 }
 
 async function installSkill(s: SeedSkill): Promise<boolean> {
-  const dir = path.join(os.homedir(), ".reflex", "skills");
+  const dir = path.join(reflexHome(), "skills");
   const file = path.join(dir, `${s.id}.md`);
   try {
     await fs.access(file);

@@ -1,8 +1,8 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import { getRoot, listRoots, type RegistryEntry } from "@/lib/registry";
+import { reflexHome } from "@/lib/reflex/home";
 import { reflexRoot } from "@/lib/reflex/paths";
 import {
   ManifestSchema,
@@ -21,7 +21,7 @@ import {
  * over the existing directory. The bundler is invoked separately by callers.
  */
 
-const GLOBAL_DIR = path.join(os.homedir(), ".reflex", "utilities");
+const GLOBAL_DIR = path.join(reflexHome(), "utilities");
 
 export function globalUtilitiesDir(): string {
   return GLOBAL_DIR;

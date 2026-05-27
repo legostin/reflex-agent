@@ -1,8 +1,8 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import matter from "gray-matter";
+import { reflexHome } from "@/lib/reflex/home";
 
 /**
  * "Skills" = reusable instruction packs the user (or agent) can apply to
@@ -39,7 +39,7 @@ export interface Skill extends SkillMeta {
   instructions: string;
 }
 
-const USER_DIR = path.join(os.homedir(), ".reflex", "skills");
+const USER_DIR = path.join(reflexHome(), "skills");
 
 const BUILTIN: Skill[] = [
   {

@@ -43,8 +43,19 @@ reflex chat <dir>             # open a chat scoped to dir's KB
 ```sh
 pnpm install
 pnpm dev     # http://localhost:3210 (Next dev server with HMR)
-pnpm build   # produce dist/ + .next/standalone for `reflex start`
+pnpm build   # produce dist/ + .next/ for `reflex start`
 ```
+
+## Data directory
+
+Reflex stores its global state (registered roots, settings, MCP config,
+API keys, skills, …) in a single directory:
+
+- **Dev (`pnpm dev`)** → `~/.reflex`
+- **Prod (`reflex start` via npm-installed CLI)** → `~/.reflex-agent`
+
+Override either by setting `REFLEX_HOME=/your/path` before launching. The
+two defaults keep prod and dev experiments isolated.
 
 ## Layout produced
 

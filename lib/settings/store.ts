@@ -1,14 +1,14 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import {
   DEFAULT_SETTINGS,
   SettingsSchema,
   type Settings,
 } from "./schema";
+import { reflexHome } from "../reflex/home.js";
 
-const SETTINGS_DIR = path.join(os.homedir(), ".reflex");
+const SETTINGS_DIR = reflexHome();
 const SETTINGS_FILE = path.join(SETTINGS_DIR, "settings.json");
 
 export async function loadSettings(): Promise<Settings> {

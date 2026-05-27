@@ -1,7 +1,7 @@
 import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import os from "node:os";
+import { reflexHome } from "@/lib/reflex/home";
 
 /**
  * Curated catalogue of utilities Reflex blesses for one-tap install.
@@ -42,7 +42,7 @@ const INLINE_BASELINE: CuratedUtility[] = [
   },
 ];
 
-const CACHE_PATH = path.join(os.homedir(), ".reflex", "curated-registry.json");
+const CACHE_PATH = path.join(reflexHome(), "curated-registry.json");
 const REMOTE_URL =
   "https://raw.githubusercontent.com/reflex-org/utility-registry/main/index.json";
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
