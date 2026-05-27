@@ -236,7 +236,7 @@ export function NgrokSection({ settings, onChange }: Props) {
         <p className="text-xs text-muted-foreground">
           {t.rich("ngrok.intro", {
             code: (chunks) => <code className="font-mono">{chunks}</code>,
-            path: <code className="font-mono">/share/*</code>,
+            path: (chunks) => <code className="font-mono">{chunks}</code>,
             link: (chunks) => (
               <a
                 href="https://ngrok.com/download"
@@ -266,7 +266,7 @@ export function NgrokSection({ settings, onChange }: Props) {
           <p className="text-[10px] text-muted-foreground">
             {t.rich("ngrok.authtokenHint", {
               code: (chunks) => <code className="font-mono">{chunks}</code>,
-              path: <code className="font-mono">~/.reflex/ngrok.yml</code>,
+              path: (chunks) => <code className="font-mono">{chunks}</code>,
               link: (chunks) => (
                 <a
                   href="https://dashboard.ngrok.com/get-started/your-authtoken"
