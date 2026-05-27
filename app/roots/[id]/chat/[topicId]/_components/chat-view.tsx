@@ -351,6 +351,9 @@ function TurnView({
     // every dispatch clutters the chat with internal traffic. Suppress.
     if (turn.agentRole === "subagent") return null;
     const body = turn.body ?? "";
+    // Hide the bootstrap message Reflex auto-injects when spawning the
+    // per-Space onboarding topic — the user didn't type it.
+    if (/^\/skill\s+space-onboarding\s*$/.test(body.trim())) return null;
     const system = classifySystemUserMessage(body, {
       mcpSetupDefault: t("chat.mcpSetupDefault"),
       mcpSetupBadge: t("chat.mcpSetupBadge"),
