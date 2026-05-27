@@ -15,6 +15,7 @@ import { CommandBar } from "./_components/command-bar";
 import { ShareButton } from "@/app/_components/share-button";
 import { InsertImageButton } from "@/app/_components/kb/insert-image-button";
 import { AddUtilityButton } from "./_components/add-utility-button";
+import { RemoveRootButton } from "@/app/_components/remove-root-button";
 
 export default async function RootDetailPage({
   params,
@@ -84,6 +85,7 @@ export default async function RootDetailPage({
           label={entry.path.split("/").pop() || t("detail.projectFallbackLabel")}
         />
         <RunInitButton rootPath={entry.path} rootId={entry.id} />
+        <RemoveRootButton id={entry.id} path={entry.path} redirectHome />
       </header>
       <Separator />
       {!snapshot ? (

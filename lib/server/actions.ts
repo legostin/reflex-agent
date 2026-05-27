@@ -1,12 +1,15 @@
 "use server";
 
 import { promises as fs } from "node:fs";
+import path from "node:path";
 import { revalidatePath } from "next/cache";
-import { addRoot, markInitialized, removeRoot } from "@/lib/registry";
+import { addRoot, getRoot, markInitialized, removeRoot } from "@/lib/registry";
 import { runInit } from "@/lib/reflex/commands/init";
 import { loadSettings } from "@/lib/settings/store";
 import { createTopic } from "@/lib/server/topics";
 import { startOrchestratorTurn } from "@/lib/server/agents/start-turn";
+import { writeMemory, readMemoryFile } from "@/lib/server/memory/store";
+import { MEMORY_FILES } from "@/lib/server/memory/types";
 
 export interface AddRootResult {
   ok: boolean;
@@ -107,15 +110,70 @@ export interface RemoveRootResult {
   error?: string;
 }
 
+/**
+ * Delete a Space:
+ *   1. Wipe the project's `.reflex/` folder (Reflex state — KB, topics,
+ *      memory, suggestions, layout, audit, journal). User files in the
+ *      project directory itself are left alone.
+ *   2. Scrub mentions of the project name / path from every GLOBAL
+ *      memory file so the agent stops referencing a Space that no
+ *      longer exists.
+ *   3. Remove from the registry so it disappears from the sidebar / home.
+ */
 export async function removeRootAction(
   id: string,
 ): Promise<RemoveRootResult> {
   try {
+    const entry = await getRoot(id);
+    if (!entry) {
+      // Already gone — treat as success.
+      revalidatePath("/");
+      return { ok: true };
+    }
+    const reflexDir = path.join(entry.path, ".reflex");
+    await fs
+      .rm(reflexDir, { recursive: true, force: true })
+      .catch(() => null);
+
+    const projectName = path.basename(entry.path);
+    await scrubGlobalMemory({ projectName, projectPath: entry.path });
+
     await removeRoot(id);
     revalidatePath("/");
+    revalidatePath(`/roots/${id}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: describe(err) };
+  }
+}
+
+async function scrubGlobalMemory(args: {
+  projectName: string;
+  projectPath: string;
+}): Promise<void> {
+  const tokens = new Set<string>();
+  if (args.projectName.trim()) tokens.add(args.projectName.trim());
+  if (args.projectPath.trim()) tokens.add(args.projectPath.trim());
+  // Token-free name (no path) helps with relative mentions too.
+  if (tokens.size === 0) return;
+  for (const file of MEMORY_FILES) {
+    const cur = await readMemoryFile({ scope: "global" }, file);
+    if (!cur.content) continue;
+    const kept = cur.content
+      .split("\n")
+      .filter((line) => {
+        const lower = line.toLowerCase();
+        for (const tok of tokens) {
+          if (lower.includes(tok.toLowerCase())) return false;
+        }
+        return true;
+      })
+      .join("\n")
+      .trim();
+    if (kept === cur.content.trim()) continue; // nothing matched
+    await writeMemory({ scope: "global" }, file, "replace", {
+      content: kept,
+    });
   }
 }
 
