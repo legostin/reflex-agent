@@ -14,6 +14,7 @@ interface StartOptions {
 export async function runStart(opts: StartOptions): Promise<void> {
   const pkgRoot = await findPackageRoot();
   await assertBuilt(pkgRoot);
+  await rewriteBuildPaths(pkgRoot);
 
   // Lazy-import to avoid pulling Next into CLI-only commands.
   const nextMod = (await import("next")) as unknown as {
@@ -64,6 +65,43 @@ async function assertBuilt(pkgRoot: string): Promise<void> {
     throw new Error(
       `Reflex web bundle not found at ${pkgRoot}/.next. If running from source, run \`pnpm run build\` first.`,
     );
+  }
+}
+
+/**
+ * Next bakes the build-time project path into `required-server-files.json`
+ * (`appDir`, `outputFileTracingRoot`). When the package is built in CI and
+ * installed on a user's machine those paths point at `/home/runner/...`
+ * which doesn't exist — rewrite them to the actual install location.
+ *
+ * Idempotent: if the values already match `pkgRoot`, skip the write.
+ */
+async function rewriteBuildPaths(pkgRoot: string): Promise<void> {
+  const file = path.join(pkgRoot, ".next", "required-server-files.json");
+  let raw: string;
+  try {
+    raw = await fs.readFile(file, "utf8");
+  } catch {
+    return;
+  }
+  const data = JSON.parse(raw) as Record<string, unknown> & {
+    appDir?: string;
+    config?: { outputFileTracingRoot?: string };
+  };
+  let changed = false;
+  if (data.appDir && data.appDir !== pkgRoot) {
+    data.appDir = pkgRoot;
+    changed = true;
+  }
+  if (
+    data.config?.outputFileTracingRoot &&
+    data.config.outputFileTracingRoot !== pkgRoot
+  ) {
+    data.config.outputFileTracingRoot = pkgRoot;
+    changed = true;
+  }
+  if (changed) {
+    await fs.writeFile(file, JSON.stringify(data, null, 2));
   }
 }
 

@@ -20,33 +20,30 @@ import { appendAudit } from "./audit";
 /**
  * Resolve the absolute path of `worker-bootstrap.js` for `new Worker()`.
  *
- * Tricky because:
- *   1. In Next.js dev/build, `__filename` AND `require.resolve` return webpack
- *      pseudo-paths like `(rsc)/./lib/server/utilities/worker-bootstrap.js` —
- *      which `Worker()` rejects ("must be an absolute path or a relative
- *      path starting with './' or '../'").
- *   2. The actual `.js` file is shipped verbatim under `lib/server/utilities/`
- *      in the repo; CWD at runtime is the repo root.
- *
- * Strategy: try `require.resolve` first (works outside Next bundling, e.g.
- * the CLI). If that path doesn't pass the Worker validator, fall back to
- * `path.resolve(process.cwd(), 'lib/server/utilities/worker-bootstrap.js')`.
+ * Three execution contexts:
+ *   1. Prod CLI (`reflex start`): `REFLEX_PKG_ROOT` is set by bin/preload.ts
+ *      to the npm install location; that's where the shipped JS lives.
+ *   2. Dev (`pnpm dev`): no env var, but `process.cwd()` is the repo root.
+ *   3. Anything else: try `require.resolve`, but inside Next webpack it
+ *      returns a numeric module ID — guard with `typeof === "string"`
+ *      before `path.isAbsolute` (which throws on non-strings).
  */
 function resolveBootstrap(): string {
-  const cwdFallback = path.resolve(
-    process.cwd(),
-    "lib/server/utilities/worker-bootstrap.js",
-  );
-  let candidate: string | null = null;
+  const rel = "lib/server/utilities/worker-bootstrap.js";
+  const pkgRoot = process.env.REFLEX_PKG_ROOT;
+  if (pkgRoot) {
+    return path.resolve(pkgRoot, rel);
+  }
+  let candidate: unknown = null;
   try {
     candidate = require.resolve("./worker-bootstrap.js");
   } catch {
     /* fall through */
   }
-  if (candidate && path.isAbsolute(candidate)) {
+  if (typeof candidate === "string" && path.isAbsolute(candidate)) {
     return candidate;
   }
-  return cwdFallback;
+  return path.resolve(process.cwd(), rel);
 }
 
 interface RunArgs {

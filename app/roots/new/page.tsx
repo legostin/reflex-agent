@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { DirectoryPicker } from "./_components/directory-picker";
 import { homeDir } from "@/lib/server/fs";
 
+// Must render per-request — `homeDir()` is the user's actual $HOME,
+// not the build runner's. Static prerender would bake in `/home/runner`.
+export const dynamic = "force-dynamic";
+
 export default async function NewRootPage() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">

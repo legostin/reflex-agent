@@ -6,6 +6,11 @@ import { loadSettings } from "@/lib/settings/store";
 import { listHarnesses } from "@/lib/harnesses";
 import { SettingsForm } from "./_components/settings-form";
 
+// Settings live in `<REFLEX_HOME>/settings.json` — must render per-request
+// to reflect the user's actual saved values, not the build runner's empty
+// default.
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const settings = await loadSettings();
   const harnesses = listHarnesses().map((h) => ({
