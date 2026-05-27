@@ -142,8 +142,8 @@ export function GeminiSection() {
         <p className="text-xs text-muted-foreground">
           {t.rich("gemini.description", {
             strong: (chunks) => <strong>{chunks}</strong>,
-            model: () => <code className="font-mono">gemini-2.5-flash-image</code>,
-            path: () => <code className="font-mono">~/.reflex/api-keys/gemini.json</code>,
+            model: <code className="font-mono">gemini-2.5-flash-image</code>,
+            path: <code className="font-mono">~/.reflex/api-keys/gemini.json</code>,
             link: (chunks) => (
               <a
                 href="https://aistudio.google.com/apikey"
@@ -194,7 +194,7 @@ export function GeminiSection() {
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
                 {t.rich("gemini.modelsFromBeta", {
-                  path: () => <code className="font-mono">v1beta/models</code>,
+                  path: <code className="font-mono">v1beta/models</code>,
                   count: models.length > 0 ? `(${models.length})` : "",
                 })}
               </span>

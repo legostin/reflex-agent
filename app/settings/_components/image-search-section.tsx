@@ -39,8 +39,8 @@ export function ImageSearchSection() {
         </div>
         <p className="text-xs text-muted-foreground">
           {t.rich("imageSearch.description", {
-            api: () => <code className="font-mono">reflex.images.search</code>,
-            dir: () => <code className="font-mono">~/.reflex/api-keys/</code>,
+            api: <code className="font-mono">reflex.images.search</code>,
+            dir: <code className="font-mono">~/.reflex/api-keys/</code>,
           })}
         </p>
         <ProviderKey

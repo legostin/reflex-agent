@@ -265,9 +265,7 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
               <div>
                 <p className="text-sm">
                   {t.rich("imageProcessing.description", {
-                    dir: () => (
-                      <code className="font-mono text-xs">.reflex/attachments/</code>
-                    ),
+                    dir: <code className="font-mono text-xs">.reflex/attachments/</code>,
                   })}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -599,7 +597,7 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
         <p className="text-sm text-muted-foreground mb-3">
           {t.rich("oauth.description", {
             code: (chunks) => <code>{chunks}</code>,
-            uri: () => (
+            uri: (
               <code className="font-mono">
                 http://localhost:3210/api/oauth/callback
               </code>
@@ -615,7 +613,7 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
         <p className="text-sm text-muted-foreground mb-3">
           {t.rich("mcpServers.description", {
             code: (chunks) => <code>{chunks}</code>,
-            path: () => <code>~/.reflex/mcp/servers.json</code>,
+            path: <code>~/.reflex/mcp/servers.json</code>,
           })}
         </p>
         <McpServersSection />

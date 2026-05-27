@@ -582,7 +582,7 @@ function CustomProviderForm({
         </div>
         <p className="text-[11px] text-muted-foreground">
           {t.rich("oauth.custom.description", {
-            uri: () => (
+            uri: (
               <code className="font-mono">
                 http://localhost:3210/api/oauth/callback
               </code>
