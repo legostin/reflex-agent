@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "highlight.js/styles/github.css" layer(base);
+@plugin "@tailwindcss/typography";
+
+/* highlight.js theme override for dark mode — github-dark. */
+@media (prefers-color-scheme: dark) {
+  .hljs {
+    background: transparent;
+    color: #c9d1d9;
+  }
+  .hljs-comment, .hljs-quote { color: #8b949e; }
+  .hljs-variable, .hljs-template-variable, .hljs-attribute,
+  .hljs-tag, .hljs-name, .hljs-regexp, .hljs-link, .hljs-selector-id,
+  .hljs-selector-class { color: #7ee787; }
+  .hljs-number, .hljs-meta, .hljs-built_in, .hljs-builtin-name,
+  .hljs-literal, .hljs-type, .hljs-params { color: #79c0ff; }
+  .hljs-string, .hljs-symbol, .hljs-bullet { color: #a5d6ff; }
+  .hljs-title, .hljs-section { color: #d2a8ff; }
+  .hljs-keyword, .hljs-selector-tag { color: #ff7b72; }
+  .hljs-addition { color: #aff5b4; background-color: #033a16; }
+  .hljs-deletion { color: #ffdcd7; background-color: #67060c; }
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: 600; }
+}
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Animated gradient used for the Ask Reflex command block. Cycles slowly so
+     it feels alive but never distracts from reading. */
+  .reflex-gradient {
+    background-image: linear-gradient(
+      125deg,
+      oklch(0.74 0.17 285),
+      oklch(0.76 0.16 330),
+      oklch(0.78 0.14 60),
+      oklch(0.72 0.18 220),
+      oklch(0.74 0.17 285)
+    );
+    background-size: 320% 320%;
+    animation: reflex-gradient-shift 18s ease-in-out infinite;
+  }
+  .dark .reflex-gradient {
+    background-image: linear-gradient(
+      125deg,
+      oklch(0.45 0.18 285),
+      oklch(0.5 0.18 330),
+      oklch(0.55 0.14 60),
+      oklch(0.45 0.2 220),
+      oklch(0.45 0.18 285)
+    );
+  }
+}
+
+@keyframes reflex-gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
