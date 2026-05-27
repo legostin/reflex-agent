@@ -215,26 +215,47 @@ async function fetchUtilityFiles(
   const files: Record<string, string> = {};
   const sizes: Record<string, number> = {};
 
-  const uiContent = await fetchRaw(p, manifest.ui);
-  if (!uiContent) throw new Error(`${manifest.ui} missing`);
-  files[manifest.ui] = uiContent;
-  sizes[manifest.ui] = Buffer.byteLength(uiContent, "utf8");
+  const record = (relPath: string, content: string): void => {
+    files[relPath] = content;
+    sizes[relPath] = Buffer.byteLength(content, "utf8");
+  };
+
+  // Seed: explicit entry points from the manifest.
+  const queue: string[] = [manifest.ui, ...manifest.serverActions.map((a) => a.entry)];
+  const visited = new Set<string>();
+
+  while (queue.length > 0) {
+    const rel = queue.shift()!;
+    const normalized = normalizeRelPath(rel);
+    if (visited.has(normalized)) continue;
+    visited.add(normalized);
+    const text = await fetchRaw(p, normalized);
+    if (!text) {
+      // The manifest-declared entries are required; anything else
+      // discovered through imports is best-effort — a broken import is
+      // a build-time error already, no need to fail the fetch here.
+      const required =
+        normalized === manifest.ui ||
+        manifest.serverActions.some((a) => a.entry === normalized);
+      if (required) {
+        throw new Error(`${normalized} missing`);
+      }
+      continue;
+    }
+    record(normalized, text);
+    // Walk relative imports inside source files so private helpers
+    // (`./_store`, `../article-view`, `./_prompt`) get pulled too.
+    if (/\.(ts|tsx|js|jsx|mjs)$/i.test(normalized)) {
+      for (const imp of extractRelativeImports(text)) {
+        for (const candidate of resolveImportCandidates(normalized, imp)) {
+          if (!visited.has(candidate)) queue.push(candidate);
+        }
+      }
+    }
+  }
 
   const readme = await fetchRaw(p, "README.md", true);
-  if (readme) {
-    files["README.md"] = readme;
-    sizes["README.md"] = Buffer.byteLength(readme, "utf8");
-  }
-
-  // Server actions — fetch each declared entry.
-  for (const action of manifest.serverActions) {
-    const text = await fetchRaw(p, action.entry);
-    if (!text) {
-      throw new Error(`server action entry ${action.entry} missing`);
-    }
-    files[action.entry] = text;
-    sizes[action.entry] = Buffer.byteLength(text, "utf8");
-  }
+  if (readme) record("README.md", readme);
 
   // Optional icon — fetched as base64 if present and under cap.
   const iconUrl = `https://raw.githubusercontent.com/${p.owner}/${p.repo}/${p.sha}/icon.png`;
@@ -249,4 +270,40 @@ async function fetchUtilityFiles(
 
   FilesShapeSchema.parse(files);
   return { manifest, files, sizes };
+}
+
+function extractRelativeImports(source: string): string[] {
+  // Static `import ... from "./..."` and `import "./..."`.
+  const out = new Set<string>();
+  const re = /(?:from|import)\s*\(?\s*["']((?:\.{1,2}\/)[^"']+)["']/g;
+  let m;
+  while ((m = re.exec(source))) out.add(m[1]!);
+  return [...out];
+}
+
+function resolveImportCandidates(fromFile: string, importPath: string): string[] {
+  const segs = fromFile.split("/");
+  segs.pop(); // drop filename
+  const parts = importPath.split("/");
+  for (const seg of parts) {
+    if (seg === "." || seg === "") continue;
+    if (seg === "..") {
+      if (segs.length > 0) segs.pop();
+      continue;
+    }
+    segs.push(seg);
+  }
+  const base = segs.join("/");
+  // If the import already names a known extension, try only that.
+  if (/\.(tsx?|jsx?|mjs|json|css)$/i.test(base)) return [normalizeRelPath(base)];
+  // Otherwise probe common source extensions plus index files.
+  const exts = [".tsx", ".ts", ".jsx", ".js", ".mjs"];
+  const out: string[] = [];
+  for (const e of exts) out.push(normalizeRelPath(base + e));
+  for (const e of exts) out.push(normalizeRelPath(base + "/index" + e));
+  return out;
+}
+
+function normalizeRelPath(rel: string): string {
+  return rel.replace(/^\.\/+/, "").replace(/\\/g, "/");
 }
