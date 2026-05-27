@@ -13,6 +13,7 @@ import { utilityFile } from "./store";
 import { quickComplete } from "@/lib/server/quick";
 import { writeKbEntry } from "@/lib/server/agents/kb-writer";
 import { listKbFiles, readKbFile } from "@/lib/server/kb";
+import { searchSessions } from "@/lib/server/sessions";
 import { getRoot } from "@/lib/registry";
 import { loadSettings } from "@/lib/settings/store";
 import type { Assignment, TaskId } from "@/lib/settings";
@@ -282,6 +283,15 @@ const WorktreeCreateSchema = z.object({
   baseRef: z.string().optional(),
 });
 
+const SessionsSearchSchema = z.object({
+  query: z.string().min(1).max(512),
+  rootId: z.string().optional(),
+  source: z.enum(["journal", "topic"]).optional(),
+  since: z.string().optional(),
+  until: z.string().optional(),
+  limit: z.number().int().min(1).max(50).default(10),
+});
+
 const ImagesPickBestSchema = z.object({
   query: z.string().min(1).max(200),
   alt: z.string().max(280).default(""),
@@ -428,6 +438,8 @@ export async function dispatchHostCall(
         return worktreeRemove(ctx, WorktreeRemoveSchema.parse(rawArgs));
       case "git.worktree.list":
         return worktreeList(ctx);
+      case "sessions.search":
+        return sessionsSearch(ctx, SessionsSearchSchema.parse(rawArgs));
       default:
         throw new Error(`Unknown host method: ${method}`);
     }
@@ -1457,4 +1469,22 @@ async function worktreeList(ctx: HostContext): Promise<unknown> {
   const { path: rootPath } = await resolveTargetRoot(ctx);
   const { listWorktrees } = await import("@/lib/server/tasks/worktree");
   return { worktrees: await listWorktrees(rootPath) };
+}
+
+async function sessionsSearch(
+  ctx: HostContext,
+  args: z.infer<typeof SessionsSearchSchema>,
+): Promise<{ hits: unknown[] }> {
+  if (!ctx.utility.manifest.permissions.sessions?.search) {
+    throw new Error(
+      `utility "${ctx.utility.manifest.id}" lacks permissions.sessions.search`,
+    );
+  }
+  const opts: Parameters<typeof searchSessions>[1] = { limit: args.limit };
+  if (args.rootId !== undefined) opts.rootId = args.rootId;
+  if (args.source !== undefined) opts.source = args.source;
+  if (args.since !== undefined) opts.since = args.since;
+  if (args.until !== undefined) opts.until = args.until;
+  const hits = await searchSessions(args.query, opts);
+  return { hits };
 }

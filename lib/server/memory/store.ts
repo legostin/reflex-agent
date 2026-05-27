@@ -12,6 +12,7 @@ import {
   type MemoryOp,
   type MemoryScope,
 } from "./types";
+import { checkMemoryHygiene } from "./hygiene";
 
 /**
  * Global memory lives at `$REFLEX_HOME/memory/<FILE>.md`.
@@ -118,6 +119,16 @@ export async function writeMemory(
         .catch(() => null);
       return { ok: true, file, lines: 0, cap };
     }
+    const hygiene = checkMemoryHygiene(next, { skipDupCheck: true });
+    if (!hygiene.ok) {
+      return {
+        ok: false,
+        file,
+        lines: current.lines,
+        cap,
+        error: `hygiene: ${hygiene.error}`,
+      };
+    }
     const lines = countLines(next);
     if (lines > cap) {
       return {
@@ -160,6 +171,18 @@ export async function writeMemory(
   const addition = (args.content ?? "").trim();
   if (!addition) {
     return { ok: false, file, lines: current.lines, cap, error: "empty-content" };
+  }
+  const hygiene = checkMemoryHygiene(addition, {
+    existing: current.content,
+  });
+  if (!hygiene.ok) {
+    return {
+      ok: false,
+      file,
+      lines: current.lines,
+      cap,
+      error: `hygiene: ${hygiene.error}`,
+    };
   }
   const additionLines = addition.split("\n").length;
   if (current.lines + additionLines <= cap) {

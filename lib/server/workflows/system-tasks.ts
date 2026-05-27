@@ -5,6 +5,7 @@ import { listRoots, type RegistryEntry } from "@/lib/registry";
 import { loadSettings } from "@/lib/settings/store";
 import { quickComplete } from "@/lib/server/quick";
 import { writeMemory } from "@/lib/server/memory/store";
+import { indexAllSessions } from "@/lib/server/sessions";
 import { reflexRoot } from "@/lib/reflex/paths";
 
 /**
@@ -33,6 +34,12 @@ export const SYSTEM_TASKS: SystemTask[] = [
     label: "Memory rollup",
     trigger: "weekly",
     run: runMemoryRollup,
+  },
+  {
+    id: "system:sessions-index",
+    label: "Index sessions for search",
+    trigger: "hourly",
+    run: runSessionsIndex,
   },
 ];
 
@@ -163,4 +170,23 @@ function deriveDateFromName(name: string): string | null {
 function trim(s: string, n: number): string {
   if (s.length <= n) return s;
   return s.slice(0, n) + "…";
+}
+
+// ---------------------------------------------------------------------------
+// Sessions index refresh — incremental, cheap. Walks every root's journal
+// and topic dirs, upserts changed files into the FTS5 store.
+
+async function runSessionsIndex(): Promise<{ ok: boolean; detail?: string }> {
+  try {
+    const res = await indexAllSessions();
+    return {
+      ok: true,
+      detail: `scanned ${res.scanned}, upserted ${res.upserted}, removed ${res.removed}`,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
 }

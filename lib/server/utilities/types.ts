@@ -104,6 +104,16 @@ export const PermissionsSchema = z
         attach: z.boolean().optional(),
       })
       .optional(),
+    /**
+     * Read-only access to the cross-Space session search index (journal
+     * entries + topic transcripts, FTS5). Lets the utility answer "did
+     * the user mention X before?" without holding its own history.
+     */
+    sessions: z
+      .object({
+        search: z.boolean().optional(),
+      })
+      .optional(),
   })
   .default({});
 
