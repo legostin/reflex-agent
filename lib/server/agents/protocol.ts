@@ -44,6 +44,10 @@ export const ONBOARDING_DONE_OPEN = "<<reflex:onboarding-done>>";
 export const ONBOARDING_DONE_CLOSE = "<</reflex:onboarding-done>>";
 export const SKILL_CREATE_OPEN = "<<reflex:skill-create>>";
 export const SKILL_CREATE_CLOSE = "<</reflex:skill-create>>";
+export const TASK_CREATE_OPEN = "<<reflex:task-create>>";
+export const TASK_CREATE_CLOSE = "<</reflex:task-create>>";
+export const TASK_UPDATE_OPEN = "<<reflex:task-update>>";
+export const TASK_UPDATE_CLOSE = "<</reflex:task-update>>";
 
 export interface PermissionDirective {
   id?: string;
@@ -221,6 +225,64 @@ export function extractSkillCreates(text: string): SkillCreateDirective[] {
       typeof e.title === "string" &&
       typeof e.instructions === "string" &&
       e.instructions.trim().length > 0,
+  );
+}
+
+/**
+ * Task markers. `task-create` lets an agent file a new card on the
+ * board from inside any chat ("add a task for X"); `task-update`
+ * tweaks an existing task (status flip, description append, …).
+ *
+ * Manager validates fields against tasks/types.ts allowlists and
+ * persists via the same `createTask`/`updateTask` store helpers the
+ * utility uses.
+ */
+export interface TaskCreateDirective {
+  title: string;
+  body?: string;
+  type?: string;
+  status?: string;
+  priority?: string;
+  labels?: string[];
+  parent?: string;
+}
+
+export interface TaskUpdateDirective {
+  id: string;
+  patch: {
+    title?: string;
+    body?: string;
+    type?: string;
+    status?: string;
+    priority?: string;
+    labels?: string[];
+    assignee?: string | null;
+  };
+}
+
+export function extractTaskCreates(text: string): TaskCreateDirective[] {
+  return extractAll<TaskCreateDirective>(
+    text,
+    TASK_CREATE_OPEN,
+    TASK_CREATE_CLOSE,
+  ).filter(
+    (e): e is TaskCreateDirective =>
+      !!e && typeof e.title === "string" && e.title.trim().length > 0,
+  );
+}
+
+export function extractTaskUpdates(text: string): TaskUpdateDirective[] {
+  return extractAll<TaskUpdateDirective>(
+    text,
+    TASK_UPDATE_OPEN,
+    TASK_UPDATE_CLOSE,
+  ).filter(
+    (e): e is TaskUpdateDirective =>
+      !!e &&
+      typeof e.id === "string" &&
+      e.id.trim().length > 0 &&
+      !!e.patch &&
+      typeof e.patch === "object",
   );
 }
 

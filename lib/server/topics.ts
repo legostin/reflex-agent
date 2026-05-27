@@ -34,6 +34,12 @@ export interface TopicFrontmatter {
    * helper-chats don't pollute the project sidebar.
    */
   helperFor?: string;
+  /**
+   * When set, this topic is the live conversation behind task `<taskId>`
+   * on the task-board utility. The board polls events from this topic
+   * to render the "live status" line + "agent needs you" badge.
+   */
+  taskId?: string;
 }
 
 export interface TopicMessage {
@@ -247,6 +253,7 @@ export interface CreateTopicArgs {
   model?: string;
   language?: string;
   helperFor?: string;
+  taskId?: string;
 }
 
 export async function createTopic(args: CreateTopicArgs): Promise<Topic> {
@@ -262,6 +269,7 @@ export async function createTopic(args: CreateTopicArgs): Promise<Topic> {
     ...(args.model ? { model: args.model } : {}),
     ...(args.language ? { language: args.language } : {}),
     ...(args.helperFor ? { helperFor: args.helperFor } : {}),
+    ...(args.taskId ? { taskId: args.taskId } : {}),
   };
   // .md is metadata-only now; the conversation transcript lives in
   // <id>.events.jsonl and is the single source of truth for chat content.

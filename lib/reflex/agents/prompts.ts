@@ -45,6 +45,7 @@ export async function chatSystemPrompt(scope: ChatScope): Promise<string> {
     imageGenInstructions(),
     memoryInstructions(),
     skillAuthoringInstructions(),
+    taskAuthoringInstructions(),
   ].join("\n\n");
 }
 
@@ -360,5 +361,50 @@ function skillAuthoringInstructions(): string {
     `  <<reflex:skill-create>>{"scope":"project","id":"weekly-changelog-digest","title":"Weekly changelog digest","description":"Fetch the latest commits on a tracked repo and save a 5-bullet summary into KB.","instructions":"## Skill: weekly-changelog-digest\\n\\n1. Use \\\`web.fetch\\\` to GET \\\`https://api.github.com/repos/<owner>/<repo>/commits?per_page=20\\\` (the repo is in PERSONA.md).\\n2. Pick the 5 most consequential commits.\\n3. Emit a \\\`<<reflex:kb>>\\\` with kind=\\\"weekly-changelog\\\", title with the date range, body with 5 bullets + commit-hash links."}<</reflex:skill-create>>`,
     "",
     "Then say in prose: \"I keep doing this every Monday — saved as `/skill weekly-changelog-digest`. Try it next week.\"",
+  ].join("\n");
+}
+
+/**
+ * Task authoring. If the project has the task-board utility installed,
+ * the orchestrator can file or update cards from any chat by emitting
+ * `<<reflex:task-create>>` / `<<reflex:task-update>>`. The board polls
+ * the underlying store and shows new cards automatically.
+ */
+function taskAuthoringInstructions(): string {
+  return [
+    "## Tasks — file work onto the Kanban board",
+    "",
+    "When the user mentions a piece of work that's bigger than this turn (a feature to build, a bug to fix, a topic to research) emit a `<<reflex:task-create>>` marker. The task lands on the project's Kanban board (if the user has the task-board utility installed); from there they can dispatch it to an agent in its own git worktree, link it to other tasks, etc. Don't ask permission — emit and confirm in one line.",
+    "",
+    "```",
+    `<<reflex:task-create>>{`,
+    `  "title": "<imperative, 4-12 words>",`,
+    `  "body":  "<markdown — context, acceptance criteria, anything I'd want when I open this in 3 days>",`,
+    `  "type":  "feature" | "bug" | "refactor" | "docs" | "chore" | "research" | "review" | "call" | "idea",`,
+    `  "status":   "backlog" | "ready" | "in-progress" | "review" | "done" | "blocked",`,
+    `  "priority": "low" | "normal" | "high",`,
+    `  "labels":   ["...", "..."],`,
+    `  "parent":   "<id of parent task, optional>"`,
+    `}<</reflex:task-create>>`,
+    "```",
+    "",
+    "When inside a topic that's been dispatched FROM a task (you'll see this in the system prompt header: \"You are working on task t-…\"), use `<<reflex:task-update>>` to advance the card's status as you finish — `status: \"done\"` when the work lands, `status: \"review\"` if it needs human eyes.",
+    "",
+    "```",
+    `<<reflex:task-update>>{`,
+    `  "id": "t-…",`,
+    `  "patch": {`,
+    `    "status": "done",`,
+    `    "body":   "<optional — append a brief summary of what was done>"`,
+    `  }`,
+    `}<</reflex:task-update>>`,
+    "```",
+    "",
+    "Rules:",
+    "- One task per concrete unit of work. \"Set up CI + write tests + deploy\" is three tasks.",
+    "- `type` defaults to `feature`. Match the obvious case: regression → `bug`, investigate-before-decide → `research`, write-some-words-down → `idea`.",
+    "- Choose `status: \"backlog\"` for newly-captured ideas (default). Use `ready` only if the user explicitly said \"do this next\".",
+    "- Cite what the user said in `body` so it makes sense out of context.",
+    "- Don't open more than 5 tasks in a single turn; you're noting, not firehosing.",
   ].join("\n");
 }

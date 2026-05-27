@@ -1047,6 +1047,8 @@ function stripProtocolMarkers(text: string): string {
     "suggestion",
     "onboarding-done",
     "skill-create",
+    "task-create",
+    "task-update",
   ];
   let out = text;
   for (const t of tags) {

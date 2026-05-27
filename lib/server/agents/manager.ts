@@ -24,6 +24,8 @@ import {
   extractQuestions,
   extractSkillCreates,
   extractSuggestions,
+  extractTaskCreates,
+  extractTaskUpdates,
   hasOnboardingDone,
   extractUtilityDirectives,
   extractWidgetCreates,
@@ -49,6 +51,15 @@ import {
   SUGGESTION_KINDS,
 } from "@/lib/server/suggestions/store";
 import { writeSkill } from "@/lib/server/skills";
+import {
+  createTask,
+  updateTask,
+} from "@/lib/server/tasks/store";
+import {
+  isTaskPriority,
+  isTaskStatus,
+  isTaskType,
+} from "@/lib/server/tasks/types";
 import { generateImage } from "@/lib/server/images/service";
 import {
   buildRecord as buildWidgetRecord,
@@ -1083,6 +1094,7 @@ class AgentManager {
         });
       }
       await this.processSkillCreates(buf, agentId, state.rootPath);
+      await this.processTaskMarkers(buf, agentId, state.rootPath);
       const utilityDirs = extractUtilityDirectives(buf);
       for (const u of utilityDirs) {
         try {
@@ -1330,6 +1342,95 @@ class AgentManager {
           type: "error",
           message:
             "memory-write failed: " +
+            (err instanceof Error ? err.message : String(err)),
+          agentId,
+          ts: now(),
+          seq: 0,
+        });
+      }
+    }
+  }
+
+  private async processTaskMarkers(
+    buf: string,
+    agentId: string,
+    rootPath: string,
+  ): Promise<void> {
+    const creates = extractTaskCreates(buf);
+    for (const c of creates) {
+      try {
+        const task = await createTask(rootPath, {
+          title: c.title,
+          body: c.body ?? "",
+          ...(c.type && isTaskType(c.type) ? { type: c.type } : {}),
+          ...(c.status && isTaskStatus(c.status) ? { status: c.status } : {}),
+          ...(c.priority && isTaskPriority(c.priority)
+            ? { priority: c.priority }
+            : {}),
+          ...(Array.isArray(c.labels) ? { labels: c.labels.map(String) } : {}),
+          ...(c.parent ? { parent: c.parent } : {}),
+        });
+        await this.emit({
+          type: "task-created",
+          taskId: task.id,
+          title: task.title,
+          taskType: task.type,
+          status: task.status,
+          agentId,
+          ts: now(),
+          seq: 0,
+        });
+      } catch (err) {
+        await this.emit({
+          type: "error",
+          message:
+            "task-create failed: " +
+            (err instanceof Error ? err.message : String(err)),
+          agentId,
+          ts: now(),
+          seq: 0,
+        });
+      }
+    }
+    const updates = extractTaskUpdates(buf);
+    for (const u of updates) {
+      try {
+        const patch: Parameters<typeof updateTask>[2] = {};
+        if (typeof u.patch.title === "string") patch.title = u.patch.title;
+        if (typeof u.patch.body === "string") patch.body = u.patch.body;
+        if (u.patch.type && isTaskType(u.patch.type)) patch.type = u.patch.type;
+        if (u.patch.status && isTaskStatus(u.patch.status))
+          patch.status = u.patch.status;
+        if (u.patch.priority && isTaskPriority(u.patch.priority))
+          patch.priority = u.patch.priority;
+        if (Array.isArray(u.patch.labels))
+          patch.labels = u.patch.labels.map(String);
+        if (u.patch.assignee !== undefined)
+          patch.assignee = u.patch.assignee ?? null;
+        const updated = await updateTask(rootPath, u.id, patch);
+        if (!updated) {
+          await this.emit({
+            type: "error",
+            message: `task-update: task ${u.id} not found`,
+            agentId,
+            ts: now(),
+            seq: 0,
+          });
+          continue;
+        }
+        await this.emit({
+          type: "task-updated",
+          taskId: updated.id,
+          status: updated.status,
+          agentId,
+          ts: now(),
+          seq: 0,
+        });
+      } catch (err) {
+        await this.emit({
+          type: "error",
+          message:
+            "task-update failed: " +
             (err instanceof Error ? err.message : String(err)),
           agentId,
           ts: now(),

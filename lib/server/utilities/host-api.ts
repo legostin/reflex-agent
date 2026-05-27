@@ -157,6 +157,131 @@ const MermaidValidateSchema = z.object({
   source: z.string().min(1).max(20_000),
 });
 
+// ---------------------------------------------------------------------------
+// Tasks + git worktree
+
+const TaskHookSchema = z
+  .object({
+    kind: z.enum(["workflow", "chat"]),
+    id: z.string().optional(),
+    prompt: z.string().optional(),
+  })
+  .strict();
+
+const TaskAttachmentSchema = z
+  .object({
+    kind: z.enum(["image", "text", "file"]),
+    file: z.string().min(1).max(500),
+    caption: z.string().max(500).optional(),
+  })
+  .strict();
+
+const TaskCreateSchema = z.object({
+  title: z.string().min(1).max(280),
+  body: z.string().max(50_000).default(""),
+  type: z
+    .enum([
+      "feature",
+      "bug",
+      "refactor",
+      "docs",
+      "chore",
+      "research",
+      "review",
+      "call",
+      "idea",
+    ])
+    .default("feature"),
+  status: z
+    .enum(["backlog", "ready", "in-progress", "review", "done", "blocked"])
+    .default("backlog"),
+  priority: z.enum(["low", "normal", "high"]).default("normal"),
+  labels: z.array(z.string()).default([]),
+  assignee: z.string().nullable().default(null),
+  parent: z.string().nullable().default(null),
+  links: z
+    .object({
+      blocks: z.array(z.string()).optional(),
+      blockedBy: z.array(z.string()).optional(),
+      related: z.array(z.string()).optional(),
+    })
+    .default({}),
+  pre: z.array(TaskHookSchema).default([]),
+  post: z.array(TaskHookSchema).default([]),
+  attachments: z.array(TaskAttachmentSchema).default([]),
+});
+
+const TaskUpdateSchema = z.object({
+  id: z.string().min(1),
+  patch: z
+    .object({
+      title: z.string().min(1).max(280).optional(),
+      body: z.string().max(50_000).optional(),
+      type: z
+        .enum([
+          "feature",
+          "bug",
+          "refactor",
+          "docs",
+          "chore",
+          "research",
+          "review",
+          "call",
+          "idea",
+        ])
+        .optional(),
+      status: z
+        .enum(["backlog", "ready", "in-progress", "review", "done", "blocked"])
+        .optional(),
+      priority: z.enum(["low", "normal", "high"]).optional(),
+      labels: z.array(z.string()).optional(),
+      assignee: z.string().nullable().optional(),
+      parent: z.string().nullable().optional(),
+      links: z
+        .object({
+          blocks: z.array(z.string()).optional(),
+          blockedBy: z.array(z.string()).optional(),
+          related: z.array(z.string()).optional(),
+        })
+        .optional(),
+      pre: z.array(TaskHookSchema).optional(),
+      post: z.array(TaskHookSchema).optional(),
+      attachments: z.array(TaskAttachmentSchema).optional(),
+    })
+    .default({}),
+});
+
+const TaskIdSchema = z.object({ id: z.string().min(1) });
+
+const TaskDispatchSchema = z.object({
+  id: z.string().min(1),
+  harness: z.string().optional(),
+  model: z.string().optional(),
+});
+
+const TaskCompleteSchema = z.object({
+  id: z.string().min(1),
+  outcome: z.enum(["done", "review", "blocked"]),
+});
+
+const WorktreeMergeSchema = z.object({
+  branch: z.string().min(1),
+  intoRef: z.string().optional(),
+});
+
+const WorktreeRemoveSchema = z.object({
+  slug: z.string().min(1),
+  branch: z.string().min(1),
+  force: z.boolean().default(false),
+  deleteBranch: z.boolean().default(true),
+});
+
+const WorktreeCreateSchema = z.object({
+  slug: z.string().min(1),
+  branch: z.string().min(1),
+  baseRef: z.string().optional(),
+});
+
 const ImagesPickBestSchema = z.object({
   query: z.string().min(1).max(200),
   alt: z.string().max(280).default(""),
@@ -273,6 +398,36 @@ export async function dispatchHostCall(
         return imagesPickBest(ctx, ImagesPickBestSchema.parse(rawArgs));
       case "mermaid.validate":
         return mermaidValidate(ctx, MermaidValidateSchema.parse(rawArgs));
+      case "tasks.create":
+        return tasksCreate(ctx, TaskCreateSchema.parse(rawArgs));
+      case "tasks.update":
+        return tasksUpdate(ctx, TaskUpdateSchema.parse(rawArgs));
+      case "tasks.delete":
+        return tasksDelete(ctx, TaskIdSchema.parse(rawArgs));
+      case "tasks.get":
+        return tasksGet(ctx, TaskIdSchema.parse(rawArgs));
+      case "tasks.list":
+        return tasksList(ctx);
+      case "tasks.dispatch":
+        return tasksDispatch(ctx, TaskDispatchSchema.parse(rawArgs));
+      case "tasks.observe":
+        return tasksObserve(ctx, TaskIdSchema.parse(rawArgs));
+      case "tasks.complete":
+        return tasksComplete(ctx, TaskCompleteSchema.parse(rawArgs));
+      case "git.isRepo":
+        return gitIsRepo(ctx);
+      case "git.hasRemote":
+        return gitHasRemote(ctx);
+      case "git.hasGhCli":
+        return gitHasGhCli();
+      case "git.worktree.create":
+        return worktreeCreate(ctx, WorktreeCreateSchema.parse(rawArgs));
+      case "git.worktree.merge":
+        return worktreeMerge(ctx, WorktreeMergeSchema.parse(rawArgs));
+      case "git.worktree.remove":
+        return worktreeRemove(ctx, WorktreeRemoveSchema.parse(rawArgs));
+      case "git.worktree.list":
+        return worktreeList(ctx);
       default:
         throw new Error(`Unknown host method: ${method}`);
     }
@@ -1155,4 +1310,151 @@ function preflightMermaid(src: string): string | null {
     }
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Tasks + git host methods
+
+async function tasksCreate(
+  ctx: HostContext,
+  args: z.infer<typeof TaskCreateSchema>,
+): Promise<{ id: string }> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { createTask } = await import("@/lib/server/tasks/store");
+  const task = await createTask(rootPath, args);
+  return { id: task.id };
+}
+
+async function tasksUpdate(
+  ctx: HostContext,
+  args: z.infer<typeof TaskUpdateSchema>,
+): Promise<{ ok: boolean }> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { updateTask } = await import("@/lib/server/tasks/store");
+  const updated = await updateTask(rootPath, args.id, args.patch);
+  return { ok: !!updated };
+}
+
+async function tasksDelete(
+  ctx: HostContext,
+  args: z.infer<typeof TaskIdSchema>,
+): Promise<{ ok: boolean }> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { deleteTask } = await import("@/lib/server/tasks/store");
+  const ok = await deleteTask(rootPath, args.id);
+  return { ok };
+}
+
+async function tasksGet(
+  ctx: HostContext,
+  args: z.infer<typeof TaskIdSchema>,
+): Promise<unknown> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { getTask } = await import("@/lib/server/tasks/store");
+  return getTask(rootPath, args.id);
+}
+
+async function tasksList(ctx: HostContext): Promise<{ tasks: unknown[] }> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { listTasks } = await import("@/lib/server/tasks/store");
+  const tasks = await listTasks(rootPath);
+  return { tasks };
+}
+
+async function tasksDispatch(
+  ctx: HostContext,
+  args: z.infer<typeof TaskDispatchSchema>,
+): Promise<unknown> {
+  const { id: rootId } = await resolveTargetRoot(ctx);
+  const { dispatchTask } = await import("@/lib/server/tasks/dispatch");
+  return dispatchTask({
+    rootId,
+    taskId: args.id,
+    ...(args.harness ? { harness: args.harness } : {}),
+    ...(args.model ? { model: args.model } : {}),
+  });
+}
+
+async function tasksObserve(
+  ctx: HostContext,
+  args: z.infer<typeof TaskIdSchema>,
+): Promise<unknown> {
+  const { id: rootId } = await resolveTargetRoot(ctx);
+  const { observeTask } = await import("@/lib/server/tasks/observe");
+  return observeTask({ rootId, taskId: args.id });
+}
+
+async function tasksComplete(
+  ctx: HostContext,
+  args: z.infer<typeof TaskCompleteSchema>,
+): Promise<{ ok: boolean }> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { updateTask } = await import("@/lib/server/tasks/store");
+  const updated = await updateTask(rootPath, args.id, { status: args.outcome });
+  return { ok: !!updated };
+}
+
+async function gitIsRepo(ctx: HostContext): Promise<{ ok: boolean }> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { isGitRepo } = await import("@/lib/server/tasks/worktree");
+  return { ok: await isGitRepo(rootPath) };
+}
+
+async function gitHasRemote(ctx: HostContext): Promise<{ ok: boolean }> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { hasRemote } = await import("@/lib/server/tasks/worktree");
+  return { ok: await hasRemote(rootPath) };
+}
+
+async function gitHasGhCli(): Promise<{ ok: boolean }> {
+  const { hasGhCli } = await import("@/lib/server/tasks/worktree");
+  return { ok: await hasGhCli() };
+}
+
+async function worktreeCreate(
+  ctx: HostContext,
+  args: z.infer<typeof WorktreeCreateSchema>,
+): Promise<unknown> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { createWorktree } = await import("@/lib/server/tasks/worktree");
+  return createWorktree({
+    rootPath,
+    slug: args.slug,
+    branch: args.branch,
+    ...(args.baseRef ? { baseRef: args.baseRef } : {}),
+  });
+}
+
+async function worktreeMerge(
+  ctx: HostContext,
+  args: z.infer<typeof WorktreeMergeSchema>,
+): Promise<unknown> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { mergeWorktree } = await import("@/lib/server/tasks/worktree");
+  return mergeWorktree({
+    rootPath,
+    branch: args.branch,
+    ...(args.intoRef ? { intoRef: args.intoRef } : {}),
+  });
+}
+
+async function worktreeRemove(
+  ctx: HostContext,
+  args: z.infer<typeof WorktreeRemoveSchema>,
+): Promise<unknown> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { removeWorktree } = await import("@/lib/server/tasks/worktree");
+  return removeWorktree({
+    rootPath,
+    slug: args.slug,
+    branch: args.branch,
+    force: args.force,
+    deleteBranch: args.deleteBranch,
+  });
+}
+
+async function worktreeList(ctx: HostContext): Promise<unknown> {
+  const { path: rootPath } = await resolveTargetRoot(ctx);
+  const { listWorktrees } = await import("@/lib/server/tasks/worktree");
+  return { worktrees: await listWorktrees(rootPath) };
 }

@@ -171,6 +171,26 @@ export type AgentEvent = AgentEventBase &
         file: string;
       }
     /**
+     * Agent filed a new task via `<<reflex:task-create>>`. The task lives
+     * as a KB entry of `kind: "task"`; the board utility renders it.
+     */
+    | {
+        type: "task-created";
+        taskId: string;
+        title: string;
+        taskType: string;
+        status: string;
+      }
+    /**
+     * Agent updated an existing task via `<<reflex:task-update>>`.
+     * Surfaced so the board / dashboard can refresh.
+     */
+    | {
+        type: "task-updated";
+        taskId: string;
+        status: string;
+      }
+    /**
      * The agent generated and installed a new utility via the
      * `<<reflex:utility>>{...}<</reflex:utility>>` marker.
      */
