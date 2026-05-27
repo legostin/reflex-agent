@@ -40,6 +40,17 @@ const INLINE_BASELINE: CuratedUtility[] = [
     suggestedScope: "project",
     author: "reflex-org",
   },
+  {
+    id: "task-board",
+    name: "Task board",
+    emoji: "📋",
+    category: "productivity",
+    description:
+      "Kanban tracker with /task, /tasks, /take-task commands. Each code task gets its own git worktree on dispatch so parallel agents never collide. Auto-pickup, PR mode, pre/post hooks.",
+    github: "github:legostin/rflx-task-board@v0.1.0",
+    suggestedScope: "project",
+    author: "reflex-org",
+  },
 ];
 
 const CACHE_PATH = path.join(reflexHome(), "curated-registry.json");
