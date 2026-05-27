@@ -345,6 +345,11 @@ function TurnView({
     return <SystemEventTurn body={turn.body ?? ""} subtype={turn.systemSubtype} />;
   }
   if (turn.kind === "user") {
+    // Briefs dispatched to sub-agents are emitted as user-messages on the
+    // sub-agent's stream. The sub-agent's response is already shown
+    // collapsed via SubAgentWrapper — showing the verbose brief on top of
+    // every dispatch clutters the chat with internal traffic. Suppress.
+    if (turn.agentRole === "subagent") return null;
     const body = turn.body ?? "";
     const system = classifySystemUserMessage(body, {
       mcpSetupDefault: t("chat.mcpSetupDefault"),
@@ -572,7 +577,15 @@ function projectEvents(events: AgentEvent[]): Turn[] {
       continue;
     }
     if (ev.type === "user-message") {
-      turns.push({ kind: "user", body: ev.text });
+      const meta = agentMetaById.get(ev.agentId);
+      const role = meta?.role;
+      turns.push({
+        kind: "user",
+        body: ev.text,
+        agentId: ev.agentId,
+        ...(role ? { agentRole: role } : {}),
+        ...(meta?.label ? { agentLabel: meta.label } : {}),
+      });
       continue;
     }
     if (ev.type === "system") {
@@ -984,6 +997,8 @@ function stripProtocolMarkers(text: string): string {
     "widget-update",
     "workflow-create",
     "image-gen",
+    "memory",
+    "suggestion",
   ];
   let out = text;
   for (const t of tags) {
