@@ -229,17 +229,16 @@ async function fetchUtilityFiles(
     const normalized = normalizeRelPath(rel);
     if (visited.has(normalized)) continue;
     visited.add(normalized);
-    const text = await fetchRaw(p, normalized);
+    // Manifest-declared entries (ui, serverActions) MUST exist — a 404
+    // there is a real install error. Import-walker candidates are
+    // probes: we try multiple extensions per bare specifier and only
+    // one (or none) will hit; the others 404 by design.
+    const required =
+      normalized === manifest.ui ||
+      manifest.serverActions.some((a) => a.entry === normalized);
+    const text = await fetchRaw(p, normalized, !required);
     if (!text) {
-      // The manifest-declared entries are required; anything else
-      // discovered through imports is best-effort — a broken import is
-      // a build-time error already, no need to fail the fetch here.
-      const required =
-        normalized === manifest.ui ||
-        manifest.serverActions.some((a) => a.entry === normalized);
-      if (required) {
-        throw new Error(`${normalized} missing`);
-      }
+      if (required) throw new Error(`${normalized} missing`);
       continue;
     }
     record(normalized, text);
