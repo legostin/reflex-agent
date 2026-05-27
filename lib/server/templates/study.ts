@@ -1,23 +1,23 @@
 import type { SpaceTemplate } from "./registry";
 
 /**
- * "Учёба" — courses, study notes, knowledge tracking. The skill prompts
+ * "Study" — courses, study notes, knowledge tracking. The skill prompts
  * the agent to digest readings into Anki-style flashcards and weekly
  * recall reviews.
  */
 export const studyTemplate: SpaceTemplate = {
   id: "study",
-  label: "Учёба",
+  label: "Study",
   emoji: "🎓",
   description:
-    "Курсы, конспекты, повторение материала. Скидываешь статью — Reflex делает выжимку и карточки для повторения.",
-  defaultFolder: "Учёба",
+    "Courses, notes, spaced repetition. Drop in an article — Reflex makes a summary and review cards.",
+  defaultFolder: "Study",
   build: () => ({
     widgets: [
       {
         id: "study-current-courses",
-        title: "Текущие курсы",
-        description: "Что сейчас учу",
+        title: "Current courses",
+        description: "What I'm studying now",
         payload: {
           kind: "progress",
           data: {
@@ -27,21 +27,21 @@ export const studyTemplate: SpaceTemplate = {
       },
       {
         id: "study-weekly-checklist",
-        title: "На этой неделе",
+        title: "This week",
         payload: {
           kind: "checklist",
           data: {
             items: [
-              { text: "Пройти 1 урок", done: false },
-              { text: "Сделать 5 повторений", done: false },
-              { text: "Записать ключевые мысли в дневник", done: false },
+              { text: "Complete 1 lesson", done: false },
+              { text: "Do 5 reviews", done: false },
+              { text: "Write key ideas in the journal", done: false },
             ],
           },
         },
       },
       {
         id: "study-recent-notes",
-        title: "Свежие конспекты",
+        title: "Recent notes",
         payload: {
           kind: "kb-pinned",
           data: { items: [] },
@@ -51,23 +51,23 @@ export const studyTemplate: SpaceTemplate = {
     topics: [
       {
         message:
-          "Привет! Я помогу учиться: скидывай ссылки на статьи, видео или книги — я делаю выжимки и карточки для повторения. Расскажи, что сейчас учишь.",
+          "Hi! I'll help you study: drop in links to articles, videos, or books — I'll make summaries and review cards. Tell me what you're studying right now.",
       },
     ],
     skills: [
       {
         id: "study-helper",
-        title: "Учебный помощник",
-        description: "Делает выжимки, карточки для повторения, отслеживает курсы",
+        title: "Study helper",
+        description: "Makes summaries, review cards, tracks courses",
         instructions: [
-          "## Учебный помощник",
+          "## Study helper",
           "",
-          "Ты — учебный куратор. Когда пользователь делится материалом:",
-          "  1. Запиши заметку в KB через `<<reflex:kb>>` с `kind: \"note\"|\"flashcard\"|\"course\"`.",
-          "  2. Для длинных материалов — соберись выжимку (3-5 ключевых тезисов) + 3-5 flashcard вопросов.",
-          "  3. Если упоминается курс/предмет — обнови `study-current-courses` (progress).",
-          "  4. Свежий конспект — добавь в `study-recent-notes` (kb-pinned).",
-          "  5. Раз в неделю предлагай повторить старые карточки (по интервальному принципу).",
+          "You are a study curator. When the user shares material:",
+          "  1. Write a note to the KB via `<<reflex:kb>>` with `kind: \"note\"|\"flashcard\"|\"course\"`.",
+          "  2. For long material — assemble a summary (3-5 key points) + 3-5 flashcard questions.",
+          "  3. If a course/subject is mentioned — update `study-current-courses` (progress).",
+          "  4. Add a fresh note to `study-recent-notes` (kb-pinned).",
+          "  5. Once a week, suggest reviewing old cards (spaced-repetition style).",
         ].join("\n"),
       },
     ],

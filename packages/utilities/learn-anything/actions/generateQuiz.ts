@@ -28,16 +28,16 @@ export default async function generateQuiz(
 ): Promise<{ questions: QuizQuestion[] }> {
   const trimmed = (args.article ?? "").slice(0, 6000);
   const prompt = [
-    `Модуль: «${args.moduleTitle}» — ${args.moduleObjective}.`,
-    "Составь короткий тест-проверку из 5 вопросов с 4 вариантами ответа.",
-    "Правила:",
-    "  • Вопросы — на понимание, не на запоминание мелочей.",
-    "  • Только один правильный ответ; остальные правдоподобные.",
-    "  • Объяснение почему правильный — 1-2 фразы.",
-    "Верни ТОЛЬКО JSON одной строкой:",
+    `Module: "${args.moduleTitle}" — ${args.moduleObjective}.`,
+    "Compose a short knowledge-check quiz of 5 questions with 4 answer options each.",
+    "Rules:",
+    "  • Questions test understanding, not rote memorisation of trivia.",
+    "  • Exactly one correct answer; the others are plausible.",
+    "  • Explanation of why the answer is correct — 1-2 sentences.",
+    "Reply with JSON ONLY on a single line:",
     `  {"questions":[{"stem":"...","options":["a","b","c","d"],"correctIndex":0,"explanation":"..."}, ...]}`,
     "",
-    `## Материал модуля\n${trimmed}`,
+    `## Module material\n${trimmed}`,
   ].join("\n");
 
   const r = await reflex.llm.complete({ task: "quick", prompt });

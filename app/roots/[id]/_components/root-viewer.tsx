@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +27,7 @@ interface Props {
  * `?file=` URL param) and pins the CommandBar to the bottom of the column.
  */
 export function RootViewer({ files, rootId, rootPath, initialFile }: Props) {
+  const t = useTranslations("roots");
   const filesByRel = (() => {
     const m = new Map<string, KbFileShallow>();
     for (const f of files) m.set(f.rel, f);
@@ -48,7 +50,7 @@ export function RootViewer({ files, rootId, rootPath, initialFile }: Props) {
   // the summary as conversational context.
   const sendSummaryToChat = (text: string, url: string) => {
     void (async () => {
-      const message = `Контекст — выжимка YouTube-видео (${url}), сделанная Gemini:\n\n${text}\n\nДавай продолжим работу с этим материалом.`;
+      const message = t("kb.summaryContext", { url, text });
       const res = await startTopicAction(rootId, message);
       if (!res.ok) {
         toast.error(res.error);
@@ -103,7 +105,7 @@ export function RootViewer({ files, rootId, rootPath, initialFile }: Props) {
             )
           ) : (
             <p className="text-muted-foreground">
-              Выбери файл в боковой панели слева.
+              {t("kb.selectFileHint")}
             </p>
           )}
           <div className="mt-10 text-[11px] text-muted-foreground font-mono truncate">
@@ -148,28 +150,29 @@ function MetaHeader({ meta, filename }: { meta: KbFileMeta; filename: string }) 
 }
 
 /**
- * Renders a "создано X" pill when the KB file's frontmatter carries a
+ * Renders a "created by X" pill when the KB file's frontmatter carries a
  * `createdBy` tag in the form `<kind>:<id>[@<version>]`. Utilities get a
  * clickable deep-link to their detail page; other origins (workflow,
  * agent, ...) get a passive label.
  */
 function ProvenanceBadge({ createdBy }: { createdBy?: unknown }) {
+  const t = useTranslations("roots");
   if (typeof createdBy !== "string" || !createdBy) return null;
   const [origin, rest] = createdBy.split(":", 2);
   if (!origin || !rest) return null;
   const [id, version] = rest.split("@", 2);
   const label =
     origin === "utility"
-      ? "мини-приложение"
+      ? t("kb.createdMiniApp")
       : origin === "workflow"
-        ? "рецепт"
+        ? t("kb.createdWorkflow")
         : origin === "agent"
-          ? "агент"
+          ? t("kb.createdAgent")
           : origin;
   const inner = (
     <span className="inline-flex items-center gap-1 rounded-full border bg-violet-50 dark:bg-violet-950/30 px-2 py-0.5 text-[10px] text-violet-700 dark:text-violet-300">
       <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-        создано
+        {t("kb.createdLabel")}
       </span>
       <span>{label}</span>
       <code className="font-mono">{id}</code>
@@ -183,7 +186,7 @@ function ProvenanceBadge({ createdBy }: { createdBy?: unknown }) {
       <a
         href={`/utilities/project/${encodeURIComponent(id)}`}
         className="inline-block hover:opacity-80"
-        title="Открыть мини-приложение"
+        title={t("kb.openMiniApp")}
       >
         {inner}
       </a>

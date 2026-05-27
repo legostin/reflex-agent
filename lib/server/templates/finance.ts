@@ -1,59 +1,59 @@
 import type { SpaceTemplate } from "./registry";
 
 /**
- * "Финансы" — personal money tracking starter. KPI tile for monthly
+ * "Finance" — personal money tracking starter. KPI tile for monthly
  * spend + budget, checklist for monthly money habits, progress bars for
- * savings goals. The dedicated skill teaches the agent to log every "я
- * купил X за Y" as a structured KB entry and update the KPI widget.
+ * savings goals. The dedicated skill teaches the agent to log every "I
+ * bought X for Y" as a structured KB entry and update the KPI widget.
  */
 export const financeTemplate: SpaceTemplate = {
   id: "finance",
-  label: "Финансы",
+  label: "Finance",
   emoji: "💰",
   description:
-    "Учёт расходов и доходов, бюджет на месяц, цели накоплений. Скажи «купил Х за Y» — Reflex сам разнесёт по карточкам.",
-  defaultFolder: "Финансы",
+    "Track expenses and income, monthly budget, savings goals. Say \"bought X for Y\" and Reflex sorts it into the cards.",
+  defaultFolder: "Finance",
   build: () => ({
     widgets: [
       {
         id: "finance-month-kpi",
-        title: "Этот месяц",
-        description: "Доходы, расходы, остаток бюджета",
+        title: "This month",
+        description: "Income, expenses, remaining budget",
         payload: {
           kind: "kpi",
           data: {
             items: [
-              { label: "Расходы", value: "0 ₽", delta: "flat" },
-              { label: "Доходы", value: "0 ₽", delta: "flat" },
-              { label: "Остаток бюджета", value: "0 ₽", hint: "из месячного" },
+              { label: "Expenses", value: "0 ₽", delta: "flat" },
+              { label: "Income", value: "0 ₽", delta: "flat" },
+              { label: "Budget remaining", value: "0 ₽", hint: "of the monthly" },
             ],
           },
         },
       },
       {
         id: "finance-savings-goals",
-        title: "Цели накоплений",
-        description: "Куда копим",
+        title: "Savings goals",
+        description: "What we're saving for",
         payload: {
           kind: "progress",
           data: {
             items: [
-              { label: "Подушка безопасности", current: 0, target: 100000, unit: "₽" },
+              { label: "Emergency fund", current: 0, target: 100000, unit: "₽" },
             ],
           },
         },
       },
       {
         id: "finance-habits",
-        title: "Финансовые привычки",
-        description: "Ежемесячные привычки — отмечай по мере выполнения",
+        title: "Financial habits",
+        description: "Monthly habits — tick them off as you complete them",
         payload: {
           kind: "checklist",
           data: {
             items: [
-              { text: "Свериться с бюджетом", done: false },
-              { text: "Записать крупные расходы", done: false },
-              { text: "Откладывать в копилку", done: false },
+              { text: "Review the budget", done: false },
+              { text: "Log major expenses", done: false },
+              { text: "Move money to savings", done: false },
             ],
           },
         },
@@ -62,25 +62,25 @@ export const financeTemplate: SpaceTemplate = {
     topics: [
       {
         message:
-          "Привет! Я помогу вести финансы. Пиши о любой покупке, доходе или цели — я положу в нужную карточку. Например: «купил продукты за 1200» или «зарплата 80000».",
+          "Hi! I'll help you manage finances. Tell me about any purchase, income, or goal — I'll put it in the right card. For example: \"bought groceries for 1200\" or \"salary 80000\".",
       },
     ],
     skills: [
       {
         id: "finance-helper",
-        title: "Финансовый помощник",
-        description: "Раскладывает покупки и доходы в KPI/Progress карточки",
+        title: "Finance helper",
+        description: "Sorts purchases and income into KPI/Progress cards",
         instructions: [
-          "## Финансовый помощник",
+          "## Finance helper",
           "",
-          "Ты — помощник по личным финансам. Когда пользователь пишет про деньги:",
-          "  1. Распознай тип: расход / доход / цель.",
-          "  2. Сохрани факт в KB через `<<reflex:kb>>` с `kind: \"expense\"|\"income\"|\"goal\"` и `meta.amount`, `meta.currency`, `meta.category`, `meta.date`.",
-          "  3. Обнови соответствующую карточку через `<<reflex:widget-update>>`:",
-          "     - `finance-month-kpi`: пересчитай расходы/доходы за текущий месяц из KB.",
-          "     - `finance-savings-goals`: продвинь прогресс по соответствующей цели.",
-          "  4. В чате — короткое подтверждение: «Записал расход 1200 ₽ — продукты». Без лишнего.",
-          "  5. Если категория неоднозначна (например «1500») — спроси через `<<reflex:question>>`.",
+          "You are a personal finance assistant. When the user writes about money:",
+          "  1. Recognize the type: expense / income / goal.",
+          "  2. Save the fact to the KB via `<<reflex:kb>>` with `kind: \"expense\"|\"income\"|\"goal\"` and `meta.amount`, `meta.currency`, `meta.category`, `meta.date`.",
+          "  3. Update the corresponding card via `<<reflex:widget-update>>`:",
+          "     - `finance-month-kpi`: recompute expenses/income for the current month from the KB.",
+          "     - `finance-savings-goals`: advance progress on the matching goal.",
+          "  4. In chat — a short confirmation: \"Logged expense 1200 ₽ — groceries\". Nothing extra.",
+          "  5. If the category is ambiguous (e.g. just \"1500\") — ask via `<<reflex:question>>`.",
         ].join("\n"),
       },
     ],

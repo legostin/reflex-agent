@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Boxes, FolderPlus, Github, Shield, Trash2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,10 +17,11 @@ import { loadSettings } from "@/lib/settings/store";
 export const dynamic = "force-dynamic";
 
 export default async function UtilitiesPage() {
-  const [utilities, settings, roots] = await Promise.all([
+  const [utilities, settings, roots, t] = await Promise.all([
     listUtilities({}),
     loadSettings(),
     listRoots(),
+    getTranslations("app"),
   ]);
   const globals = utilities.filter((u) => u.scope === "global");
   const projects = utilities.filter((u) => u.scope === "project");
@@ -33,10 +35,9 @@ export default async function UtilitiesPage() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
       <header className="mb-8 flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Мини-приложения</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("utilities.title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Готовый каталог + кастомные. Все запросы наружу идут через Reflex
-            и логируются в аудит.
+            {t("utilities.subtitle")}
           </p>
         </div>
         {advanced && (
@@ -49,25 +50,32 @@ export default async function UtilitiesPage() {
       </header>
 
       <section className="mb-8 space-y-2">
-        <h2 className="text-lg font-semibold tracking-tight">Каталог</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{t("utilities.catalogTitle")}</h2>
         <p className="text-xs text-muted-foreground">
-          Кураторская подборка. Жми «Установить» — Reflex скачает и проверит
-          разрешения автоматически.
+          {t("utilities.catalogSubtitle")}
         </p>
         <CuratedGallery installedIds={installedIds} spaces={spaces} />
       </section>
 
       <Separator className="my-6" />
 
-      <Section title="Установленные" hint={`${utilities.length} штук`} utilities={[...projects, ...globals]} />
+      <Section
+        title={t("utilities.installedTitle")}
+        hint={t("utilities.installedHint", { count: utilities.length })}
+        utilities={[...projects, ...globals]}
+      />
       {advanced && (
         <>
           <Separator className="my-8" />
-          <Section title="Глобальные" hint="~/.reflex/utilities/" utilities={globals} />
+          <Section
+            title={t("utilities.globalTitle")}
+            hint={t("utilities.globalHint")}
+            utilities={globals}
+          />
           <Separator className="my-8" />
           <Section
-            title="Проектные"
-            hint="<root>/.reflex/utilities/ — видны только в своём проекте"
+            title={t("utilities.projectTitle")}
+            hint={t("utilities.projectHint")}
             utilities={projects}
           />
         </>
@@ -76,7 +84,7 @@ export default async function UtilitiesPage() {
   );
 }
 
-function Section({
+async function Section({
   title,
   hint,
   utilities,
@@ -85,6 +93,7 @@ function Section({
   hint: string;
   utilities: Awaited<ReturnType<typeof listUtilities>>;
 }) {
+  const t = await getTranslations("app");
   return (
     <section className="space-y-3">
       <div>
@@ -94,7 +103,7 @@ function Section({
       {utilities.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Пока пусто. Попроси агента сделать утилиту или установи готовую из GitHub.
+            {t("utilities.empty")}
           </CardContent>
         </Card>
       ) : (
@@ -110,7 +119,7 @@ function Section({
                   </Badge>
                 </CardTitle>
                 <CardDescription className="line-clamp-2">
-                  {u.manifest.description || "нет описания"}
+                  {u.manifest.description || t("utilities.noDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-2 text-xs">
@@ -124,7 +133,7 @@ function Section({
                   <Badge variant="secondary">MCP</Badge>
                 )}
                 {u.manifest.source?.type === "agent" && (
-                  <Badge variant="outline">создано агентом</Badge>
+                  <Badge variant="outline">{t("utilities.createdByAgent")}</Badge>
                 )}
                 {!u.bundleAvailable && (
                   <Badge variant="destructive" className="gap-1">
@@ -139,7 +148,7 @@ function Section({
                 <div className="ml-auto flex gap-1">
                   <Button asChild size="sm" variant="default">
                     <Link href={`/utilities/${u.scope}/${u.manifest.id}${u.rootId ? `?rootId=${u.rootId}` : ""}`}>
-                      Открыть
+                      {t("utilities.openButton")}
                     </Link>
                   </Button>
                   <RemoveUtilityButton

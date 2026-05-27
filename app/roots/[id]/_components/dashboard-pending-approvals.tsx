@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   HelpCircle,
@@ -23,12 +24,13 @@ interface Props {
  * full approval UI lives.
  */
 export function DashboardPendingApprovals({ rootId, items }: Props) {
+  const t = useTranslations("roots");
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
-          Ждут реакции
+          {t("pendingApprovals.title")}
         </CardTitle>
         {items.length > 0 && (
           <Badge variant="secondary" className="text-[10px]">
@@ -39,7 +41,7 @@ export function DashboardPendingApprovals({ rootId, items }: Props) {
       <CardContent className="space-y-2">
         {items.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            Ничего не висит — все вопросы и одобрения отвечены.
+            {t("pendingApprovals.empty")}
           </p>
         )}
         {items.map((it) => (
@@ -65,7 +67,7 @@ export function DashboardPendingApprovals({ rootId, items }: Props) {
                   </p>
                 )}
                 <div className="text-[10px] text-muted-foreground mt-1">
-                  topic {it.topicId.slice(0, 12)} · {formatRel(it.ts)}
+                  topic {it.topicId.slice(0, 12)} · {formatRel(it.ts, t)}
                 </div>
               </div>
             </div>
@@ -90,14 +92,17 @@ function labelKind(k: PendingInteraction["kind"]): string {
   return "mcp-add";
 }
 
-function formatRel(iso: string): string {
+function formatRel(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "только что";
+  if (!Number.isFinite(ms) || ms < 0) return t("pendingApprovals.justNow");
   const min = Math.floor(ms / 60_000);
-  if (min < 1) return "только что";
-  if (min < 60) return `${min} мин назад`;
+  if (min < 1) return t("pendingApprovals.justNow");
+  if (min < 60) return t("pendingApprovals.minutesAgo", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} ч назад`;
+  if (hr < 24) return t("pendingApprovals.hoursAgo", { count: hr });
   const d = Math.floor(hr / 24);
-  return `${d} дн назад`;
+  return t("pendingApprovals.daysAgo", { count: d });
 }

@@ -239,14 +239,14 @@ export async function refreshWidgetNowAction(
       return {
         ok: false,
         error:
-          "У виджета нет исходного топика — обнови его сначала из любого чата.",
+          "Widget has no source topic — update it from any chat first.",
       };
     }
     if (agentManager.isActive(w.sourceTopicId)) {
       return {
         ok: false,
         error:
-          "Исходный топик уже занят агентом — дождись завершения текущего turn'а.",
+          "The source topic is already occupied by an agent — wait for the current turn to finish.",
       };
     }
     // Stamp BEFORE firing — scheduler invariant.
@@ -284,7 +284,7 @@ export async function deleteWidgetAction(
     if ((SYSTEM_WIDGET_IDS as readonly string[]).includes(widgetId)) {
       return {
         ok: false,
-        error: "Системный виджет нельзя удалить — только скрыть.",
+        error: "System widget cannot be deleted — only hidden.",
       };
     }
     const entry = await getRoot(rootId);

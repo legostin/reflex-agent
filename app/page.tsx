@@ -10,6 +10,7 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { loadSettings } from "@/lib/settings/store";
 import { loadGlobalSnapshotAction } from "@/lib/server/global-actions";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,8 @@ export default async function HomePage() {
     redirect("/onboarding");
   }
   const snapshot = await loadGlobalSnapshotAction();
-  const greeting = greetingFor(settings.userName, settings.timezone);
+  const t = await getTranslations("app");
+  const greeting = greetingFor(settings.userName, settings.timezone, t);
   const totalPending = snapshot.pending.length;
   const totalGoals = snapshot.activeGoals.length;
 
@@ -52,7 +54,7 @@ export default async function HomePage() {
                   {settings.userName ? `, ${settings.userName}` : ""}
                 </h1>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  {summaryLine(snapshot.spaces.length, totalPending, totalGoals)}
+                  {summaryLine(snapshot.spaces.length, totalPending, totalGoals, t)}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -64,7 +66,7 @@ export default async function HomePage() {
                 <Button asChild variant="default" size="sm">
                   <Link href="/roots/new">
                     <FolderPlus className="mr-1 h-3.5 w-3.5" />
-                    Пространство
+                    {t("home.spaceCta")}
                   </Link>
                 </Button>
               </div>
@@ -73,16 +75,16 @@ export default async function HomePage() {
 
           {/* Pending (always show even when empty so user knows it exists) */}
           <Section
-            title="Ждут реакции"
+            title={t("home.pendingTitle")}
             subtitle={
               totalPending === 0
-                ? "Никаких висящих карточек — всё разобрано."
-                : `${totalPending} карточек требуют ответа`
+                ? t("home.pendingEmptySubtitle")
+                : t("home.pendingSubtitle", { count: totalPending })
             }
           >
             {snapshot.pending.length === 0 ? (
               <EmptyHint icon={<CheckCircle2 className="h-4 w-4" />}>
-                Всё чисто
+                {t("home.allClear")}
               </EmptyHint>
             ) : (
               <ul className="space-y-1.5">
@@ -111,7 +113,7 @@ export default async function HomePage() {
 
           {/* Active goals */}
           {snapshot.activeGoals.length > 0 && (
-            <Section title="Активные цели" subtitle="Над чем сейчас идёт работа">
+            <Section title={t("home.activeGoalsTitle")} subtitle={t("home.activeGoalsSubtitle")}>
               <ul className="space-y-1.5">
                 {snapshot.activeGoals.slice(0, 6).map((g) => (
                   <li key={`${g.rootId}-${g.topicId}`}>
@@ -123,7 +125,7 @@ export default async function HomePage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm truncate">{g.goal}</div>
                         <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          {g.spaceLabel} · {g.goalIterations} итераций ·{" "}
+                          {g.spaceLabel} · {t("home.iterations", { count: g.goalIterations })} ·{" "}
                           {relTime(g.updatedAt)}
                           {g.running && (
                             <Loader2 className="h-3 w-3 animate-spin text-violet-600 ml-1" />
@@ -139,7 +141,7 @@ export default async function HomePage() {
 
           {/* Recent KB across all Spaces */}
           {snapshot.recentKb.length > 0 && (
-            <Section title="Свежее в памяти" subtitle="Что недавно записалось">
+            <Section title={t("home.recentKbTitle")} subtitle={t("home.recentKbSubtitle")}>
               <ul className="space-y-1">
                 {snapshot.recentKb.slice(0, 6).map((kb) => (
                   <li key={`${kb.rootId}-${kb.rel}`}>
@@ -167,18 +169,18 @@ export default async function HomePage() {
 
           {/* Spaces grid */}
           <Section
-            title="Твои пространства"
-            subtitle={`${snapshot.spaces.length} · добавь ещё /onboarding`}
+            title={t("home.spacesTitle")}
+            subtitle={t("home.spacesSubtitle", { count: snapshot.spaces.length })}
           >
             {snapshot.spaces.length === 0 ? (
               <EmptyHint icon={<FolderPlus className="h-4 w-4" />}>
-                Пока ни одного.{" "}
+                {t("home.noSpaces")}{" "}
                 <Link href="/onboarding?force=1" className="underline">
-                  Запустить мастер
+                  {t("home.runWizard")}
                 </Link>{" "}
-                или{" "}
+                {t("home.or")}{" "}
                 <Link href="/roots/new" className="underline">
-                  добавить вручную
+                  {t("home.addManually")}
                 </Link>
                 .
               </EmptyHint>
@@ -201,11 +203,11 @@ export default async function HomePage() {
                       )}
                     </div>
                     <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground flex-wrap">
-                      <span>{s.kbFileCount} заметок</span>
+                      <span>{t("home.notes", { count: s.kbFileCount })}</span>
                       {s.activeGoalsCount > 0 && (
                         <>
                           <span>·</span>
-                          <span>{s.activeGoalsCount} целей</span>
+                          <span>{t("home.goalsCount", { count: s.activeGoalsCount })}</span>
                         </>
                       )}
                       {s.lastKbActivityAt && (
@@ -267,7 +269,11 @@ function EmptyHint({
   );
 }
 
-function greetingFor(name: string, timezone: string): string {
+function greetingFor(
+  _name: string,
+  timezone: string,
+  t: (key: string) => string,
+): string {
   let hour = new Date().getHours();
   if (timezone) {
     try {
@@ -282,23 +288,28 @@ function greetingFor(name: string, timezone: string): string {
       /* fall back to server-local */
     }
   }
-  if (hour < 5) return "Доброй ночи";
-  if (hour < 12) return "Доброе утро";
-  if (hour < 18) return "Добрый день";
-  return "Добрый вечер";
+  if (hour < 5) return t("home.greetingNight");
+  if (hour < 12) return t("home.greetingMorning");
+  if (hour < 18) return t("home.greetingDay");
+  return t("home.greetingEvening");
 }
 
 function summaryLine(
   spaces: number,
   pending: number,
   goals: number,
+  t: (key: string, values?: Record<string, string | number>) => string,
 ): string {
   const bits: string[] = [];
-  bits.push(spaces === 0 ? "Пока ни одного пространства" : `${spaces} пространств${spaces === 1 ? "о" : ""}`);
-  if (pending > 0) bits.push(`${pending} ждёт реакции`);
-  if (goals > 0) bits.push(`${goals} целей в работе`);
+  bits.push(
+    spaces === 0
+      ? t("home.noSpacesYet")
+      : t("home.summarySpaces", { count: spaces }),
+  );
+  if (pending > 0) bits.push(t("home.summaryPending", { count: pending }));
+  if (goals > 0) bits.push(t("home.summaryGoals", { count: goals }));
   if (pending === 0 && goals === 0 && spaces > 0) {
-    bits.push("ничего срочного");
+    bits.push(t("home.summaryNothingUrgent"));
   }
   return bits.join(" · ");
 }

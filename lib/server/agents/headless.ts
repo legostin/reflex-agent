@@ -105,7 +105,7 @@ export async function runHeadlessAgent(
 
     // Surface explicit failures: if the agent only emitted error/system
     // events and no assistant text, the caller deserves to see why
-    // instead of "(пусто)".
+    // instead of "(empty)".
     if (!text) {
       const errors = events
         .filter(
@@ -116,7 +116,7 @@ export async function runHeadlessAgent(
         .filter(Boolean);
       if (errors.length > 0) {
         throw new Error(
-          `Агент завершился с ошибкой: ${errors.slice(0, 3).join(" · ")}`,
+          `Agent finished with errors: ${errors.slice(0, 3).join(" · ")}`,
         );
       }
       // Fallback: hand back the most recent `system` text if there's no
@@ -138,11 +138,11 @@ export async function runHeadlessAgent(
       }
       if (timedOut) {
         throw new Error(
-          `Агент не ответил за ${Math.round((args.timeoutMs ?? 300_000) / 1000)}с (timeout)`,
+          `Agent did not respond within ${Math.round((args.timeoutMs ?? 300_000) / 1000)}s (timeout)`,
         );
       }
       throw new Error(
-        "Агент завершил работу не оставив текстового ответа — возможно, не настроен chat-движок в Settings.",
+        "Agent finished without producing any text — perhaps no chat engine is configured in Settings.",
       );
     }
     return { text, topicId: topic.meta.id, timedOut };

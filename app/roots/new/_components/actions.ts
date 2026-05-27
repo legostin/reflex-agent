@@ -2,6 +2,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { getTranslations } from "next-intl/server";
 import { listDirectory, type DirListing } from "@/lib/server/fs";
 
 export type BrowseResult =
@@ -33,12 +34,13 @@ export async function createDirectoryAction(
   parent: string,
   name: string,
 ): Promise<CreateDirectoryResult> {
+  const t = await getTranslations("roots");
   try {
     if (!parent || !name) {
-      return { ok: false, error: "Не указан родитель или имя" };
+      return { ok: false, error: t("picker.missingParentOrName") };
     }
     const trimmed = name.trim();
-    if (!trimmed) return { ok: false, error: "Пустое имя" };
+    if (!trimmed) return { ok: false, error: t("picker.emptyName") };
     if (
       trimmed === "." ||
       trimmed === ".." ||
@@ -46,17 +48,17 @@ export async function createDirectoryAction(
       trimmed.includes("\\") ||
       trimmed.includes("\0")
     ) {
-      return { ok: false, error: "Недопустимое имя папки" };
+      return { ok: false, error: t("picker.invalidFolderName") };
     }
     const absParent = path.resolve(parent);
     const parentStat = await fs.stat(absParent).catch(() => null);
     if (!parentStat || !parentStat.isDirectory()) {
-      return { ok: false, error: "Родительский путь не является каталогом" };
+      return { ok: false, error: t("picker.parentNotDirectory") };
     }
     const target = path.join(absParent, trimmed);
     const rel = path.relative(absParent, target);
     if (rel.startsWith("..") || path.isAbsolute(rel)) {
-      return { ok: false, error: "Недопустимый путь" };
+      return { ok: false, error: t("picker.invalidPath") };
     }
     try {
       await fs.mkdir(target, { recursive: false });
@@ -69,7 +71,7 @@ export async function createDirectoryAction(
       ) {
         return {
           ok: false,
-          error: "Папка с таким именем уже существует",
+          error: t("picker.folderExists"),
         };
       }
       throw err;

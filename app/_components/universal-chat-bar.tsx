@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   generateTopicTitleAction,
   startTopicAction,
@@ -35,6 +36,7 @@ interface Props {
  */
 export function UniversalChatBar({ spaces }: Props) {
   const router = useRouter();
+  const t = useTranslations("app");
   const [selectedSpaceId, setSelectedSpaceId] = useState<string>(
     spaces[0]?.id ?? "",
   );
@@ -57,13 +59,13 @@ export function UniversalChatBar({ spaces }: Props) {
     return (
       <div className="border-t bg-background">
         <div className="mx-auto max-w-3xl px-6 py-5 text-center text-xs text-muted-foreground">
-          Создай первое пространство, чтобы начать разговор —{" "}
+          {t("universal.createFirstSpace1")}{" "}
           <a href="/onboarding?force=1" className="underline">
-            мастер
+            {t("universal.wizardLink")}
           </a>{" "}
-          или{" "}
+          {t("universal.or")}{" "}
           <a href="/roots/new" className="underline">
-            вручную
+            {t("universal.manualLink")}
           </a>
           .
         </div>
@@ -78,9 +80,9 @@ export function UniversalChatBar({ spaces }: Props) {
           type="button"
           onClick={() => setPickerOpen((v) => !v)}
           className="inline-flex items-center gap-1 rounded-full border bg-card/80 px-2 py-0.5 text-[10px] font-medium hover:bg-accent normal-case tracking-normal"
-          title="Выбрать пространство"
+          title={t("universal.pickSpace")}
         >
-          <span className="text-muted-foreground">в</span>
+          <span className="text-muted-foreground">{t("universal.in")}</span>
           <span>{activeSpace.label}</span>
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </button>
@@ -140,7 +142,7 @@ export function UniversalChatBar({ spaces }: Props) {
 
   return (
     <CommandBarFrame
-      label="Спроси Reflex"
+      label={t("universal.label")}
       {...(picker ? { headerRight: picker } : {})}
     >
       {/* Same component as the per-topic chat. Re-key on Space change so
@@ -148,9 +150,9 @@ export function UniversalChatBar({ spaces }: Props) {
       <ChatInputForm
         key={activeSpace.id}
         rootId={activeSpace.id}
-        placeholder="Задай вопрос или дай команду…"
-        submitLabel="Начать"
-        pendingLabel="Старт"
+        placeholder={t("universal.placeholder")}
+        submitLabel={t("universal.submitLabel")}
+        pendingLabel={t("universal.pendingLabel")}
         SubmitIcon={Send}
         onSubmit={handleSubmit}
       />

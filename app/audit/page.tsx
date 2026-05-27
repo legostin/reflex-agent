@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Activity, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +20,7 @@ export default async function AuditPage({
     filter: utility ? { utilityId: utility } : undefined,
     limit: 500,
   });
+  const t = await getTranslations("app");
 
   // Pair start/end by correlationId to render unified rows.
   type Row = {
@@ -72,11 +74,12 @@ export default async function AuditPage({
             </Link>
           </Button>
           <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-2">
-            <Activity className="h-7 w-7 text-muted-foreground" /> Аудит
+            <Activity className="h-7 w-7 text-muted-foreground" /> {t("audit.title")}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Все вызовы Host API от утилит. Лог в{" "}
-            <code className="font-mono">~/.reflex/audit/&lt;date&gt;.jsonl</code>.
+            {t("audit.description.before")}
+            <code className="font-mono">~/.reflex/audit/&lt;date&gt;.jsonl</code>
+            {t("audit.description.after")}
           </p>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -96,12 +99,12 @@ export default async function AuditPage({
 
       {utility && (
         <div className="mb-4 text-xs">
-          Фильтр: utility = <span className="font-mono">{utility}</span> ·{" "}
+          {t("audit.filterPrefix")} utility = <span className="font-mono">{utility}</span> ·{" "}
           <Link
             href={`/audit?date=${activeDate}`}
             className="underline-offset-2 hover:underline"
           >
-            снять
+            {t("audit.clearFilter")}
           </Link>
         </div>
       )}
@@ -109,7 +112,7 @@ export default async function AuditPage({
       {rows.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            В этот день не было вызовов утилит.
+            {t("audit.empty")}
           </CardContent>
         </Card>
       ) : (

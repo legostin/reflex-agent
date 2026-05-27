@@ -1,0 +1,71 @@
+{
+  "header": {
+    "welcome": "Welcome to Reflex",
+    "stepCounter": "Step {current} of {total} · {title}"
+  },
+  "stepTitles": {
+    "0": "Hello",
+    "1": "AI engine",
+    "2": "What matters to you",
+    "3": "Done"
+  },
+  "step0": {
+    "title": "What's your name?",
+    "description": "Reflex will call you by name — on the dashboard, in morning greetings, and in reminders.",
+    "nameLabel": "Name",
+    "namePlaceholder": "For example, Lyuda",
+    "languageLabel": "Conversation language",
+    "languageRu": "Russian",
+    "languageEn": "English",
+    "languageEs": "Spanish",
+    "languageDe": "German",
+    "languageFr": "French",
+    "timezoneDetected": "Detected timezone:"
+  },
+  "step1": {
+    "title": "Which engine should we use",
+    "description": "Reflex uses one of three neural networks. Pick the one you prefer — you can change it later in settings.",
+    "checking": "Checking what you have installed…",
+    "claudeTitle": "Claude (smart)",
+    "claudeDescription": "Best at understanding context and writing text. Works via the Claude Code CLI.",
+    "claudeReady": "ready",
+    "claudeMissing": "Not found — install the Claude Code CLI and sign in",
+    "codexTitle": "Codex (fast GPT)",
+    "codexDescription": "OpenAI Codex CLI with GPT-5. Faster than Claude, requires an OpenAI subscription.",
+    "codexReady": "ready",
+    "codexMissing": "Not found — install the Codex CLI and log in via OpenAI",
+    "ollamaTitle": "Ollama (local, free)",
+    "ollamaDescription": "Fully local model. Free, private, slower.",
+    "ollamaModels": "{count} models available",
+    "ollamaMissing": "Not responding on localhost:11434 — start Ollama",
+    "installLink": "how to install →"
+  },
+  "step2": {
+    "title": "What matters to you right now",
+    "description": "Choose the areas of life Reflex will help with. For each one it will create a separate space with ready-made cards and conversations. You can add more at any time.",
+    "folderHint": "Spaces are created in the ~/Reflex/ folder — you can move them later."
+  },
+  "step3": {
+    "title": "Ready to start?",
+    "description": "Reflex will create for you:",
+    "profileLabel": "Profile:",
+    "engineLabel": "Engine:",
+    "spacesLabel": "Spaces:",
+    "engineClaude": "Claude",
+    "engineCodex": "Codex (GPT-5)",
+    "engineOllama": "Ollama",
+    "empty": "—",
+    "footer": "After clicking \"Start\", the main screen will open. All settings can be changed later."
+  },
+  "nav": {
+    "back": "Back",
+    "next": "Next",
+    "start": "Start"
+  },
+  "errors": {
+    "generic": "Something went wrong"
+  },
+  "success": {
+    "created": "Created: {spaces} spaces, {widgets} cards."
+  }
+}

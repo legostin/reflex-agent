@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { Loader2, LogIn } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { submitSharePasswordAction } from "../actions";
 
 /**
@@ -16,6 +17,7 @@ export function ShareAuthForm({
   shareId: string;
   error?: string;
 }) {
+  const t = useTranslations("app");
   const [pending, startSubmit] = useTransition();
   return (
     <form
@@ -30,7 +32,7 @@ export function ShareAuthForm({
       className="space-y-2"
     >
       <label className="block text-xs text-muted-foreground" htmlFor={`pw-${shareId}`}>
-        Введите пароль
+        {t("share.auth.passwordLabel")}
       </label>
       <input
         id={`pw-${shareId}`}
@@ -41,7 +43,7 @@ export function ShareAuthForm({
         placeholder="••••••••"
       />
       {error === "bad" && (
-        <p className="text-xs text-destructive">Неверный пароль.</p>
+        <p className="text-xs text-destructive">{t("share.auth.badPassword")}</p>
       )}
       <button
         type="submit"
@@ -53,7 +55,7 @@ export function ShareAuthForm({
         ) : (
           <LogIn className="h-3.5 w-3.5" />
         )}
-        Открыть
+        {t("share.auth.open")}
       </button>
     </form>
   );

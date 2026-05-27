@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ExternalLink, Sparkles } from "lucide-react";
 import type { UtilityCardData } from "@/lib/server/widgets/types";
 import { renderWidget } from "../registry";
@@ -9,7 +10,7 @@ import { renderWidget } from "../registry";
  * Dashboard preview for an installed utility. Wraps a child widget kind
  * (KPI / markdown / progress / etc.) declared in the utility's
  * `manifest.card`, framing it with the utility name + a deep-link to the
- * full utility page. Read-only — the user clicks "Открыть" to interact.
+ * full utility page. Read-only — the user clicks "Open" to interact.
  *
  * Refresh: utilities push fresh data via `reflex.cards.update({snapshot})`
  * from inside their own iframe / server-action. The wrapper just renders
@@ -25,6 +26,7 @@ export function UtilityCardWidget({
   readonly?: boolean;
   onPatch?: (next: UtilityCardData) => void | Promise<void>;
 }) {
+  const t = useTranslations("roots");
   const utilityUrl =
     data.utilityScope === "project"
       ? `/utilities/project/${data.utilityId}?rootId=${encodeURIComponent(rootId)}`
@@ -33,16 +35,16 @@ export function UtilityCardWidget({
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
         <Sparkles className="h-3 w-3 text-violet-600" />
-        <span>Мини-приложение</span>
+        <span>{t("utilityCardWidget.miniAppLabel")}</span>
         <span className="font-mono normal-case tracking-normal text-muted-foreground/80">
           {data.utilityId}
         </span>
         <Link
           href={utilityUrl}
           className="ml-auto inline-flex items-center gap-0.5 text-[10px] text-violet-700 hover:underline normal-case tracking-normal"
-          title="Открыть полную версию"
+          title={t("utilityCardWidget.openFullTitle")}
         >
-          Открыть
+          {t("utilityCardWidget.openLabel")}
           <ExternalLink className="h-2.5 w-2.5" />
         </Link>
       </div>

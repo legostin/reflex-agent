@@ -90,31 +90,31 @@ export interface WorkflowKindMeta {
 export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
   {
     kind: "text-template",
-    label: "Шаблон текста",
+    label: "Text template",
     description:
-      "Собирает текст из шаблона с подстановками из предыдущих шагов. Используй как «склейку» данных перед следующим шагом.",
+      "Assembles text from a template with substitutions from previous steps. Use as glue between steps before the next one.",
     defaultParams: { template: "Hello {{prev}}" },
     fields: [
       {
         key: "template",
-        label: "Шаблон",
+        label: "Template",
         type: "text",
-        hint: "Подстановки: {{prev}}, {{steps.<id>.output}}, {{input.<field>}}",
-        placeholder: "Сводка: {{prev}}",
+        hint: "Substitutions: {{prev}}, {{steps.<id>.output}}, {{input.<field>}}",
+        placeholder: "Summary: {{prev}}",
       },
     ],
   },
   {
     kind: "http-request",
-    label: "HTTP-запрос",
+    label: "HTTP request",
     description:
-      "Делает HTTP-запрос (GET по умолчанию). Тело ответа кладёт в output как строку или JSON, если application/json.",
+      "Makes an HTTP request (GET by default). Puts the response body into output as a string or JSON if application/json.",
     defaultParams: { url: "https://api.example.com/", method: "GET" },
     fields: [
       { key: "url", label: "URL", type: "url", placeholder: "https://…" },
       {
         key: "method",
-        label: "Метод",
+        label: "Method",
         type: "select",
         options: ["GET", "POST", "PUT", "PATCH", "DELETE"],
       },
@@ -122,16 +122,16 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
         key: "headers",
         label: "Headers (JSON)",
         type: "json",
-        hint: "Например: {\"Authorization\":\"Bearer …\"}",
+        hint: "Example: {\"Authorization\":\"Bearer …\"}",
       },
-      { key: "body", label: "Body", type: "text", hint: "Пусто для GET" },
+      { key: "body", label: "Body", type: "text", hint: "Leave empty for GET" },
     ],
   },
   {
     kind: "web-fetch",
-    label: "Скачать страницу",
+    label: "Fetch page",
     description:
-      "Запрашивает URL и возвращает текстовое содержимое. Удобно для парсинга страниц без боли HTTP-настроек.",
+      "Requests a URL and returns the textual content. Convenient for parsing pages without HTTP-config pain.",
     defaultParams: { url: "https://example.com" },
     fields: [
       { key: "url", label: "URL", type: "url", placeholder: "https://…" },
@@ -139,27 +139,27 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
   },
   {
     kind: "ask-agent",
-    label: "Спросить агента",
+    label: "Ask the agent",
     description:
-      "Запустить headless orchestrator-агента с указанным вопросом. Output — ответ агента (полный текст ассистента).",
-    defaultParams: { prompt: "Кратко суммаризируй: {{prev}}" },
+      "Runs a headless orchestrator agent with the given question. Output is the agent's reply (the full assistant text).",
+    defaultParams: { prompt: "Briefly summarize: {{prev}}" },
     fields: [
       {
         key: "prompt",
-        label: "Вопрос агенту",
+        label: "Question for the agent",
         type: "text",
-        placeholder: "Используй {{prev}} чтобы передать вход",
+        placeholder: "Use {{prev}} to pass the input",
       },
     ],
   },
   {
     kind: "kb-write",
-    label: "Записать в KB",
+    label: "Write to KB",
     description:
-      "Сохраняет в базу знаний как Markdown-файл с frontmatter (kind, title, body). Используй output предыдущего шага как `body`.",
+      "Saves to the knowledge base as a Markdown file with frontmatter (kind, title, body). Use the previous step's output as `body`.",
     defaultParams: {
       kind: "note",
-      title: "Из workflow {{workflow.label}}",
+      title: "From workflow {{workflow.label}}",
       body: "{{prev}}",
     },
     fields: [
@@ -180,9 +180,9 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
   },
   {
     kind: "utility-call",
-    label: "Вызвать мини-приложение",
+    label: "Call a mini-app",
     description:
-      "Запускает named server-action установленной утилиты с переданными args. Output = результат action. utility-call позволяет workflow'у пользоваться функциями мини-приложений как библиотекой.",
+      "Runs a named server action of an installed utility with the given args. Output = the action's result. utility-call lets the workflow use mini-app functions as a library.",
     defaultParams: {
       utilityId: "",
       utilityScope: "global",
@@ -192,7 +192,7 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
     fields: [
       {
         key: "utilityId",
-        label: "Утилита (id)",
+        label: "Utility (id)",
         type: "string",
         placeholder: "my-utility",
       },
@@ -204,50 +204,50 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
       },
       {
         key: "actionName",
-        label: "Действие",
+        label: "Action",
         type: "string",
-        placeholder: "имя из manifest.serverActions",
+        placeholder: "name from manifest.serverActions",
       },
       {
         key: "args",
-        label: "Аргументы (JSON)",
+        label: "Arguments (JSON)",
         type: "json",
-        hint: "Передаются как первый аргумент action. Подстановки {{prev}} работают внутри строк JSON.",
+        hint: "Passed as the first argument to the action. {{prev}} substitutions work inside JSON strings.",
       },
     ],
   },
   {
     kind: "image-generate",
-    label: "Сгенерировать картинку",
+    label: "Generate an image",
     description:
-      "Генерирует картинку через Gemini Nano Banana или Codex `$imagegen`. Output: {url, sha, mime, provider} — `url` можно вставить в kb-write body как `![]({{steps.<id>.output.url}})`.",
+      "Generates an image via Gemini Nano Banana or Codex `$imagegen`. Output: {url, sha, mime, provider} — `url` can be inserted into a kb-write body as `![]({{steps.<id>.output.url}})`.",
     defaultParams: {
-      prompt: "симпатичный енот в скафандре, акварель",
+      prompt: "cute raccoon in a spacesuit, watercolor",
       provider: "gemini",
       aspectRatio: "1:1",
     },
     fields: [
       {
         key: "prompt",
-        label: "Промпт",
+        label: "Prompt",
         type: "text",
-        placeholder: "Описание картинки",
+        placeholder: "Image description",
       },
       {
         key: "provider",
-        label: "Провайдер",
+        label: "Provider",
         type: "select",
         options: ["gemini", "codex"],
       },
       {
         key: "aspectRatio",
-        label: "Соотношение",
+        label: "Aspect ratio",
         type: "select",
         options: ["1:1", "16:9", "9:16", "4:3", "3:4", "21:9"],
       },
       {
         key: "size",
-        label: "Размер (опц.)",
+        label: "Size (opt.)",
         type: "string",
         placeholder: "1024x1024",
       },
@@ -255,9 +255,9 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
   },
   {
     kind: "image-search",
-    label: "Найти картинки в сети",
+    label: "Search images on the web",
     description:
-      "Ищет готовые изображения по запросу (Unsplash по умолчанию, Pexels как fallback). Output: {results: [{url, thumb, attribution}…]}.",
+      "Searches for ready-made images by query (Unsplash by default, Pexels as fallback). Output: {results: [{url, thumb, attribution}…]}.",
     defaultParams: {
       query: "mountains sunrise",
       provider: "unsplash",
@@ -266,19 +266,19 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
     fields: [
       {
         key: "query",
-        label: "Запрос",
+        label: "Query",
         type: "string",
         placeholder: "mountains sunrise",
       },
       {
         key: "provider",
-        label: "Провайдер",
+        label: "Provider",
         type: "select",
         options: ["unsplash", "pexels", "brave"],
       },
       {
         key: "count",
-        label: "Сколько результатов",
+        label: "Result count",
         type: "string",
         placeholder: "6",
       },

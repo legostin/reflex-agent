@@ -136,7 +136,7 @@ export async function generateTopicTitleAction(
 /**
  * Hard-delete a topic: stop any agent running on it, then unlink both the
  * `.md` and the `.events.jsonl`. Used by the sidebar trash button and the
- * chat-header "Удалить топик" action.
+ * chat-header "Delete topic" action.
  */
 export async function deleteTopicAction(
   rootId: string,
@@ -224,7 +224,7 @@ export async function loadHelperTranscriptAction(
           typeof e.text === "string" &&
           e.text.trim() &&
           // Skip the synthetic seed firstMessage we wrote when creating the topic.
-          !e.text.startsWith("[Помощник ·")
+          !e.text.startsWith("[Helper ·")
         ) {
           messages.push({ role: "user", text: e.text, ts: e.ts });
         }
@@ -303,7 +303,7 @@ export async function getOrCreateUtilityHelperTopicAction(args: {
     const assignment = settings.assignments.chat;
     const topic = await createTopic({
       root: entry.path,
-      firstMessage: `[Помощник · ${args.utilityName}]`,
+      firstMessage: `[Helper · ${args.utilityName}]`,
       harness: assignment.harness,
       model: assignment.model,
       language: settings.language,

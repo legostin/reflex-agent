@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Check, ExternalLink, Newspaper, X } from "lucide-react";
 import type { NewsListData } from "@/lib/server/widgets/types";
 
@@ -8,7 +9,7 @@ type Item = NewsListData["items"][number];
 
 /**
  * News digest. Two interactive affordances:
- *   - "прочитано" toggle (✓ icon, hover) → sets `read: true`. Row dims.
+ *   - "read" toggle (✓ icon, hover) → sets `read: true`. Row dims.
  *   - "dismiss" (× icon, hover) → permanently removes from items.
  * Both feed back into the widget data; the agent sees `read` flags in
  * memory and can dedupe on the next refresh.
@@ -23,6 +24,7 @@ export function NewsListWidget({
   readonly?: boolean;
   onPatch?: (next: NewsListData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   const initial = data.items ?? [];
   const [items, setItems] = useState<Item[]>(initial);
   const [pending, startSave] = useTransition();
@@ -60,7 +62,7 @@ export function NewsListWidget({
 
   if (items.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground">Список новостей пустой.</p>
+      <p className="text-xs text-muted-foreground">{t("newsListWidget.empty")}</p>
     );
   }
   return (
@@ -112,8 +114,16 @@ export function NewsListWidget({
                 type="button"
                 onClick={() => toggleRead(i)}
                 disabled={pending}
-                aria-label={it.read ? "Отметить непрочитанным" : "Отметить прочитанным"}
-                title={it.read ? "Отметить непрочитанным" : "Прочитано"}
+                aria-label={
+                  it.read
+                    ? t("newsListWidget.markUnreadAria")
+                    : t("newsListWidget.markReadAria")
+                }
+                title={
+                  it.read
+                    ? t("newsListWidget.markUnreadTitle")
+                    : t("newsListWidget.markReadTitle")
+                }
                 className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-950/40 text-muted-foreground hover:text-emerald-600 disabled:opacity-30"
               >
                 <Check className="h-3 w-3" />
@@ -122,8 +132,8 @@ export function NewsListWidget({
                 type="button"
                 onClick={() => dismiss(i)}
                 disabled={pending}
-                aria-label="Убрать новость"
-                title="Убрать"
+                aria-label={t("newsListWidget.dismissAria")}
+                title={t("newsListWidget.dismissTitle")}
                 className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive disabled:opacity-30"
               >
                 <X className="h-3 w-3" />

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Check, Eye, EyeOff, KeyRound, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ interface SlotState {
  * returns presence flags. Saving writes to ~/.reflex/secrets/... server-side.
  */
 export function SecretsSection({ scope, id, rootId, declared }: Props) {
+  const t = useTranslations("app");
   const [slots, setSlots] = useState<Record<string, SlotState>>(() => {
     const m: Record<string, SlotState> = {};
     for (const d of declared) m[d.key] = { set: false, draft: "", reveal: false };
@@ -77,7 +79,7 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
   const save = async (key: string) => {
     const slot = slots[key];
     if (!slot || !slot.draft) {
-      toast.error("Введи значение");
+      toast.error(t("utilities.secrets.enterValue"));
       return;
     }
     setBusy(key);
@@ -93,7 +95,7 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
         toast.error(res.error);
         return;
       }
-      toast.success(`${key} сохранён`);
+      toast.success(t("utilities.secrets.saved", { key }));
       setSlots((cur) => ({
         ...cur,
         [key]: { set: true, draft: "", reveal: false },
@@ -116,7 +118,7 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
         toast.error(res.error);
         return;
       }
-      toast.success(`${key} удалён`);
+      toast.success(t("utilities.secrets.deleted", { key }));
       setSlots((cur) => ({
         ...cur,
         [key]: { set: false, draft: "", reveal: false },
@@ -131,12 +133,12 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
   return (
     <div className="space-y-2">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-        <KeyRound className="h-3 w-3" /> Секреты
+        <KeyRound className="h-3 w-3" /> {t("utilities.secrets.title")}
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Значения хранятся локально (
-        <code className="font-mono">~/.reflex/secrets/</code>) и не передаются
-        агенту. Утилита читает их через{" "}
+        {t("utilities.secrets.description1")}
+        <code className="font-mono">~/.reflex/secrets/</code>
+        {t("utilities.secrets.description2")}{" "}
         <code className="font-mono">reflex.secrets.get</code>.
       </p>
       <ul className="space-y-3">
@@ -152,9 +154,9 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
                     <Check className="h-2.5 w-2.5" /> set
                   </Badge>
                 ) : d.required ? (
-                  <Badge variant="destructive">missing (required)</Badge>
+                  <Badge variant="destructive">{t("utilities.secrets.missingRequired")}</Badge>
                 ) : (
-                  <Badge variant="outline">empty</Badge>
+                  <Badge variant="outline">{t("utilities.secrets.empty")}</Badge>
                 )}
               </Label>
               <p className="text-[11px] text-muted-foreground">
@@ -171,7 +173,7 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
                       [d.key]: { ...slot, draft: e.target.value },
                     }))
                   }
-                  placeholder={slot.set ? "•••• (сохранено, введи новое для замены)" : "новое значение"}
+                  placeholder={slot.set ? t("utilities.secrets.placeholderSet") : t("utilities.secrets.placeholderEmpty")}
                   className="font-mono text-xs flex-1 h-8"
                   disabled={itemBusy}
                 />
@@ -186,7 +188,7 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
                       [d.key]: { ...slot, reveal: !slot.reveal },
                     }))
                   }
-                  title={slot.reveal ? "Скрыть" : "Показать"}
+                  title={slot.reveal ? t("utilities.secrets.hide") : t("utilities.secrets.show")}
                 >
                   {slot.reveal ? (
                     <EyeOff className="h-3.5 w-3.5" />
@@ -207,7 +209,7 @@ export function SecretsSection({ scope, id, rootId, declared }: Props) {
                   {itemBusy ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
-                    "Сохранить"
+                    t("utilities.secrets.save")
                   )}
                 </Button>
                 {slot.set && (

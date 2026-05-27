@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronRight,
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function ToolCall({ name, input, result, pending }: Props) {
+  const t = useTranslations("roots");
   const [open, setOpen] = useState(false);
   const Icon = pickIcon(name);
   const summary = pickSummary(name, input);
@@ -55,12 +57,12 @@ export function ToolCall({ name, input, result, pending }: Props) {
         <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">
           {pending ? (
             <span className="inline-flex items-center gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" /> работает
+              <Loader2 className="h-3 w-3 animate-spin" /> {t("toolCall.working")}
             </span>
           ) : result?.isError ? (
-            <span className="text-destructive">ошибка</span>
+            <span className="text-destructive">{t("toolCall.error")}</span>
           ) : result ? (
-            <span>готово</span>
+            <span>{t("toolCall.done")}</span>
           ) : (
             <span>—</span>
           )}

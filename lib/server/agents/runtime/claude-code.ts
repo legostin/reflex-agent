@@ -224,8 +224,8 @@ function toEvents(
               action: "tool-policy",
               ...(target ? { input: { target } } : {}),
               description: target
-                ? `Агент хочет ${verbFor(blocked)} \`${target}\` через «${blocked}». Разрешить?`
-                : `Агент попытался вызвать инструмент «${blocked}», но он не в списке разрешённых для этой задачи. Разрешить?`,
+                ? `The agent wants to ${verbFor(blocked)} \`${target}\` via "${blocked}". Allow?`
+                : `The agent tried to call the "${blocked}" tool, but it is not in the allowed list for this task. Allow?`,
               agentId,
               ts,
               seq: 0,
@@ -269,14 +269,14 @@ function parseBlockedTarget(content: string): string | null {
 }
 
 function verbFor(tool: string): string {
-  if (tool === "Write") return "записать в";
-  if (tool === "Edit" || tool === "MultiEdit") return "отредактировать";
-  if (tool === "Read") return "прочитать";
-  if (tool === "Bash") return "выполнить команду";
-  if (tool === "NotebookEdit") return "отредактировать notebook";
-  if (tool === "WebFetch") return "запросить URL";
-  if (tool === "WebSearch") return "поискать в вебе";
-  return "использовать";
+  if (tool === "Write") return "write to";
+  if (tool === "Edit" || tool === "MultiEdit") return "edit";
+  if (tool === "Read") return "read";
+  if (tool === "Bash") return "run a command";
+  if (tool === "NotebookEdit") return "edit a notebook";
+  if (tool === "WebFetch") return "fetch a URL";
+  if (tool === "WebSearch") return "search the web";
+  return "use";
 }
 
 function parseBlockedTool(content: string): string | null {

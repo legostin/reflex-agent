@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   Loader2,
@@ -43,6 +44,7 @@ type Transport = "stdio" | "http" | "sse";
  * its CLI harness's `--mcp-config`.
  */
 export function McpServersSection() {
+  const t = useTranslations("settings");
   const [servers, setServers] = useState<McpServerEntry[]>([]);
   const [loading, startLoad] = useTransition();
   const [adding, setAdding] = useState(false);
@@ -53,7 +55,7 @@ export function McpServersSection() {
   const runWizard = () => {
     const text = wizardPrompt.trim();
     if (!text) {
-      toast.error("Опиши что подключить");
+      toast.error(t("mcpServers.wizardDescribeError"));
       return;
     }
     startWizard(async () => {
@@ -62,7 +64,7 @@ export function McpServersSection() {
         toast.error(res.error);
         return;
       }
-      toast.success("Открываю чат с агентом-установщиком");
+      toast.success(t("mcpServers.wizardOpenedToast"));
       setWizardPrompt("");
       router.push(`/roots/${res.rootId}/chat/${res.topicId}`);
     });
@@ -85,13 +87,13 @@ export function McpServersSection() {
   }, []);
 
   const remove = async (id: string) => {
-    if (!confirm(`Удалить MCP-сервер "${id}"?`)) return;
+    if (!confirm(t("mcpServers.removeConfirm", { id }))) return;
     const res = await removeMcpServerAction(id);
     if (!res.ok) {
       toast.error(res.error ?? "fail");
       return;
     }
-    toast.success("Удалён");
+    toast.success(t("mcpServers.removedToast"));
     reload();
   };
 
@@ -101,13 +103,10 @@ export function McpServersSection() {
         <div className="rounded-[7px] bg-background/95 p-4 space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Wand2 className="h-4 w-4" />
-            <span>Подключить через AI-мастер</span>
+            <span>{t("mcpServers.wizardTitle")}</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Скажи человеческим языком («подключи google calendar», «добавь
-            github mcp»). Агент сам найдёт нужный пакет, объяснит где взять
-            токен/выйти на OAuth, и выдаст готовую карточку — тебе останется
-            только её одобрить.
+            {t("mcpServers.wizardDescription")}
           </p>
           <div className="flex gap-2">
             <Input
@@ -119,7 +118,7 @@ export function McpServersSection() {
                   runWizard();
                 }
               }}
-              placeholder="Например: подключи google calendar"
+              placeholder={t("mcpServers.wizardPlaceholder")}
               disabled={wizardLoading}
               className="flex-1"
             />
@@ -134,12 +133,11 @@ export function McpServersSection() {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              Запустить
+              {t("mcpServers.wizardRun")}
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground">
-            Откроется чат в твоём первом проекте — там агент задаст уточнения и
-            предложит конфиг. Конфиг сохранится в реестр после твоего «Зарегистрировать».
+            {t("mcpServers.wizardFooter")}
           </p>
         </div>
       </Card>
@@ -147,14 +145,15 @@ export function McpServersSection() {
       {loading && servers.length === 0 ? (
         <Card>
           <CardContent className="py-6 text-sm text-muted-foreground">
-            <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> Loading…
+            <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> {t("mcpServers.loading")}
           </CardContent>
         </Card>
       ) : servers.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-6 text-sm text-muted-foreground text-center">
-            Пока ни одного MCP-сервера. Добавь свой первый — он станет доступен
-            утилитам (через <code>manifest.mcpServers</code>) и чату.
+            {t.rich("mcpServers.emptyHint", {
+              code: (chunks) => <code>{chunks}</code>,
+            })}
           </CardContent>
         </Card>
       ) : (
@@ -189,7 +188,7 @@ export function McpServersSection() {
                   size="icon"
                   variant="ghost"
                   onClick={() => void remove(s.id)}
-                  title="Удалить"
+                  title={t("mcpServers.removeTitle")}
                   className="h-8 w-8"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -218,7 +217,7 @@ export function McpServersSection() {
           className="gap-2 text-muted-foreground"
         >
           <Plus className="h-4 w-4" />
-          Добавить вручную
+          {t("mcpServers.addManual")}
         </Button>
       )}
     </div>
@@ -234,6 +233,7 @@ function AddServerForm({
   onCancel: () => void;
   onAdded: () => void;
 }) {
+  const t = useTranslations("settings");
   const [id, setId] = useState("");
   const [label, setLabel] = useState("");
   const [description, setDescription] = useState("");
@@ -335,7 +335,7 @@ function AddServerForm({
         toast.error(res.error);
         return;
       }
-      toast.success(`MCP-сервер "${slug}" добавлен`);
+      toast.success(t("mcpServers.form.addedToast", { id: slug }));
       onAdded();
     });
   };
@@ -345,7 +345,7 @@ function AddServerForm({
       <CardContent className="pt-5 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium flex items-center gap-2">
-            <Plug className="h-4 w-4" /> Новый MCP-сервер
+            <Plug className="h-4 w-4" /> {t("mcpServers.form.title")}
           </h3>
           <Button
             type="button"
@@ -380,11 +380,11 @@ function AddServerForm({
         </div>
 
         <div>
-          <Label className="text-xs">Description (optional)</Label>
+          <Label className="text-xs">{t("mcpServers.form.descriptionLabel")}</Label>
           <Input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Доступ к репам, issues, PR-ам."
+            placeholder={t("mcpServers.form.descriptionPlaceholder")}
             className="text-sm"
           />
         </div>
@@ -462,11 +462,11 @@ function AddServerForm({
           <div className="rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs flex items-center gap-2 text-emerald-900">
             <CheckCircle2 className="h-3.5 w-3.5" />
             <span>
-              Подключился к{" "}
-              <span className="font-mono">
-                {tested.serverName ?? "(anonymous)"}
-              </span>{" "}
-              · {tested.toolsCount} tools
+              {t.rich("mcpServers.form.connectedTo", {
+                mono: (chunks) => <span className="font-mono">{chunks}</span>,
+                name: tested.serverName ?? t("mcpServers.form.anonymousName"),
+                count: tested.toolsCount,
+              })}
             </span>
           </div>
         )}
@@ -482,7 +482,7 @@ function AddServerForm({
             {testing ? (
               <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
             ) : null}
-            Проверить
+            {t("mcpServers.form.testButton")}
           </Button>
           <Button
             type="button"
@@ -493,12 +493,12 @@ function AddServerForm({
             {saving ? (
               <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
             ) : null}
-            Сохранить
+            {t("mcpServers.form.saveButton")}
           </Button>
         </div>
         {!tested && (
           <p className="text-[11px] text-muted-foreground">
-            Сначала «Проверить» чтобы убедиться, что сервер запускается.
+            {t("mcpServers.form.testFirstHint")}
           </p>
         )}
       </CardContent>

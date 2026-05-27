@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Download, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,14 +23,14 @@ interface CuratedItem {
   author?: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  finance: "Финансы",
-  health: "Здоровье",
-  productivity: "Продуктивность",
-  travel: "Путешествия",
-  study: "Учёба",
-  creative: "Творчество",
-  other: "Другое",
+const CATEGORY_KEY: Record<string, string> = {
+  finance: "utilities.curated.catFinance",
+  health: "utilities.curated.catHealth",
+  productivity: "utilities.curated.catProductivity",
+  travel: "utilities.curated.catTravel",
+  study: "utilities.curated.catStudy",
+  creative: "utilities.curated.catCreative",
+  other: "utilities.curated.catOther",
 };
 
 interface SpaceOpt {
@@ -38,7 +39,7 @@ interface SpaceOpt {
 }
 
 /**
- * Curated catalogue of utilities. Click "Установить" → one-shot
+ * Curated catalogue of utilities. Click "Install" → one-shot
  * preview+install behind the scenes (no GitHub URL dialog). Installed
  * utilities are detected via the rendered list reload after success.
  *
@@ -54,6 +55,7 @@ export function CuratedGallery({
   spaces: SpaceOpt[];
 }) {
   const router = useRouter();
+  const t = useTranslations("app");
   const [items, setItems] = useState<CuratedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<string | null>(null);
@@ -106,7 +108,9 @@ export function CuratedGallery({
         ? spaces.find((s) => s.id === rootId)?.label
         : undefined;
       toast.success(
-        `«${item.name}» установлено${spaceLabel ? ` в «${spaceLabel}»` : ""}`,
+        spaceLabel
+          ? t("utilities.curated.installedToastIn", { name: item.name, space: spaceLabel })
+          : t("utilities.curated.installedToast", { name: item.name }),
       );
       router.refresh();
     });
@@ -120,9 +124,7 @@ export function CuratedGallery({
     }
     // project scope: need a rootId.
     if (spaces.length === 0) {
-      toast.error(
-        "Сначала создай пространство (мастер /onboarding) — утилита привязывается к проекту.",
-      );
+      toast.error(t("utilities.curated.needSpace"));
       return;
     }
     if (spaces.length === 1) {
@@ -137,14 +139,14 @@ export function CuratedGallery({
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Загружаю каталог…
+        {t("utilities.curated.loading")}
       </div>
     );
   }
   if (items.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        Каталог пуст. Можно установить из GitHub вручную (внизу страницы).
+        {t("utilities.curated.empty")}
       </p>
     );
   }
@@ -154,7 +156,7 @@ export function CuratedGallery({
       <div className="flex items-center gap-1.5 flex-wrap">
         <Sparkles className="h-3 w-3 text-violet-600" />
         <span className="text-[11px] text-muted-foreground mr-2">
-          Категория:
+          {t("utilities.curated.categoryLabel")}
         </span>
         {categories.map((c) => (
           <button
@@ -168,7 +170,11 @@ export function CuratedGallery({
                 : "border bg-card hover:bg-accent")
             }
           >
-            {c === "all" ? "Все" : CATEGORY_LABELS[c] ?? c}
+            {c === "all"
+              ? t("utilities.curated.categoryAll")
+              : CATEGORY_KEY[c]
+                ? t(CATEGORY_KEY[c])
+                : c}
           </button>
         ))}
       </div>
@@ -189,7 +195,9 @@ export function CuratedGallery({
                     </div>
                   </div>
                   <Badge variant="outline" className="text-[10px]">
-                    {CATEGORY_LABELS[item.category] ?? item.category}
+                    {CATEGORY_KEY[item.category]
+                      ? t(CATEGORY_KEY[item.category])
+                      : item.category}
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">
@@ -203,7 +211,7 @@ export function CuratedGallery({
                       className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-emerald-700 cursor-default"
                     >
                       <Check className="h-3 w-3" />
-                      Установлено
+                      {t("utilities.curated.installed")}
                     </button>
                   ) : (
                     <button
@@ -221,8 +229,8 @@ export function CuratedGallery({
                         <Download className="h-3 w-3" />
                       )}
                       {item.suggestedScope === "project" && spaces.length > 1
-                        ? "В пространство…"
-                        : "Установить"}
+                        ? t("utilities.curated.intoSpace")
+                        : t("utilities.curated.install")}
                     </button>
                   )}
                   {pickerForId === item.id && (
@@ -246,7 +254,7 @@ export function CuratedGallery({
                           onClick={() => setPickerForId(null)}
                           className="w-full text-left px-2.5 py-1.5 text-[10px] text-muted-foreground hover:bg-accent"
                         >
-                          Отмена
+                          {t("utilities.curated.cancel")}
                         </button>
                       </li>
                     </ul>

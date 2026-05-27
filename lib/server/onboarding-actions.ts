@@ -130,7 +130,7 @@ export interface OnboardingResult {
  * Atomic finalize. Writes settings (incl. onboardedAt) → for each
  * chosen template, creates a root under `~/Reflex/<folder>` and runs
  * its seed. Surfaces aggregate counts so the UI can show a satisfying
- * "вот что мы для тебя сделали" summary at the end.
+ * "here's what we did for you" summary at the end.
  */
 export async function runOnboardingAction(
   input: OnboardingInput,

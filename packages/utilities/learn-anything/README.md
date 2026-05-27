@@ -1,41 +1,41 @@
-# 🎓 Изучи что угодно
+# 🎓 Learn Anything
 
-Универсальный AI-наставник. Введи тему → агент задаёт 2-4 уточняющих вопроса (про уровень, цель, время, формат) → собирает программу 5-9 модулей → каждый модуль с длинной статьёй, видео, иллюстрациями, схемами (mermaid), тестом, домашкой и интерактивным тренажёром на canvas.
+Universal AI tutor. Enter a topic → the agent asks 2-4 clarifying questions (about level, goal, time, format) → assembles a 5-9 module program → each module includes a long article, video, illustrations, diagrams (mermaid), quiz, homework, and an interactive canvas trainer.
 
-## Возможности
+## Features
 
-- **Wizard в агентном режиме** — вопросы НЕ хардкоженные, агент сам решает что важно спросить под конкретную тему. «Хочу научиться рисовать акварелью» и «Хочу выучить Python» приведут к разным вопросам.
-- **Программа курса** — генерируется с целями и оценкой времени.
-- **Модуль = статья 800-2000 слов** + видео (YouTube) + ссылки на источники + изображения (CC) + mermaid-схемы + 3-5 домашних заданий.
-- **Тест** — 5-7 multiple-choice вопросов сгенерированных из статьи, мгновенная проверка с объяснениями.
-- **Прогресс** — отметка пройденности + результат теста, сохраняется в KB.
-- **Объяснить выделенное** — выдели любой кусок статьи → агент даст подробное объяснение с примерами.
-- **Тренажёр** — агент пишет standalone HTML/JS/canvas под идею (или сам предложит идею), Reflex рендерит в sandboxed iframe.
+- **Agent-driven wizard** — questions are NOT hardcoded; the agent itself decides what matters to ask for a given topic. "I want to learn watercolor painting" and "I want to learn Python" lead to different questions.
+- **Course outline** — generated with objectives and time estimates.
+- **Module = 800-2000 word article** + video (YouTube) + source links + images (CC) + mermaid diagrams + 3-5 homework tasks.
+- **Quiz** — 5-7 multiple-choice questions generated from the article, instant grading with explanations.
+- **Progress** — completion mark + quiz result, persisted to KB.
+- **Explain selection** — highlight any chunk of the article → the agent gives a detailed explanation with examples.
+- **Trainer** — the agent writes standalone HTML/JS/canvas for an idea (or proposes one itself), Reflex renders it in a sandboxed iframe.
 
-## KB-схемы
+## KB schemas
 
-- `course` — корень курса: `meta.courseId`, `meta.topic`, `meta.modules` (JSON), `meta.progress` (JSON), `meta.wizardAnswers` (JSON), `meta.createdAt`.
-- `course-module` — материал модуля: `meta.courseId`, `meta.moduleId`, JSON-поля `videos`/`links`/`images`/`diagrams`/`homework`, body = статья.
-- `course-trainer` — HTML тренажёра в `meta.html` (capped ≈60KB).
-- `course-note` — пользовательские заметки в модуле (опц., пока не используется).
+- `course` — course root: `meta.courseId`, `meta.topic`, `meta.modules` (JSON), `meta.progress` (JSON), `meta.wizardAnswers` (JSON), `meta.createdAt`.
+- `course-module` — module material: `meta.courseId`, `meta.moduleId`, JSON fields `videos`/`links`/`images`/`diagrams`/`homework`, body = article.
+- `course-trainer` — trainer HTML in `meta.html` (capped at ~60KB).
+- `course-note` — user notes inside a module (optional, not used yet).
 
 ## Server actions
 
-- `tutorAsk({topic, history, forceFinish?})` — следующий вопрос wizard или `{done:true}`.
-- `generateOutline({topic, history})` — программа курса + сохранение KB.
-- `buildModule({courseId, moduleId, moduleTitle, moduleObjective, topic})` — материал модуля.
-- `generateQuiz({moduleTitle, moduleObjective, article})` — тест.
-- `explainSelection({selection, context, topic, moduleTitle})` — глубокое объяснение фрагмента.
-- `generateTrainer({courseId, moduleId, moduleTitle, moduleObjective, prompt?})` — HTML тренажёр.
-- `refreshCourseCard()` — обновление dashboard-карточки (число активных курсов + средний прогресс).
+- `tutorAsk({topic, history, forceFinish?})` — next wizard question or `{done:true}`.
+- `generateOutline({topic, history})` — course outline + KB persistence.
+- `buildModule({courseId, moduleId, moduleTitle, moduleObjective, topic})` — module material.
+- `generateQuiz({moduleTitle, moduleObjective, article})` — quiz.
+- `explainSelection({selection, context, topic, moduleTitle})` — deep explanation of a fragment.
+- `generateTrainer({courseId, moduleId, moduleTitle, moduleObjective, prompt?})` — trainer HTML.
+- `refreshCourseCard()` — dashboard card refresh (active course count + average progress).
 
-## Разрешения
+## Permissions
 
-`llm.chat/quick`, `kb.read/write` для своих kinds, `fs.sandbox` (для будущего кэша), `web.fetch` с whitelist (wikipedia, mdn, youtube, ...), `web.search`, `audit.write`, `workers.enabled`, `agent.invoke`.
+`llm.chat/quick`, `kb.read/write` for its kinds, `fs.sandbox` (for future cache), `web.fetch` with whitelist (wikipedia, mdn, youtube, ...), `web.search`, `audit.write`, `workers.enabled`, `agent.invoke`.
 
-## Ограничения v0.1
+## v0.1 limitations
 
-- Картинки не качаются локально (используются URL'ы CC-источников); подписаны в whitelist.
-- Mermaid-схемы рендерятся как code-block; embed-рендер придёт в v0.2.
-- Тренажёры в `srcdoc` iframe — без доступа к host RPC (только клиентский JS+canvas).
-- Прогресс хранится в frontmatter курса; кэш на mtime ещё не оптимизирован.
+- Images aren't downloaded locally (URLs from CC sources are used); their domains are in the whitelist.
+- Mermaid diagrams are rendered as a code block; embed rendering is coming in v0.2.
+- Trainers run in a `srcdoc` iframe — no access to host RPC (client-side JS+canvas only).
+- Progress is stored in course frontmatter; mtime-based caching isn't optimized yet.

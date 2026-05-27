@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, Copy, Lock, Share2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   createShareAction,
 } from "@/lib/server/shares/actions";
@@ -21,14 +22,15 @@ interface Props {
 }
 
 /**
- * One-click "Поделиться" button. Opens a small inline form to choose
- * an optional password, then creates the share record on the server.
+ * One-click "Share" button. Opens a small inline form to choose an
+ * optional password, then creates the share record on the server.
  * The result is a public URL we copy to clipboard and display so the
  * user can paste it anywhere. Tunnel host is auto-detected from the
  * currently-running ngrok process — if none, we still create the
  * share but warn that the URL only works once the tunnel is up.
  */
 export function ShareButton(props: Props) {
+  const t = useTranslations("app");
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
   const [creating, startCreate] = useTransition();
@@ -56,8 +58,8 @@ export function ShareButton(props: Props) {
       void navigator.clipboard.writeText(url).catch(() => null);
       toast.success(
         status.status.running
-          ? "Ссылка создана и скопирована"
-          : "Ссылка создана; запусти ngrok-туннель в настройках чтобы открыть извне",
+          ? t("share.button.created")
+          : t("share.button.createdNoTunnel"),
       );
     });
   };
@@ -72,10 +74,10 @@ export function ShareButton(props: Props) {
             ? "p-1 rounded hover:bg-accent text-muted-foreground hover:text-violet-700"
             : "inline-flex items-center gap-1 rounded border px-2 py-1 text-xs hover:bg-accent"
         }
-        title="Создать публичную ссылку"
+        title={t("share.button.title")}
       >
         <Share2 className="h-3.5 w-3.5" />
-        {!props.iconOnly && "Поделиться"}
+        {!props.iconOnly && t("share.button.label")}
       </button>
     );
   }
@@ -85,7 +87,7 @@ export function ShareButton(props: Props) {
       <div className="rounded border bg-card p-2 text-xs space-y-1.5 w-full max-w-sm">
         <div className="flex items-center gap-1.5 text-emerald-700">
           <Check className="h-3.5 w-3.5" />
-          <span className="font-medium">Ссылка создана</span>
+          <span className="font-medium">{t("share.button.createdTitle")}</span>
         </div>
         <a
           href={made.url}
@@ -101,12 +103,12 @@ export function ShareButton(props: Props) {
             onClick={() =>
               void navigator.clipboard
                 .writeText(made.url)
-                .then(() => toast.success("Скопировано"))
+                .then(() => toast.success(t("share.button.copied")))
             }
             className="inline-flex items-center gap-1 rounded border px-2 py-0.5 hover:bg-accent"
           >
             <Copy className="h-3 w-3" />
-            Скопировать
+            {t("share.button.copy")}
           </button>
           <button
             type="button"
@@ -117,7 +119,7 @@ export function ShareButton(props: Props) {
             }}
             className="text-muted-foreground hover:text-foreground"
           >
-            Готово
+            {t("share.button.done")}
           </button>
         </div>
       </div>
@@ -128,7 +130,7 @@ export function ShareButton(props: Props) {
     <div className="rounded border bg-card p-2 text-xs space-y-1.5 w-full max-w-sm">
       <div className="flex items-center gap-1.5">
         <Share2 className="h-3.5 w-3.5 text-violet-600" />
-        <span className="font-medium">Новая публичная ссылка</span>
+        <span className="font-medium">{t("share.button.newLink")}</span>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -138,7 +140,7 @@ export function ShareButton(props: Props) {
         </button>
       </div>
       <label className="block text-[10px] text-muted-foreground">
-        Пароль (опционально)
+        {t("share.button.passwordLabel")}
       </label>
       <div className="relative">
         <Lock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
@@ -147,7 +149,7 @@ export function ShareButton(props: Props) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoFocus
-          placeholder="пусто = открытая ссылка"
+          placeholder={t("share.button.passwordPlaceholder")}
           className="w-full rounded border bg-background pl-6 pr-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400"
         />
       </div>
@@ -157,11 +159,10 @@ export function ShareButton(props: Props) {
         disabled={creating}
         className="w-full rounded bg-violet-600 text-white px-2 py-1 hover:bg-violet-700 disabled:opacity-50 inline-flex items-center justify-center gap-1"
       >
-        {creating ? "Создание…" : "Создать ссылку"}
+        {creating ? t("share.button.creating") : t("share.button.create")}
       </button>
       <p className="text-[10px] text-muted-foreground">
-        Ссылку будет видно только после старта ngrok-туннеля (Настройки →
-        Публичные ссылки).
+        {t("share.button.footer")}
       </p>
     </div>
   );

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plug, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,7 @@ interface Preview {
  * confirmation generates a utility whose UI is a form per tool.
  */
 export function InstallFromMcpButton() {
+  const t = useTranslations("app");
   const [open, setOpen] = useState(false);
   const [transport, setTransport] = useState<Transport>("stdio");
   const [command, setCommand] = useState("");
@@ -184,7 +186,7 @@ export function InstallFromMcpButton() {
               MCP server → Reflex utility
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Подключимся к серверу, прочитаем tools/list, сгенерируем UI и server-action прокси.
+              {t("utilities.mcp.subtitle")}
             </p>
           </div>
           <Button
@@ -343,7 +345,7 @@ export function InstallFromMcpButton() {
                     resetForm();
                   }}
                 >
-                  Отмена
+                  {t("utilities.mcp.cancel")}
                 </Button>
                 <Button onClick={handleInstall} disabled={installing}>
                   {installing ? (

@@ -7,6 +7,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertOctagon,
   BookmarkPlus,
@@ -88,8 +89,8 @@ interface Props {
   disabled?: boolean;
   onSubmit: (payload: ChatInputPayload) => Promise<boolean>;
   /**
-   * When the topic has a running agent, the submit button flips to "Стоп"
-   * (empty input) or "Уточнить" (non-empty input). "Уточнить" calls
+   * When the topic has a running agent, the submit button flips to "Stop"
+   * (empty input) or "Clarify" (non-empty input). "Clarify" calls
    * `onClarify` first to stop the current turn, then `onSubmit` to start a
    * new one with the user's interjection.
    */
@@ -112,9 +113,12 @@ export function ChatInputForm({
   onSubmit,
   active,
   onStop,
-  clarifyLabel = "Уточнить",
-  stopLabel = "Стоп",
+  clarifyLabel,
+  stopLabel,
 }: Props) {
+  const t = useTranslations("roots");
+  const resolvedClarifyLabel = clarifyLabel ?? t("chatInputForm.clarifyLabel");
+  const resolvedStopLabel = stopLabel ?? t("chatInputForm.stopLabel");
   const router = useRouter();
   const [text, setText] = useState("");
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
@@ -289,7 +293,9 @@ export function ChatInputForm({
           const body = (await res.json().catch(() => ({}))) as {
             error?: string;
           };
-          toast.error(body.error ?? `Не удалось загрузить (${res.status})`);
+          toast.error(
+            body.error ?? t("chatInputForm.uploadFailed", { status: res.status }),
+          );
           return;
         }
         const data = (await res.json()) as {
@@ -342,6 +348,7 @@ export function ChatInputForm({
           rootId,
           topicId,
           router,
+          t,
         });
         setText("");
       } finally {
@@ -352,7 +359,7 @@ export function ChatInputForm({
 
     setPending(true);
     try {
-      // "Уточнить" first interrupts the running turn so the send endpoint
+      // "Clarify" first interrupts the running turn so the send endpoint
       // doesn't 409. We don't clear the input until the new turn is accepted.
       if (mode === "clarify" && onStop) {
         await onStop();
@@ -376,6 +383,7 @@ export function ChatInputForm({
     rootId,
     topicId,
     router,
+    t,
   ]);
 
   const onFormSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -578,7 +586,7 @@ export function ChatInputForm({
           variant="ghost"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || pending || disabled}
-          title="Прикрепить файлы (можно drag&drop или Cmd+V)"
+          title={t("chatInputForm.attachTitle")}
           className="h-11 w-11 shrink-0"
         >
           {uploading ? (
@@ -602,12 +610,12 @@ export function ChatInputForm({
           ) : mode === "stop" ? (
             <>
               <Square className="mr-2 h-4 w-4" fill="currentColor" />
-              {stopLabel}
+              {resolvedStopLabel}
             </>
           ) : mode === "clarify" ? (
             <>
               <SubmitIcon className="mr-2 h-4 w-4" />
-              {clarifyLabel}
+              {resolvedClarifyLabel}
             </>
           ) : (
             <>
@@ -618,7 +626,7 @@ export function ChatInputForm({
         </Button>
       </div>
       <div className="text-[10px] text-muted-foreground">
-        Enter — отправить · Shift+Enter — новая строка · @ — упомянуть файл/заметку · `/` — команды · можно перетащить файлы или вставить из буфера
+        {t("chatInputForm.helperRow")}
       </div>
     </form>
   );
@@ -635,41 +643,45 @@ async function runDirectCommand({
   rootId,
   topicId,
   router,
+  t,
 }: {
   cmd: CommandDef;
   payload: string;
   rootId: string;
   topicId?: string;
   router: ReturnType<typeof useRouter>;
+  t: ReturnType<typeof useTranslations>;
 }): Promise<void> {
   if (cmd.id === "help") {
     const lines = COMMANDS.map((c) => `• ${c.label} — ${c.description}`);
-    toast.info(`Доступные команды:\n${lines.join("\n")}`, { duration: 12_000 });
+    toast.info(t("chatInputForm.availableCommands", { list: lines.join("\n") }), {
+      duration: 12_000,
+    });
     return;
   }
   if (cmd.id === "remember") {
     if (!payload) {
-      toast.error("Пусто — нечего запоминать. Использование: /remember <текст>");
+      toast.error(t("chatInputForm.rememberEmpty"));
       return;
     }
     const r = await rememberAction(rootId, payload);
     if (!r.ok) toast.error(r.error);
     else {
-      toast.success(r.message ?? "Сохранено в KB");
+      toast.success(r.message ?? t("chatInputForm.savedToKb"));
       dispatchReflex(REFLEX_EVENTS.kbChanged(rootId));
     }
     return;
   }
   if (cmd.id === "delete-topic") {
     if (!topicId) {
-      toast.error("Команда работает только внутри топика.");
+      toast.error(t("chatInputForm.topicOnlyCommand"));
       return;
     }
-    if (!confirm("Удалить этот топик? Это необратимо.")) return;
+    if (!confirm(t("chatInputForm.deleteTopicConfirm"))) return;
     const r = await deleteCurrentTopicCommand(rootId, topicId);
     if (!r.ok) toast.error(r.error);
     else {
-      toast.success(r.message ?? "Удалено");
+      toast.success(r.message ?? t("chatInputForm.deleted"));
       dispatchReflex(REFLEX_EVENTS.topicsChanged(rootId));
       if (r.redirectTo) router.push(r.redirectTo);
     }
@@ -690,36 +702,29 @@ async function runDirectCommand({
       .slice(0, 8)
       .map((it) => `• ${it.name} (${it.scope}/${it.id})`)
       .join("\n");
-    toast.message(`Несколько подходит — уточни запрос:\n${list}`, {
+    toast.message(t("chatInputForm.multipleMatches", { list }), {
       duration: 12_000,
     });
     return;
   }
   if (cmd.id === "clear-project") {
-    if (
-      !confirm(
-        "ВНИМАНИЕ: будут удалены ВСЕ топики, виджеты и KB-файлы этого проекта. Это необратимо. Продолжить?",
-      )
-    )
-      return;
-    const phrase = prompt(
-      "Введи фразу «очистить» (без кавычек), чтобы подтвердить:",
-    );
-    if (phrase?.trim().toLowerCase() !== "очистить") {
-      toast.message("Подтверждение не прошло — отмена.");
+    if (!confirm(t("chatInputForm.clearProjectConfirm"))) return;
+    const phrase = prompt(t("chatInputForm.clearProjectPrompt"));
+    if (phrase?.trim().toLowerCase() !== t("chatInputForm.clearProjectPhrase")) {
+      toast.message(t("chatInputForm.confirmFailed"));
       return;
     }
     const r = await clearProjectAction(rootId);
     if (!r.ok) toast.error(r.error);
     else {
-      toast.success(r.message ?? "Проект очищен");
+      toast.success(r.message ?? t("chatInputForm.projectCleared"));
       dispatchReflex(REFLEX_EVENTS.topicsChanged(rootId));
       dispatchReflex(REFLEX_EVENTS.kbChanged(rootId));
       if (r.redirectTo) router.push(r.redirectTo);
     }
     return;
   }
-  toast.error(`Неизвестная команда: ${cmd.label}`);
+  toast.error(t("chatInputForm.unknownCommand", { label: cmd.label }));
 }
 
 function CommandPalette({
@@ -735,10 +740,11 @@ function CommandPalette({
   onHover: (i: number) => void;
   topicAvailable: boolean;
 }) {
+  const t = useTranslations("roots");
   return (
     <div className="absolute bottom-full left-0 right-0 mb-2 z-50 max-h-80 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-lg">
       <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
-        Команды · Tab — вставить · ↑↓ — выбор · Esc — закрыть
+        {t("chatInputForm.commandsPaletteHeader")}
       </div>
       <ul>
         {items.map((cmd, i) => {
@@ -774,12 +780,12 @@ function CommandPalette({
                     </span>
                     {cmd.kind === "direct" && (
                       <span className="text-[9px] uppercase tracking-wider text-amber-700">
-                        прямое действие
+                        {t("chatInputForm.directAction")}
                       </span>
                     )}
                     {cmd.requiresConfirm && (
                       <span className="text-[9px] uppercase tracking-wider text-destructive">
-                        с подтверждением
+                        {t("chatInputForm.withConfirm")}
                       </span>
                     )}
                   </div>
@@ -812,15 +818,16 @@ function MentionPicker({
   onPick: (item: MentionItem) => void;
   onHover: (i: number) => void;
 }) {
+  const t = useTranslations("roots");
   return (
     <div className="absolute bottom-full left-0 right-0 mb-2 z-50 max-h-72 overflow-y-auto rounded-md border bg-popover text-popover-foreground shadow-lg">
       {loading && items.length === 0 ? (
         <div className="px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-3 w-3 animate-spin" /> поиск…
+          <Loader2 className="h-3 w-3 animate-spin" /> {t("chatInputForm.mentionSearching")}
         </div>
       ) : items.length === 0 ? (
         <div className="px-3 py-2 text-xs text-muted-foreground italic">
-          ничего не найдено
+          {t("chatInputForm.mentionNothing")}
         </div>
       ) : (
         <ul>

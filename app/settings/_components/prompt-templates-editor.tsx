@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { GitMerge, Loader2, RotateCcw, Save, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ const EMPTY: TemplateState = {
 };
 
 export function PromptTemplatesEditor() {
+  const t = useTranslations("settings");
   const [metas, setMetas] = useState<TemplateMeta[]>([]);
   const [active, setActive] = useState<string | null>(null);
   const [states, setStates] = useState<Record<string, TemplateState>>({});
@@ -114,8 +116,11 @@ export function PromptTemplatesEditor() {
       }
       toast.success(
         res.appended.length === 0
-          ? "Уже актуально"
-          : `Добавлено ${res.appended.length} секций: ${res.appended.join(", ")}`,
+          ? t("promptTemplates.merged")
+          : t("promptTemplates.mergedAppended", {
+              count: res.appended.length,
+              names: res.appended.join(", "),
+            }),
       );
       setStates((s) => ({
         ...s,
@@ -204,11 +209,12 @@ export function PromptTemplatesEditor() {
                     <Sparkles className="h-4 w-4 mt-0.5 shrink-0" />
                     <div className="flex-1 space-y-1">
                       <div className="font-medium">
-                        Шаблон по умолчанию обновился ({st.missingSections.length}{" "}
-                        новых секций)
+                        {t("promptTemplates.templateUpdated", {
+                          count: st.missingSections.length,
+                        })}
                       </div>
                       <div className="text-amber-800/80">
-                        Отсутствует в твоём файле:{" "}
+                        {t("promptTemplates.missingFromYours")}{" "}
                         {st.missingSections.map((h, i) => (
                           <span key={h}>
                             <code className="font-mono">## {h}</code>
@@ -229,7 +235,7 @@ export function PromptTemplatesEditor() {
                       ) : (
                         <GitMerge className="mr-1 h-3.5 w-3.5" />
                       )}
-                      Добавить недостающее
+                      {t("promptTemplates.addMissing")}
                     </Button>
                   </div>
                 )}

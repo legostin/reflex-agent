@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   CheckCircle2,
@@ -63,6 +65,7 @@ interface Props {
 }
 
 export function SettingsForm({ initialSettings, harnesses }: Props) {
+  const t = useTranslations("settings");
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [models, setModels] = useState<Record<HarnessId, ModelInfo[] | null>>({
     "claude-code": null,
@@ -152,11 +155,17 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
     }));
   };
 
+  const router = useRouter();
   const save = () => {
     startSaving(async () => {
       const res = await saveSettingsAction(settings);
-      if (!res.ok) toast.error(res.error ?? "Save failed");
-      else toast.success("Settings saved");
+      if (!res.ok) {
+        toast.error(res.error ?? t("form.saveFailedFallback"));
+        return;
+      }
+      toast.success(t("form.savedToast"));
+      // Re-render server components so a language change takes effect.
+      router.refresh();
     });
   };
 
@@ -173,9 +182,10 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
     }));
   };
 
-  const isPreset = (LANGUAGE_PRESETS as readonly string[]).includes(
-    settings.language,
-  );
+  const LANGUAGE_LABELS: Record<string, string> = {
+    en: "English",
+    ru: "Русский",
+  };
 
   const isAdvanced = settings.uiMode === "advanced";
   const toggleAdvanced = () => {
@@ -194,12 +204,12 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
         <CardContent className="pt-5 pb-5 flex items-center gap-3">
           <div className="flex-1">
             <div className="text-sm font-medium">
-              {isAdvanced ? "Расширенный режим" : "Простой режим"}
+              {isAdvanced ? t("uiMode.advancedTitle") : t("uiMode.simpleTitle")}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
               {isAdvanced
-                ? "Видны все секции — модели, MCP-серверы, prompt-шаблоны, инструменты."
-                : "Видны только основные настройки. Включи расширенный, чтобы поменять модели, подключения и промпты."}
+                ? t("uiMode.advancedHint")
+                : t("uiMode.simpleHint")}
             </p>
           </div>
           <Button
@@ -208,82 +218,65 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
             size="sm"
             onClick={toggleAdvanced}
           >
-            {isAdvanced ? "Простой режим" : "Расширенный режим"}
+            {isAdvanced ? t("uiMode.switchToSimple") : t("uiMode.switchToAdvanced")}
           </Button>
         </CardContent>
       </Card>
       <section>
-        <h2 className="text-lg font-semibold mb-3">Output language</h2>
+        <h2 className="text-lg font-semibold mb-3">Interface &amp; content language</h2>
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground mb-3">
-              The agent injects this into every system prompt and writes all
-              Markdown artifacts in this language. Code, paths, and quoted
-              source stay verbatim.
+              Switches the UI and the language the agent writes in. Code,
+              paths, and quoted source stay verbatim.
             </p>
-            <div className="flex items-center gap-3 max-w-xl">
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">Preset</Label>
-                <Select
-                  value={isPreset ? settings.language : "__custom__"}
-                  onValueChange={(v) => {
-                    if (v === "__custom__") {
-                      setLanguage(isPreset ? "" : settings.language);
-                    } else {
-                      setLanguage(v);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGE_PRESETS.map((p) => (
-                      <SelectItem key={p} value={p}>
-                        {p}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__custom__">custom…</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {!isPreset && (
-                <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Custom
-                  </Label>
-                  <Input
-                    value={settings.language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                    placeholder="e.g. português, latviešu"
-                    className="mt-1"
-                  />
-                </div>
-              )}
+            <div className="max-w-xs">
+              <Select
+                value={
+                  (LANGUAGE_PRESETS as readonly string[]).includes(
+                    settings.language,
+                  )
+                    ? settings.language
+                    : "en"
+                }
+                onValueChange={(v) => setLanguage(v)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGE_PRESETS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {LANGUAGE_LABELS[p] ?? p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Обработка изображений</h2>
+        <h2 className="text-lg font-semibold mb-3">{t("imageProcessing.title")}</h2>
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm">
-                  Reflex автоматически ресайзит и перекодирует прикреплённые
-                  изображения перед сохранением в{" "}
-                  <code className="font-mono text-xs">.reflex/attachments/</code>.
+                  {t.rich("imageProcessing.description", {
+                    dir: () => (
+                      <code className="font-mono text-xs">.reflex/attachments/</code>
+                    ),
+                  })}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Сокращает токены модели и место на диске. Векторы (SVG) и
-                  анимированные GIF/WebP остаются как есть.
+                  {t("imageProcessing.hint")}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Label htmlFor="img-enabled" className="text-xs">
-                  включено
+                  {t("imageProcessing.enabledLabel")}
                 </Label>
                 <Switch
                   id="img-enabled"
@@ -304,7 +297,7 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-xs text-muted-foreground">
-                    Макс. сторона
+                    {t("imageProcessing.maxDimensionLabel")}
                   </Label>
                   <span className="font-mono text-xs">
                     {settings.imageProcessing.maxDimension}px
@@ -329,7 +322,7 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-xs text-muted-foreground">
-                    Качество (JPEG / WebP)
+                    {t("imageProcessing.qualityLabel")}
                   </Label>
                   <span className="font-mono text-xs">
                     {settings.imageProcessing.quality}
@@ -346,7 +339,7 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
                 />
               </div>
               <div className="max-w-xs">
-                <Label className="text-xs text-muted-foreground">Формат</Label>
+                <Label className="text-xs text-muted-foreground">{t("imageProcessing.formatLabel")}</Label>
                 <Select
                   value={settings.imageProcessing.format}
                   onValueChange={(v) =>
@@ -362,12 +355,12 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
                         <span className="font-mono">{f}</span>
                         <span className="ml-2 text-muted-foreground text-xs">
                           {f === "auto"
-                            ? "JPEG, PNG для прозрачных"
+                            ? t("imageProcessing.format.auto")
                             : f === "jpeg"
-                              ? "всё в JPEG (альфа → белый фон)"
+                              ? t("imageProcessing.format.jpeg")
                               : f === "webp"
-                                ? "всё в WebP"
-                                : "оставить исходный контейнер"}
+                                ? t("imageProcessing.format.webp")
+                                : t("imageProcessing.format.original")}
                         </span>
                       </SelectItem>
                     ))}
@@ -597,44 +590,42 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Картинки</h2>
+        <h2 className="text-lg font-semibold mb-3">{t("imageSearch.title")}</h2>
         <ImageSearchSection />
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">OAuth providers</h2>
+        <h2 className="text-lg font-semibold mb-3">{t("oauth.title")}</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Reflex держит локально access/refresh-токены и сам обновляет их при
-          истечении. Используй <code>$oauth:&lt;provider&gt;</code> в env/headers
-          MCP-сервера — Reflex подставит свежий токен при каждом вызове.
-          Redirect URI:{" "}
-          <code className="font-mono">
-            http://localhost:3210/api/oauth/callback
-          </code>
-          .
+          {t.rich("oauth.description", {
+            code: (chunks) => <code>{chunks}</code>,
+            uri: () => (
+              <code className="font-mono">
+                http://localhost:3210/api/oauth/callback
+              </code>
+            ),
+          })}
         </p>
         <OAuthProvidersSection />
       </section>
 
       {isAdvanced && (
       <section>
-        <h2 className="text-lg font-semibold mb-3">MCP servers</h2>
+        <h2 className="text-lg font-semibold mb-3">{t("mcpServers.title")}</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Зарегистрированные MCP-серверы доступны утилитам (через{" "}
-          <code>manifest.mcpServers</code>) и чату напрямую (orchestrator
-          получает их через <code>--mcp-config</code>). Config хранится в{" "}
-          <code>~/.reflex/mcp/servers.json</code> с perms <code>0600</code>.
+          {t.rich("mcpServers.description", {
+            code: (chunks) => <code>{chunks}</code>,
+            path: () => <code>~/.reflex/mcp/servers.json</code>,
+          })}
         </p>
         <McpServersSection />
       </section>
       )}
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Сервисы маршрутов</h2>
+        <h2 className="text-lg font-semibold mb-3">{t("mapServices.title")}</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Какие сервисы навигации появятся в попапе «Маршрут в…» на каждой
-          точке map-виджета. Reflex генерирует deep-link из координат — без
-          посредников, без аккаунтов.
+          {t("mapServices.description")}
         </p>
         <MapServicesSection
           settings={settings}
@@ -643,11 +634,9 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-3">Публичные ссылки (ngrok)</h2>
+        <h2 className="text-lg font-semibold mb-3">{t("ngrok.title")}</h2>
         <p className="text-sm text-muted-foreground mb-3">
-          Сделать утилиту, KB-файл или дашборд доступным из интернета через
-          ngrok-туннель. Каждая ссылка опционально защищена паролем; middleware
-          закрывает все остальные пути на ngrok-хосте.
+          {t("ngrok.description")}
         </p>
         <NgrokSection
           settings={settings}
@@ -707,15 +696,16 @@ function ToolsPolicyEditor({
   tools: string[];
   onChange: (next: string[]) => void;
 }) {
-  const remove = (t: string) => onChange(tools.filter((x) => x !== t));
-  const add = (t: string) => {
-    const v = t.trim();
+  const t = useTranslations("settings");
+  const remove = (tool: string) => onChange(tools.filter((x) => x !== tool));
+  const add = (tool: string) => {
+    const v = tool.trim();
     if (!v) return;
     if (tools.includes(v)) return;
     onChange([...tools, v]);
   };
   const [draft, setDraft] = useState("");
-  const inactive = CLAUDE_TOOL_SUGGESTIONS.filter((t) => !tools.includes(t));
+  const inactive = CLAUDE_TOOL_SUGGESTIONS.filter((tool) => !tools.includes(tool));
   return (
     <div className="rounded-md border bg-muted/30 p-3 space-y-2">
       <div className="flex items-baseline justify-between">
@@ -723,22 +713,22 @@ function ToolsPolicyEditor({
           Allowed tools (claude-code)
         </Label>
         <span className="text-[10px] text-muted-foreground">
-          без них агент попросит разрешение и зависнет в headless-режиме
+          {t("toolsPolicy.noToolsHint")}
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {tools.length === 0 && (
           <span className="text-[11px] italic text-muted-foreground">
-            используются дефолты harness'а
+            {t("toolsPolicy.usingDefaults")}
           </span>
         )}
-        {tools.map((t) => (
-          <Badge key={t} variant="secondary" className="gap-1 font-mono">
-            {t}
+        {tools.map((tool) => (
+          <Badge key={tool} variant="secondary" className="gap-1 font-mono">
+            {tool}
             <button
               type="button"
               className="text-muted-foreground hover:text-foreground"
-              onClick={() => remove(t)}
+              onClick={() => remove(tool)}
             >
               ×
             </button>
@@ -747,14 +737,14 @@ function ToolsPolicyEditor({
       </div>
       {inactive.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {inactive.map((t) => (
+          {inactive.map((tool) => (
             <button
-              key={t}
+              key={tool}
               type="button"
-              onClick={() => add(t)}
+              onClick={() => add(tool)}
               className="text-[11px] font-mono rounded px-1.5 py-0.5 border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"
             >
-              + {t}
+              + {tool}
             </button>
           ))}
         </div>
@@ -770,7 +760,7 @@ function ToolsPolicyEditor({
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="custom tool name…"
+          placeholder={t("toolsPolicy.customToolPlaceholder")}
           className="h-7 text-xs font-mono"
         />
         <Button type="submit" size="sm" variant="ghost" className="h-7">

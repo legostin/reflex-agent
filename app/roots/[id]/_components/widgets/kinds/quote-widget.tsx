@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Quote } from "lucide-react";
 import type { QuoteData } from "@/lib/server/widgets/types";
 
@@ -11,8 +12,9 @@ export function QuoteWidget({
   readonly?: boolean;
   onPatch?: (next: QuoteData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   if (!data?.text) {
-    return <p className="text-xs text-muted-foreground">Цитата не задана.</p>;
+    return <p className="text-xs text-muted-foreground">{t("quoteWidget.empty")}</p>;
   }
   return (
     <figure className="relative pl-6">

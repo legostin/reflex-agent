@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MessageSquare } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { UtilityChatSidebar } from "./utility-chat-sidebar";
 
 interface Props {
@@ -46,6 +47,7 @@ export function UtilityIframe({
   agentChat,
   utilityName,
 }: Props) {
+  const t = useTranslations("app");
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const snapshotPending = useRef<{
     resolve: (value: unknown) => void;
@@ -163,10 +165,10 @@ export function UtilityIframe({
             type="button"
             onClick={() => setSidebarOpen(true)}
             className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-violet-600 px-3 py-1.5 text-xs text-white shadow-lg hover:bg-violet-700"
-            title="Открыть помощника"
+            title={t("utilities.iframe.openHelper")}
           >
             <MessageSquare className="h-3.5 w-3.5" />
-            Помощник
+            {t("utilities.iframe.helper")}
           </button>
         )}
       </div>

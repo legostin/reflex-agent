@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   getOrCreateUtilityHelperTopicAction,
   loadHelperTranscriptAction,
@@ -49,6 +50,7 @@ export function UtilityChatSidebar({
   requestSnapshot,
   onClose,
 }: Props) {
+  const tr = useTranslations("app");
   const [topicId, setTopicId] = useState<string | null>(null);
   const [messages, setMessages] = useState<HelperTranscriptMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -63,7 +65,7 @@ export function UtilityChatSidebar({
   // Bootstrap: resolve / create the helper topic for this utility.
   useEffect(() => {
     if (!rootId) {
-      setBootError("Чат доступен только в project-scope утилитах.");
+      setBootError(tr("utilities.helper.projectOnly"));
       return;
     }
     let cancelled = false;
@@ -189,15 +191,15 @@ export function UtilityChatSidebar({
     <aside className="flex h-full flex-col border-l bg-card">
       <header className="border-b px-3 py-2 flex items-center gap-2">
         <MessageSquare className="h-3.5 w-3.5 text-violet-600" />
-        <span className="text-sm font-medium">Помощник</span>
+        <span className="text-sm font-medium">{tr("utilities.helper.title")}</span>
         <span className="text-[10px] text-muted-foreground ml-1">
-          знает контекст этого приложения
+          {tr("utilities.helper.hint")}
         </span>
         {rootId && topicId && (
           <Link
             href={`/roots/${rootId}/chat/${topicId}`}
             className="ml-auto p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-            title="Открыть в полном чате"
+            title={tr("utilities.helper.openFull")}
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </Link>
@@ -210,7 +212,7 @@ export function UtilityChatSidebar({
               "p-1 rounded hover:bg-accent " +
               (rootId && topicId ? "" : "ml-auto")
             }
-            title="Скрыть"
+            title={tr("utilities.helper.hide")}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -226,11 +228,7 @@ export function UtilityChatSidebar({
         {!bootError && messages.length === 0 && !liveAssistant && (
           <div className="text-xs text-muted-foreground flex items-start gap-2">
             <Sparkles className="h-3 w-3 mt-0.5 text-violet-600 shrink-0" />
-            <span>
-              Спроси что-нибудь про данные этого мини-приложения. Диалог
-              сохраняется как обычный разговор — можно открыть полностью по
-              иконке в углу.
-            </span>
+            <span>{tr("utilities.helper.welcome")}</span>
           </div>
         )}
         {messages.map((m, i) => (
@@ -242,7 +240,7 @@ export function UtilityChatSidebar({
         {pending && !streaming && (
           <div className="mr-6 rounded-md bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground inline-flex items-center gap-2">
             <Loader2 className="h-3 w-3 animate-spin" />
-            Reflex думает…
+            {tr("utilities.helper.thinking")}
           </div>
         )}
       </div>
@@ -257,7 +255,7 @@ export function UtilityChatSidebar({
             }
           }}
           rows={1}
-          placeholder="Спроси (⌘↵)…"
+          placeholder={tr("utilities.helper.placeholder")}
           disabled={pending || !!bootError || !topicId}
           className="flex-1 resize-none rounded border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400 max-h-24"
         />
@@ -287,13 +285,17 @@ function Bubble({
   text: string;
   streaming?: boolean;
 }) {
-  // Strip a "[Контекст мини-приложения]…[/контекст]" fenced prelude from
+  const tr = useTranslations("app");
+  // Strip the fenced "[mini-app context]…[/context]" prelude from
   // the user's own bubble so the user doesn't see their own JSON dump.
+  // Match both the English label and the legacy Russian variant in case
+  // a topic was started before the i18n migration.
   let display = text;
   if (role === "user") {
+    // Strip the English fenced prelude emitted by `buildPromptWithSnapshot`.
     display = display
       .replace(
-        /^\s*\[Контекст мини-приложения\][\s\S]*?\[\/контекст\]\s*/,
+        /^\s*\[Mini-app context\][\s\S]*?\[\/context\]\s*/,
         "",
       )
       .trim();
@@ -308,7 +310,11 @@ function Bubble({
       }
     >
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">
-        {role === "user" ? "Ты" : role === "assistant" ? "Reflex" : "Система"}
+        {role === "user"
+          ? tr("utilities.helper.you")
+          : role === "assistant"
+            ? tr("utilities.helper.reflex")
+            : tr("utilities.helper.system")}
         {streaming && <span className="ml-1 text-violet-600">●</span>}
       </div>
       {display}
@@ -329,10 +335,13 @@ function buildPromptWithSnapshot(prompt: string, snapshot: unknown): string {
   if (snapText.length > 4000) {
     snapText = snapText.slice(0, 4000) + "\n…[truncated]";
   }
+  // The fence markers are stripped client-side by `Bubble` regardless of
+  // locale; we keep them English in the wire format so the agent prompt
+  // is stable across locales.
   return [
-    "[Контекст мини-приложения]",
+    "[Mini-app context]",
     snapText,
-    "[/контекст]",
+    "[/context]",
     "",
     prompt,
   ].join("\n");

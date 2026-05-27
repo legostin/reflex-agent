@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FolderOpen, RefreshCw, Workflow } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +24,7 @@ export default async function RootDetailPage({
   const { id } = await params;
   const entry = await getRoot(id);
   if (!entry) notFound();
+  const t = await getTranslations("roots");
   const [stats, snapshotResult, installedUtilities] = await Promise.all([
     kbStats(entry.path),
     loadDashboardSnapshotAction(id),
@@ -79,7 +81,7 @@ export default async function RootDetailPage({
         <ShareButton
           kind="project"
           rootId={entry.id}
-          label={entry.path.split("/").pop() || "Проект"}
+          label={entry.path.split("/").pop() || t("detail.projectFallbackLabel")}
         />
         <RunInitButton rootPath={entry.path} rootId={entry.id} />
       </header>
@@ -89,11 +91,13 @@ export default async function RootDetailPage({
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3 p-10 text-center">
             <RefreshCw className="h-6 w-6" />
             <p>
-              Не удалось загрузить состояние проекта
+              {t("detail.loadFailed")}
               {snapshotResult.ok ? "" : `: ${snapshotResult.error ?? ""}`}.
             </p>
             <p className="text-xs">
-              Попробуй <strong>Run init</strong> сверху, если это новый проект.
+              {t.rich("detail.loadFailedHint", {
+                b: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
           </div>
           <CommandBar rootId={entry.id} />

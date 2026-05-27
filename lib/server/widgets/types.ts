@@ -38,7 +38,7 @@ export interface NewsListData {
     summary?: string;
     source?: string;
     date?: string;
-    /** Set when the user clicks "прочитано" — dims the row, agent
+    /** Set when the user clicks "read" — dims the row, agent
      *  can use this in dedup memory on the next refresh. */
     read?: boolean;
   }>;
@@ -135,7 +135,7 @@ export interface MapData {
 /**
  * Card that wraps another widget kind to bind it to a utility. The host
  * dispatches to the inner kind's renderer for visuals; the wrapper adds
- * the utility's name + a "Открыть" link to the full page. Data is
+ * the utility's name + an "Open" link to the full page. Data is
  * declared in the utility's `manifest.card` and refreshed by the utility
  * itself via `reflex.cards.update({snapshot})`.
  */
@@ -200,7 +200,7 @@ export const SIZE_TO_COL_SPAN: Record<WidgetSizeMode, number> = {
 /**
  * How often the scheduler should auto-refresh the widget by re-running the
  * agent on the source topic. "manual" (default) means refresh only happens
- * when the user explicitly asks in chat or clicks "Обновить сейчас".
+ * when the user explicitly asks in chat or clicks "Refresh now".
  */
 export type WidgetRefresh = "manual" | "hourly" | "daily" | "weekly";
 
@@ -285,22 +285,22 @@ export const SYSTEM_WIDGETS: SystemWidgetMeta[] = [
   {
     id: "sys:active-goals",
     title: "Active goals & running agents",
-    description: "Темы с активным /goal и работающим оркестратором.",
+    description: "Topics with an active /goal and a running orchestrator.",
   },
   {
     id: "sys:pending",
-    title: "Ждут реакции",
-    description: "Карточки permission / question / mcp-add без ответа.",
+    title: "Awaiting response",
+    description: "Unanswered permission / question / mcp-add cards.",
   },
   {
     id: "sys:recent-kb",
-    title: "Свежее в KB",
-    description: "KB-файлы, изменённые за последние 72 часа.",
+    title: "Recent in KB",
+    description: "KB files modified in the last 72 hours.",
   },
   {
     id: "sys:ai-suggestions",
-    title: "Что дальше — предложения Reflex",
-    description: "Gemini-анализ состояния проекта с действиями.",
+    title: "What's next — Reflex suggestions",
+    description: "Gemini-driven analysis of project state with actions.",
   },
 ];
 

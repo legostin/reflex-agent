@@ -344,7 +344,7 @@ class AgentManager {
         setTimeout(() => {
           void this.continueTurn(
             args.agentId,
-            `[Reflex /goal] Продолжай выполнение. Активная цель: ${goalContinuation.goal}. Итерация ${goalContinuation.iteration}/${MAX_GOAL_ITERATIONS}. Если задача завершена И проверена — закончи маркером \`GOAL ACHIEVED\` и kb-записью kind:"goal-completion".`,
+            `[Reflex /goal] Continue execution. Active goal: ${goalContinuation.goal}. Iteration ${goalContinuation.iteration}/${MAX_GOAL_ITERATIONS}. If the task is done AND verified, finish with the marker \`GOAL ACHIEVED\` and a kb-entry kind:"goal-completion".`,
           );
         }, 50);
       }
@@ -430,13 +430,13 @@ class AgentManager {
         if (assignment && !assignment.allowedTools.includes(args.tool)) {
           assignment.allowedTools = [...assignment.allowedTools, args.tool];
           await saveSettings(settings);
-          toolPolicyNote = ` Инструмент ${args.tool} добавлен в settings.assignments.${taskKey}.allowedTools.`;
+          toolPolicyNote = ` Tool ${args.tool} added to settings.assignments.${taskKey}.allowedTools.`;
         }
       } catch (err) {
         await this.emit({
           type: "error",
           message:
-            "Не удалось сохранить разрешённый инструмент: " +
+            "Failed to save allowed tool: " +
             (err instanceof Error ? err.message : String(err)),
           agentId,
           ts: now(),
@@ -1186,7 +1186,7 @@ class AgentManager {
       } catch (err) {
         await this.emit({
           type: "assistant-delta",
-          text: `\n\n_Не удалось сгенерировать картинку: ${
+          text: `\n\n_Failed to generate image: ${
             err instanceof Error ? err.message : String(err)
           }_\n`,
           agentId,
@@ -1211,7 +1211,7 @@ class AgentManager {
     for (const d of directives) {
       try {
         const id = sanitizeWorkflowId(d.id);
-        if (!id) throw new Error("Workflow id пустой");
+        if (!id) throw new Error("Workflow id is empty");
         const now = new Date().toISOString();
         // Auto-assign step ids if missing, default trigger to manual.
         const steps = d.steps.map((s, i) => ({
@@ -1356,7 +1356,7 @@ class AgentManager {
     // chat-view.tsx — runtime "hook_started"/"hook_response" stays hidden.
     await this.emit({
       type: "system",
-      text: `Запускаю Gemini-выжимку YouTube (${directives.length}):\n${directives.map((d) => `• ${d.url}`).join("\n")}`,
+      text: `Starting Gemini YouTube summary (${directives.length}):\n${directives.map((d) => `• ${d.url}`).join("\n")}`,
       subtype: "reflex.preflight",
       agentId,
       ts: now(),
@@ -1380,26 +1380,26 @@ class AgentManager {
       if ("text" in r) {
         return [
           `### youtube-summary ${r.url}`,
-          `_(Gemini ${r.model} — используй как первоисточник; не пытайся WebFetch для того же URL.)_`,
+          `_(Gemini ${r.model} — use as primary source; do not WebFetch the same URL.)_`,
           "",
           r.text,
         ].join("\n");
       }
-      return `### youtube-summary ${r.url}\n_(Gemini failed: ${r.error}. Сообщи пользователю и предложи сохранить ключ в Settings → Gemini, либо ответь без выжимки.)_`;
+      return `### youtube-summary ${r.url}\n_(Gemini failed: ${r.error}. Notify the user and suggest saving the key in Settings -> Gemini, or answer without the summary.)_`;
     });
     await this.emit({
       type: "system",
       text: results.every((r) => "text" in r)
-        ? "Выжимки получены, передаю агенту."
-        : "Часть выжимок не получилась — детали в контексте.",
+        ? "Summaries received, passing to the agent."
+        : "Some summaries failed — details are in the context.",
       subtype: "reflex.preflight",
       agentId,
       ts: now(),
       seq: 0,
     });
     const synthesized =
-      `[Reflex] Gemini-выжимки YouTube, которые ты запросил:\n\n${blocks.join("\n\n")}\n\n` +
-      `Теперь ответь пользователю на основе этого контекста. Не повторяй сами выжимки целиком — компонуй человеческий ответ.`;
+      `[Reflex] Gemini YouTube summaries you requested:\n\n${blocks.join("\n\n")}\n\n` +
+      `Now answer the user based on this context. Do not repeat the summaries verbatim — compose a human-readable response.`;
     await this.continueTurn(agentId, synthesized);
   }
 

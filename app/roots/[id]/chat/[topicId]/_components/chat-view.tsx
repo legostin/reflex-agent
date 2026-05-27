@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Send, Sparkles, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -107,6 +108,7 @@ export function ChatView({
   initialEvents,
   initialActive,
 }: Props) {
+  const t = useTranslations("roots");
   const [events, setEvents] = useState<AgentEvent[]>(initialEvents);
   const [active, setActive] = useState(initialActive);
   const [streamConnected, setStreamConnected] = useState(false);
@@ -231,7 +233,7 @@ export function ChatView({
           },
         );
         if (res.status === 409) {
-          toast.error("Дождись окончания текущего ответа");
+          toast.error(t("chat.waitForCurrentAnswer"));
           return false;
         }
         if (!res.ok) {
@@ -256,17 +258,17 @@ export function ChatView({
         <span className="text-muted-foreground inline-flex items-center gap-1">
           {streamConnected ? (
             <>
-              <Wifi className="h-3 w-3 text-emerald-600" /> подключён к стриму
+              <Wifi className="h-3 w-3 text-emerald-600" /> {t("chat.connectedToStream")}
             </>
           ) : (
             <>
-              <WifiOff className="h-3 w-3 text-muted-foreground" /> офлайн
+              <WifiOff className="h-3 w-3 text-muted-foreground" /> {t("chat.offline")}
             </>
           )}
         </span>
         {active && (
           <Badge variant="default" className="gap-1 bg-emerald-600">
-            <Loader2 className="h-3 w-3 animate-spin" /> агент работает
+            <Loader2 className="h-3 w-3 animate-spin" /> {t("chat.agentWorking")}
           </Badge>
         )}
         <span className="ml-auto text-[10px] text-muted-foreground font-mono">
@@ -277,7 +279,7 @@ export function ChatView({
         <div className="mx-auto max-w-3xl px-6 py-6 space-y-4">
           {turns.length === 0 ? (
             <p className="text-sm text-muted-foreground italic">
-              Пока пусто.
+              {t("chat.topicEmpty")}
             </p>
           ) : (
             turns.map((t, i) => (
@@ -291,13 +293,13 @@ export function ChatView({
           )}
         </div>
       </div>
-      <CommandBarFrame label="Ответ в этом топике">
+      <CommandBarFrame label={t("chat.replyInTopicLabel")}>
         <ChatInputForm
           rootId={rootId}
           topicId={topicId}
-          placeholder="Напиши сообщение в этот топик…"
-          submitLabel="Отправить"
-          pendingLabel="Стрим"
+          placeholder={t("chat.topicPlaceholder")}
+          submitLabel={t("chat.send")}
+          pendingLabel={t("chat.sendPending")}
           SubmitIcon={Send}
           active={active}
           onStop={stop}
@@ -317,8 +319,9 @@ function TurnView({
   rootId: string;
   topicId: string;
 }) {
+  const t = useTranslations("roots");
   const sendSummaryToChat = (text: string, url: string) => {
-    const message = `Контекст — выжимка YouTube-видео (${url}), сделанная Gemini:\n\n${text}\n\nИспользуй её для следующего шага.`;
+    const message = t("kb.summaryContextChat", { url, text });
     void fetch(`/api/roots/${rootId}/chat/${topicId}/send`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -332,7 +335,7 @@ function TurnView({
           toast.error(body.error ?? `HTTP ${res.status}`);
           return;
         }
-        toast.success("Выжимка отправлена в чат");
+        toast.success(t("kb.summarySentToChat"));
       })
       .catch((err) => {
         toast.error(err instanceof Error ? err.message : String(err));
@@ -343,7 +346,18 @@ function TurnView({
   }
   if (turn.kind === "user") {
     const body = turn.body ?? "";
-    const system = classifySystemUserMessage(body);
+    const system = classifySystemUserMessage(body, {
+      mcpSetupDefault: t("chat.mcpSetupDefault"),
+      mcpSetupBadge: t("chat.mcpSetupBadge"),
+      answerBadge: t("chat.answerBadge"),
+      permissionBadge: t("chat.permissionBadge"),
+      permissionUserDecision: t("chat.permissionUserDecision"),
+      mcpBadge: t("chat.mcpBadge"),
+      goalBadge: t("chat.goalBadge"),
+      goalAutoContinue: t("chat.goalAutoContinue"),
+      systemBadge: t("chat.systemBadge"),
+      systemMessage: t("chat.systemMessage"),
+    });
     if (system) {
       return <SystemUserTurn system={system} />;
     }
@@ -385,7 +399,7 @@ function TurnView({
           {turn.pending && <Loader2 className="h-3 w-3 animate-spin" />}
           {turn.error && (
             <span className="text-destructive text-xs normal-case">
-              ошибка: {turn.error}
+              {t("chat.errorPrefix", { message: turn.error })}
             </span>
           )}
         </div>
@@ -449,7 +463,7 @@ function TurnView({
         return null;
       })}
         {turn.pending && (!turn.segments || turn.segments.length === 0) && (
-          <p className="text-sm text-muted-foreground">thinking…</p>
+          <p className="text-sm text-muted-foreground">{t("chat.thinking")}</p>
         )}
       </div>
     </SubAgentWrapper>
@@ -470,10 +484,15 @@ function SubAgentWrapper({
   turn: Turn;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("roots");
   if (!isSubAgent) return <>{children}</>;
   const summary = [
     turn.agentLabel ?? "sub-agent",
-    turn.pending ? "работает…" : turn.error ? "ошибка" : "готово",
+    turn.pending
+      ? t("chat.subAgentWorking")
+      : turn.error
+        ? t("chat.subAgentError")
+        : t("chat.subAgentDone"),
   ].join(" · ");
   return (
     <details className="group" open={turn.pending}>
@@ -809,7 +828,7 @@ function projectEvents(events: AgentEvent[]): Turn[] {
  * with the technical guts hidden behind a toggle.
  */
 interface SystemUserMessage {
-  /** Short label for the chip (e.g. "MCP setup", "Ответ", "/goal"). */
+  /** Short label for the chip (e.g. "MCP setup", "Answer", "/goal"). */
   badge: string;
   /** One-line summary the reader actually cares about. */
   summary: string;
@@ -817,14 +836,30 @@ interface SystemUserMessage {
   details: string;
 }
 
-function classifySystemUserMessage(text: string): SystemUserMessage | null {
+interface SystemUserMessageLabels {
+  mcpSetupDefault: string;
+  mcpSetupBadge: string;
+  answerBadge: string;
+  permissionBadge: string;
+  permissionUserDecision: string;
+  mcpBadge: string;
+  goalBadge: string;
+  goalAutoContinue: string;
+  systemBadge: string;
+  systemMessage: string;
+}
+
+function classifySystemUserMessage(
+  text: string,
+  labels: SystemUserMessageLabels,
+): SystemUserMessage | null {
   const trimmed = text.trimStart();
   // MCP setup wizard kickoff
   const wizard = /^\[MCP setup wizard\]\s*([^\n]*)/.exec(trimmed);
   if (wizard) {
     return {
-      badge: "MCP setup",
-      summary: wizard[1]!.trim() || "Установка MCP-сервера",
+      badge: labels.mcpSetupBadge,
+      summary: wizard[1]!.trim() || labels.mcpSetupDefault,
       details: text,
     };
   }
@@ -834,7 +869,7 @@ function classifySystemUserMessage(text: string): SystemUserMessage | null {
   );
   if (answer) {
     return {
-      badge: "Ответ",
+      badge: labels.answerBadge,
       summary: answer[1]!.trim(),
       details: text,
     };
@@ -845,8 +880,8 @@ function classifySystemUserMessage(text: string): SystemUserMessage | null {
   );
   if (perm) {
     return {
-      badge: "Permission",
-      summary: (perm[3] ?? perm[1] ?? "").trim() || "Решение пользователя",
+      badge: labels.permissionBadge,
+      summary: (perm[3] ?? perm[1] ?? "").trim() || labels.permissionUserDecision,
       details: text,
     };
   }
@@ -857,7 +892,7 @@ function classifySystemUserMessage(text: string): SystemUserMessage | null {
   if (mcpAdd) {
     const first = trimmed.split("\n", 1)[0]!;
     return {
-      badge: "MCP",
+      badge: labels.mcpBadge,
       summary: first.replace(/^\[Reflex\]\s+/, "").slice(0, 200),
       details: text,
     };
@@ -866,8 +901,8 @@ function classifySystemUserMessage(text: string): SystemUserMessage | null {
   const goal = /^\[Reflex \/goal\]\s+([\s\S]*)/.exec(trimmed);
   if (goal) {
     return {
-      badge: "/goal",
-      summary: "Auto-continue (goal mode)",
+      badge: labels.goalBadge,
+      summary: labels.goalAutoContinue,
       details: text,
     };
   }
@@ -876,8 +911,8 @@ function classifySystemUserMessage(text: string): SystemUserMessage | null {
   if (generic) {
     const first = generic[1]!.split("\n", 1)[0]!.trim();
     return {
-      badge: "system",
-      summary: first.slice(0, 200) || "Системное сообщение",
+      badge: labels.systemBadge,
+      summary: first.slice(0, 200) || labels.systemMessage,
       details: text,
     };
   }

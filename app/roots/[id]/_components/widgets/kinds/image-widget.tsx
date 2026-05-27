@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ImageData } from "@/lib/server/widgets/types";
 
 export function ImageWidget({
@@ -10,8 +11,9 @@ export function ImageWidget({
   readonly?: boolean;
   onPatch?: (next: ImageData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   if (!data?.url) {
-    return <p className="text-xs text-muted-foreground">Картинка не задана.</p>;
+    return <p className="text-xs text-muted-foreground">{t("imageWidget.empty")}</p>;
   }
   return (
     <figure className="space-y-1">

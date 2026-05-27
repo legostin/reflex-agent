@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Bookmark,
   BookOpen,
@@ -24,6 +25,7 @@ export function KbWriteCard({
   rootId: string;
   entry: KbWriteState;
 }) {
+  const t = useTranslations("roots");
   const Icon = pickIcon(entry.kind);
   const href = `/roots/${rootId}?file=${encodeURIComponent(entry.relPath)}`;
   return (
@@ -38,7 +40,7 @@ export function KbWriteCard({
         <div className="min-w-0 flex-1">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
-            <span>Записано в базу знаний</span>
+            <span>{t("kbWriteCard.writtenToKb")}</span>
             <span className="font-mono normal-case tracking-normal">
               {entry.kind}
             </span>

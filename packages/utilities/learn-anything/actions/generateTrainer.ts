@@ -35,21 +35,21 @@ export default async function generateTrainer(
 ): Promise<TrainerSpec> {
   const userBrief =
     (args.prompt ?? "").trim() ||
-    `Спроектируй тренажёр, который помогает закрепить «${args.moduleObjective}».`;
+    `Design a trainer that helps reinforce "${args.moduleObjective}".`;
   const prompt = [
-    `Курс/модуль: «${args.moduleTitle}».`,
-    "Сделай интерактивный тренажёр — отдельный HTML-файл с inline JS.",
-    "Требования:",
-    "  • Один <!doctype html> файл целиком: <head>, <body>, <script>, опционально <style>.",
-    "  • НИКАКИХ внешних ресурсов: ни CDN-скриптов, ни картинок по URL, ни fetch'ей. Всё inline.",
-    "  • Используй <canvas> где это уместно (рисование, физика, геометрия).",
-    "  • Размер ≈ 600×400 px (адаптивно).",
-    "  • Чёткий interface: что показано, что делать, мгновенный feedback (правильно/нет, score).",
-    "  • Без navigator/window глобалов которые ломаются в sandbox iframe (без localStorage, без parent).",
-    "  • КОД ДОЛЖЕН РАБОТАТЬ. Никаких placeholder-функций.",
-    "Верни ТОЛЬКО HTML (без обёртки JSON и без markdown-fence).",
+    `Course/module: "${args.moduleTitle}".`,
+    "Build an interactive trainer — a standalone HTML file with inline JS.",
+    "Requirements:",
+    "  • One full <!doctype html> file: <head>, <body>, <script>, optional <style>.",
+    "  • NO external resources: no CDN scripts, no image URLs, no fetch calls. Everything inline.",
+    "  • Use <canvas> where appropriate (drawing, physics, geometry).",
+    "  • Size ≈ 600×400 px (responsive).",
+    "  • Clear interface: what is shown, what to do, instant feedback (right/wrong, score).",
+    "  • No navigator/window globals that break inside a sandbox iframe (no localStorage, no parent).",
+    "  • THE CODE MUST WORK. No placeholder functions.",
+    "Reply with HTML ONLY (no JSON wrapper, no markdown fence).",
     "",
-    `## Идея тренажёра\n${userBrief}`,
+    `## Trainer idea\n${userBrief}`,
   ].join("\n");
 
   // Trainer HTML is long — give the agent a generous 7 minutes; worker
@@ -58,13 +58,13 @@ export default async function generateTrainer(
   const text = r.text ?? "";
   const html = extractHtml(text);
   if (!html) {
-    throw new Error("Агент не вернул валидный HTML — попробуй ещё раз");
+    throw new Error("Agent did not return valid HTML — please try again");
   }
 
   const trainerId = `${args.moduleId}-${Date.now().toString(36)}`;
   const saved = await reflex.kb.add({
     kind: "course-trainer",
-    title: `Тренажёр · ${args.moduleTitle}`,
+    title: `Trainer · ${args.moduleTitle}`,
     body: "```html\n" + html.slice(0, 30_000) + "\n```",
     meta: {
       courseId: args.courseId,

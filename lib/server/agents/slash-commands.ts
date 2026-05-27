@@ -82,16 +82,16 @@ export function researchInstructions(payload: string, language: string): string 
     "## /research — Deep research mode (this turn)",
     "",
     `Reply in ${language}.`,
-    payload ? `Тема: ${payload}` : "",
+    payload ? `Topic: ${payload}` : "",
     "",
-    "Подход:",
-    "  1. Делегируй основной поиск sub-агенту с ролью `researcher` через `<<reflex:dispatch>>` (одним маркером — он сам пройдётся по web + KB).",
-    "  2. Если возможно — несколько researcher'ов параллельно с разными углами (например: «история», «текущее состояние», «критика»).",
-    "  3. Дождись результатов, **компонуй синтез**: сходства, разногласия, белые пятна. Цитируй источники со ссылками.",
-    "  4. В конце предложи сохранить ключевые факты в KB маркером `<<reflex:kb>>` (kind=\"research-note\") — но дождись подтверждения.",
-    "  5. Если тема глубокая — предложи виджет `news-list` или `link-list` через `<<reflex:widget-create>>`.",
+    "Approach:",
+    "  1. Delegate the main search to a sub-agent with role `researcher` via `<<reflex:dispatch>>` (one marker — it will sweep web + KB on its own).",
+    "  2. If possible — multiple researchers in parallel with different angles (e.g. \"history\", \"current state\", \"criticism\").",
+    "  3. Wait for results, **compose a synthesis**: similarities, disagreements, blind spots. Cite sources with links.",
+    "  4. At the end, propose saving key facts to the KB via the `<<reflex:kb>>` marker (kind=\"research-note\") — but wait for confirmation.",
+    "  5. If the topic is deep — propose a `news-list` or `link-list` widget via `<<reflex:widget-create>>`.",
     "",
-    "Не отвечай из памяти модели — гони через WebSearch/WebFetch.",
+    "Don't answer from model memory — drive everything through WebSearch/WebFetch.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -105,17 +105,17 @@ export function widgetInstructionsForCommand(
   language: string,
 ): string {
   return [
-    "## /widget — Создание виджета на дашборде",
+    "## /widget — Create a dashboard widget",
     "",
     `Reply in ${language}.`,
-    payload ? `Запрос пользователя: ${payload}` : "",
+    payload ? `User request: ${payload}` : "",
     "",
-    "Правила:",
-    "  1. Выбери подходящий `kind` (см. блок про widgets в системном промпте). Если запрос неоднозначный — спроси через `<<reflex:question>>`.",
-    "  2. Подбери стабильный kebab-case `id`, который потом можно будет переиспользовать для widget-update.",
-    "  3. Если нужны актуальные данные (новости, цены, статусы) — собери через WebSearch/WebFetch перед эмитом.",
-    "  4. Эмить **один** `<<reflex:widget-create>>` маркер в этом ходе, потом коротко расскажи пользователю что появилось на дашборде.",
-    "  5. Если виджет имеет смысл авто-обновлять — поставь `refresh: \"hourly\"|\"daily\"|\"weekly\"` и опиши `memory` для дедупа/истории.",
+    "Rules:",
+    "  1. Pick the appropriate `kind` (see the widgets block in the system prompt). If the request is ambiguous — ask via `<<reflex:question>>`.",
+    "  2. Pick a stable kebab-case `id` that can later be reused for widget-update.",
+    "  3. If you need fresh data (news, prices, statuses) — gather it via WebSearch/WebFetch before emitting.",
+    "  4. Emit **one** `<<reflex:widget-create>>` marker in this turn, then briefly tell the user what appeared on the dashboard.",
+    "  5. If the widget makes sense to auto-refresh — set `refresh: \"hourly\"|\"daily\"|\"weekly\"` and describe `memory` for dedup/history.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -132,18 +132,18 @@ export function workflowInstructionsForCommand(
   language: string,
 ): string {
   return [
-    "## /workflow — Сборка workflow (n8n-style линейный рецепт)",
+    "## /workflow — Build a workflow (n8n-style linear recipe)",
     "",
     `Reply in ${language}.`,
-    payload ? `Запрос пользователя: ${payload}` : "",
+    payload ? `User request: ${payload}` : "",
     "",
-    "Правила:",
-    "  1. Если задача неоднозначная (что входит, куда писать, как часто) — задай 1-3 уточняющих вопроса через `<<reflex:question>>` ОДНИМ блоком. Не угадывай.",
-    "  2. Шаги КОРОТКИЕ (3-5). Поддерживаемые типы: `text-template`, `http-request`, `web-fetch`, `ask-agent`, `kb-write`. Если задача шире — разбей на несколько workflows.",
-    "  3. `id` каждого шага — стабильный kebab-case (его используют шаблоны: `{{steps.<id>.output}}`).",
-    "  4. Trigger по умолчанию `manual`. `hourly/daily/weekly` ставь, только если пользователь явно попросил периодичность.",
-    "  5. Эмить **один** `<<reflex:workflow-create>>` маркер в этом ходе. Не дублируй JSON в текст — карточка превью отрендерится в чате автоматически.",
-    "  6. После маркера — короткий план словами: что workflow делает по шагам, как запустить, что появится в результате.",
+    "Rules:",
+    "  1. If the task is ambiguous (what's included, where to write, how often) — ask 1-3 clarifying questions via `<<reflex:question>>` in a SINGLE block. Don't guess.",
+    "  2. Steps are SHORT (3-5). Supported kinds: `text-template`, `http-request`, `web-fetch`, `ask-agent`, `kb-write`. If the task is broader — split it into multiple workflows.",
+    "  3. Each step's `id` is stable kebab-case (templates use it: `{{steps.<id>.output}}`).",
+    "  4. Trigger defaults to `manual`. Set `hourly/daily/weekly` only if the user explicitly asked for a schedule.",
+    "  5. Emit **one** `<<reflex:workflow-create>>` marker in this turn. Don't duplicate the JSON in text — the preview card renders in chat automatically.",
+    "  6. After the marker — a short plan in words: what the workflow does step by step, how to run it, what appears as the result.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -159,15 +159,15 @@ export function mcpInstructionsForCommand(
   language: string,
 ): string {
   return [
-    "## /mcp — Подключение MCP-сервера",
+    "## /mcp — Connect an MCP server",
     "",
     `Reply in ${language}.`,
-    payload ? `Запрос: ${payload}` : "Пользователь хочет подключить MCP-сервер, но не уточнил какой.",
+    payload ? `Request: ${payload}` : "The user wants to connect an MCP server but didn't specify which one.",
     "",
-    "Действуй как MCP-визард:",
-    "  1. Если запрос конкретный (например «github mcp», «notion») — сразу подбери конфиг и предложи через `<<reflex:mcp-add>>`. Не забудь про secrets-слоты с описанием где взять токен.",
-    "  2. Если запрос абстрактный — спроси через `<<reflex:question>>` что нужно подключить (Notion / Slack / GitHub / Linear / другое).",
-    "  3. Если речь о существующем сервере — попроси использовать его инструменты, не предлагай add-карточку повторно.",
+    "Act as an MCP wizard:",
+    "  1. If the request is concrete (e.g. \"github mcp\", \"notion\") — pick a config right away and propose it via `<<reflex:mcp-add>>`. Don't forget secrets slots with a description of where to get the token.",
+    "  2. If the request is abstract — ask via `<<reflex:question>>` what to connect (Notion / Slack / GitHub / Linear / other).",
+    "  3. If it's about an existing server — ask the user to use its tools; don't propose the add card again.",
   ]
     .filter(Boolean)
     .join("\n");

@@ -148,4 +148,4 @@ async function refreshOne(
 }
 
 // buildRefreshPromptForWidget moved to scheduler-bridge.ts so both the
-// auto-scheduler and the manual "Обновить сейчас" action can reuse it.
+// auto-scheduler and the manual "Refresh now" action can reuse it.

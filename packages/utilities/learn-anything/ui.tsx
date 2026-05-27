@@ -14,12 +14,12 @@ import {
 } from "@host/ui";
 
 /**
- * "Изучи что угодно" — universal AI tutor / course builder.
+ * "Learn Anything" — universal AI tutor / course builder.
  *
  * UI state machine:
- *   list      → user's existing courses + "Новый курс" button
+ *   list      → user's existing courses + "New course" button
  *   wizard    → topic → agent-driven Q&A → ready
- *   outline   → preview of generated modules → "Начать"
+ *   outline   → preview of generated modules → "Start"
  *   module    → article + video + links + diagrams + quiz + homework + trainer
  *   trainer   → fullscreen iframe with the generated HTML
  */
@@ -112,9 +112,9 @@ export default function LearnAnythingUtility() {
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-3xl px-4 py-6 space-y-4">
         <header className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">🎓 Изучи что угодно</h1>
+          <h1 className="text-xl font-semibold">🎓 Learn Anything</h1>
           <span className="text-xs text-slate-500">
-            персональный AI-наставник
+            personal AI tutor
           </span>
           <div className="ml-auto" />
           {view.name !== "list" && (
@@ -123,7 +123,7 @@ export default function LearnAnythingUtility() {
               type="button"
               onClick={() => setView({ name: "list" })}
             >
-              ← К курсам
+              ← Back to courses
             </Button>
           )}
         </header>
@@ -208,7 +208,7 @@ export default function LearnAnythingUtility() {
         )}
 
         {error && (
-          <p className="text-xs text-red-600">Ошибка: {error}</p>
+          <p className="text-xs text-red-600">Error: {error}</p>
         )}
       </div>
     </div>
@@ -232,13 +232,13 @@ function CourseList({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>🎯 Что хочешь изучить?</CardTitle>
+          <CardTitle>🎯 What do you want to learn?</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <Input
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="напр. рисование акварелью, python для бэкенда, испанский с нуля"
+            placeholder="e.g. watercolor painting, python for backend, spanish from scratch"
             onKeyDown={(e) => {
               if (e.key === "Enter" && topic.trim()) {
                 e.preventDefault();
@@ -250,20 +250,20 @@ function CourseList({
             onClick={() => topic.trim() && onNew(topic.trim())}
             disabled={!topic.trim()}
           >
-            Собрать курс →
+            Build course →
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>📚 Мои курсы ({courses.length})</CardTitle>
+          <CardTitle>📚 My courses ({courses.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {courses.length === 0 ? (
             <p className="text-sm text-slate-500">
-              Пока ни одного. Введи тему выше — Reflex задаст 3-4 вопроса и
-              соберёт программу.
+              None yet. Enter a topic above — Reflex will ask 3-4 questions
+              and assemble a program.
             </p>
           ) : (
             <ul className="space-y-1.5">
@@ -283,7 +283,7 @@ function CourseList({
                       <div className="flex items-center gap-2">
                         <span className="font-medium truncate">{c.topic}</span>
                         <span className="ml-auto text-xs text-slate-500">
-                          {done}/{total} модулей
+                          {done}/{total} modules
                         </span>
                       </div>
                       <div className="mt-1 h-1 rounded-full bg-slate-200 overflow-hidden">
@@ -396,7 +396,7 @@ function WizardView({
         <CardContent className="py-8 text-center space-y-2">
           <div className="text-2xl">📐</div>
           <p className="text-sm text-slate-600">
-            Собираю программу курса… это занимает 20-40 секунд.
+            Building the course program… this takes 20-40 seconds.
           </p>
         </CardContent>
       </Card>
@@ -408,7 +408,7 @@ function WizardView({
       <CardHeader>
         <CardTitle>
           <span className="text-slate-500 text-xs uppercase tracking-wider">
-            Тема:
+            Topic:
           </span>{" "}
           {topic}
         </CardTitle>
@@ -456,7 +456,7 @@ function WizardView({
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               rows={3}
-              placeholder="свой ответ…"
+              placeholder="your answer…"
             />
             <div className="flex items-center gap-2">
               <Button
@@ -472,7 +472,7 @@ function WizardView({
                   void ask(next);
                 }}
               >
-                Ответить →
+                Answer →
               </Button>
               <Button
                 type="button"
@@ -480,15 +480,15 @@ function WizardView({
                 disabled={busy}
                 onClick={() => void buildOutline(history)}
               >
-                Хватит, собирай курс
+                Enough, build the course
               </Button>
               <Button type="button" variant="outline" onClick={onCancel}>
-                Отмена
+                Cancel
               </Button>
             </div>
           </>
         ) : (
-          <p className="text-sm text-slate-500">Думаю над вопросом…</p>
+          <p className="text-sm text-slate-500">Thinking about the next question…</p>
         )}
       </CardContent>
     </Card>
@@ -508,7 +508,7 @@ function OutlineView({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>🧭 Программа курса «{course.topic}»</CardTitle>
+        <CardTitle>🧭 Program for course "{course.topic}"</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <ol className="space-y-2 list-decimal pl-5">
@@ -519,12 +519,12 @@ function OutlineView({
                 <span className="text-slate-600"> — {m.objective}</span>
               )}
               <span className="text-xs text-slate-400 ml-1">
-                (~{m.estMinutes} мин)
+                (~{m.estMinutes} min)
               </span>
             </li>
           ))}
         </ol>
-        <Button onClick={onStart}>Начать обучение →</Button>
+        <Button onClick={onStart}>Start learning →</Button>
       </CardContent>
     </Card>
   );
@@ -550,7 +550,7 @@ function CourseView({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="text-xs text-slate-500">
-          Прогресс: {done} из {course.modules.length}
+          Progress: {done} of {course.modules.length}
         </div>
         <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
           <div
@@ -583,11 +583,11 @@ function CourseView({
                   <span className="flex-1 truncate">{m.title}</span>
                   {p?.quizScore !== undefined && (
                     <Badge variant="outline" className="text-[10px]">
-                      тест {p.quizScore}%
+                      quiz {p.quizScore}%
                     </Badge>
                   )}
                   <span className="text-[10px] text-slate-400">
-                    ~{m.estMinutes} мин
+                    ~{m.estMinutes} min
                   </span>
                 </button>
               </li>
@@ -889,7 +889,7 @@ function ModuleView({
     return (
       <Card>
         <CardContent className="py-10 text-center text-sm text-slate-500">
-          📖 Подбираю материал, статьи, видео, схемы… 30-60 секунд.
+          📖 Gathering materials, articles, videos, diagrams… 30-60 seconds.
         </CardContent>
       </Card>
     );
@@ -903,7 +903,7 @@ function ModuleView({
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm text-slate-600">{module.objective}</p>
-          <Button onClick={() => void build()}>Подготовить модуль →</Button>
+          <Button onClick={() => void build()}>Prepare module →</Button>
         </CardContent>
       </Card>
     );
@@ -939,7 +939,7 @@ function ModuleView({
       {content.images.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>🖼 Иллюстрации</CardTitle>
+            <CardTitle>🖼 Illustrations</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             {content.images.map((im, i) => (
@@ -948,7 +948,7 @@ function ModuleView({
                   src={im.url}
                   alt={im.alt}
                   loading="lazy"
-                  title={im.alt || "Открыть на весь экран"}
+                  title={im.alt || "Open fullscreen"}
                   onClick={() =>
                     setGalleryZoom({ src: im.url, alt: im.alt })
                   }
@@ -973,7 +973,7 @@ function ModuleView({
       {content.diagrams.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>📐 Схемы</CardTitle>
+            <CardTitle>📐 Diagrams</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {content.diagrams.map((d, i) => (
@@ -995,7 +995,7 @@ function ModuleView({
       {content.videos.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>🎬 Видео</CardTitle>
+            <CardTitle>🎬 Videos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {content.videos.map((v, i) => (
@@ -1022,7 +1022,7 @@ function ModuleView({
       {content.links.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>📑 Источники</CardTitle>
+            <CardTitle>📑 Sources</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             {content.links.map((l, i) => (
@@ -1046,7 +1046,7 @@ function ModuleView({
       {content.homework.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>📝 Домашнее задание</CardTitle>
+            <CardTitle>📝 Homework</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-1 text-sm list-decimal pl-5">
@@ -1060,12 +1060,12 @@ function ModuleView({
 
       <Card>
         <CardHeader>
-          <CardTitle>✅ Тест-проверка</CardTitle>
+          <CardTitle>✅ Quiz check</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {!quiz ? (
             <Button onClick={() => void startQuiz()} disabled={quizBusy}>
-              {quizBusy ? "Готовлю…" : "Сгенерировать тест"}
+              {quizBusy ? "Preparing…" : "Generate quiz"}
             </Button>
           ) : (
             <>
@@ -1124,11 +1124,11 @@ function ModuleView({
                   onClick={() => void submitQuiz()}
                   disabled={Object.keys(quizAnswers).length < quiz.length}
                 >
-                  Проверить
+                  Check
                 </Button>
               ) : (
                 <Badge variant="default" className="text-xs">
-                  Результат:{" "}
+                  Score:{" "}
                   {Math.round(
                     (quiz.filter((q, i) => quizAnswers[i] === q.correctIndex)
                       .length /
@@ -1145,16 +1145,16 @@ function ModuleView({
 
       <Card>
         <CardHeader>
-          <CardTitle>🕹 Тренажёр</CardTitle>
+          <CardTitle>🕹 Trainer</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <Input
             value={trainerIdea}
             onChange={(e) => setTrainerIdea(e.target.value)}
-            placeholder="идея тренажёра (опционально) — Reflex придумает сам если пусто"
+            placeholder="trainer idea (optional) — Reflex will invent one if empty"
           />
           <Button onClick={() => void makeTrainer()} disabled={trainerBusy}>
-            {trainerBusy ? "Делаю…" : "Сгенерировать интерактивный тренажёр"}
+            {trainerBusy ? "Building…" : "Generate interactive trainer"}
           </Button>
         </CardContent>
       </Card>
@@ -1165,13 +1165,13 @@ function ModuleView({
             onClick={() => void onProgress({ completed: true })}
             variant="outline"
           >
-            ✓ Отметить пройденным
+            ✓ Mark as completed
           </Button>
           <Button
             onClick={() => void onProgress({ completed: false })}
             variant="outline"
           >
-            Снять отметку
+            Unmark
           </Button>
         </CardContent>
       </Card>
@@ -1195,14 +1195,14 @@ function TrainerView({
     <Card>
       <CardHeader>
         <CardTitle>
-          🕹 Тренажёр · {title}
+          🕹 Trainer · {title}
           <Button
             type="button"
             variant="outline"
             className="ml-auto"
             onClick={onClose}
           >
-            Закрыть
+            Close
           </Button>
         </CardTitle>
       </CardHeader>
@@ -1293,7 +1293,7 @@ function baseSlug(rel: string): string {
 //
 //   2. A floating popover above the selection (or below if the
 //      selection sits near the top of the viewport). Initial state
-//      offers `✨ Объяснить` (default action) and `❓ Свой вопрос`
+//      offers `✨ Explain` (default action) and `❓ Ask a question`
 //      (reveals an input). After the agent replies the popover stays
 //      pinned in place and shows the explanation inline — readable
 //      like a Kindle/Apple Books margin annotation.
@@ -1365,7 +1365,7 @@ function AnnotationOverlay({
       {/* Margin note popover. */}
       <div
         role="dialog"
-        aria-label="Объяснение"
+        aria-label="Explanation"
         style={{
           position: "fixed",
           top,
@@ -1398,7 +1398,7 @@ function AnnotationOverlay({
           }}
         >
           <span aria-hidden>✨</span>
-          <span style={{ fontWeight: 600 }}>Заметка</span>
+          <span style={{ fontWeight: 600 }}>Note</span>
           <span
             style={{
               marginLeft: 6,
@@ -1417,7 +1417,7 @@ function AnnotationOverlay({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть"
+            aria-label="Close"
             style={{
               border: "none",
               background: "transparent",
@@ -1460,7 +1460,7 @@ function AnnotationOverlay({
                     cursor: "pointer",
                   }}
                 >
-                  ✨ Объяснить
+                  ✨ Explain
                 </button>
                 <button
                   type="button"
@@ -1476,9 +1476,9 @@ function AnnotationOverlay({
                     fontSize: 12,
                     cursor: "pointer",
                   }}
-                  title="Задать свой вопрос про выделенный фрагмент"
+                  title="Ask your own question about the selected fragment"
                 >
-                  ❓ Свой вопрос
+                  ❓ Ask a question
                 </button>
               </div>
               {annot.showQuestion && (
@@ -1492,7 +1492,7 @@ function AnnotationOverlay({
                   <textarea
                     value={annot.question}
                     onChange={(e) => onChange({ question: e.target.value })}
-                    placeholder="Например: «при чём тут этот закон?» или «дай пример»"
+                    placeholder="For example: 'what does this law have to do with it?' or 'give me an example'"
                     autoFocus
                     rows={3}
                     style={{
@@ -1520,7 +1520,7 @@ function AnnotationOverlay({
                       alignSelf: "flex-end",
                     }}
                   >
-                    Спросить →
+                    Ask →
                   </button>
                 </form>
               )}
@@ -1539,7 +1539,7 @@ function AnnotationOverlay({
               }}
             >
               <span aria-hidden>✨</span>
-              <span>{annot.question ? "Думаю над вопросом…" : "Объясняю…"}</span>
+              <span>{annot.question ? "Thinking about the question…" : "Explaining…"}</span>
             </div>
           )}
 
@@ -1574,7 +1574,7 @@ function AnnotationOverlay({
                     cursor: "pointer",
                   }}
                 >
-                  ❓ Ещё вопрос
+                  ❓ Another question
                 </button>
               </div>
             </div>

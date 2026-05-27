@@ -79,39 +79,39 @@ const BUILTIN: Record<string, OAuthProviderDef> = {
     extraAuthorizeParams: { access_type: "offline", prompt: "consent" },
     needsClientSecret: true,
     setupHint:
-      "Если ещё не делал — сначала включи нужный API (Calendar/Gmail/Drive) во вкладке APIs & Services → Library.",
+      "If you haven't already — first enable the required API (Calendar/Gmail/Drive) under APIs & Services → Library.",
     consoleUrl: "https://console.cloud.google.com/apis/credentials",
     setupSteps: [
       {
-        title: "Открой Google Cloud Console → APIs & Services → Credentials.",
+        title: "Open Google Cloud Console → APIs & Services → Credentials.",
       },
       {
-        title: "Нажми «+ CREATE CREDENTIALS» → «OAuth client ID».",
+        title: "Click \"+ CREATE CREDENTIALS\" → \"OAuth client ID\".",
       },
       {
         title: "Application type",
         choice: "Web application",
-        body: "Не «Desktop» — Reflex использует фиксированный localhost-redirect.",
+        body: "Not \"Desktop\" — Reflex uses a fixed localhost redirect.",
       },
       {
-        title: "Name — любое, например «Reflex».",
+        title: "Name — anything, e.g. \"Reflex\".",
       },
       {
         title: "Authorized redirect URIs → ADD URI",
         field: "Authorized redirect URIs",
         copy: "http://localhost:3210/api/oauth/callback",
-        body: "Точно как есть, без слэша в конце, http (не https).",
+        body: "Exactly as shown, no trailing slash, http (not https).",
       },
       {
-        title: "Жми CREATE → откроется попап с Client ID и Client Secret.",
-      },
-      {
-        title:
-          "Скопируй сюда оба значения. (Если потерял — открой клиент в Credentials, «Download JSON» или «Reset secret».)",
+        title: "Hit CREATE → a popup will show the Client ID and Client Secret.",
       },
       {
         title:
-          "Перед первым Authorize убедись, что нужный API включён: APIs & Services → Library → Google Calendar API → Enable (для других сервисов — аналогично).",
+          "Copy both values here. (If lost — open the client in Credentials, use \"Download JSON\" or \"Reset secret\".)",
+      },
+      {
+        title:
+          "Before the first Authorize, make sure the required API is enabled: APIs & Services → Library → Google Calendar API → Enable (similarly for other services).",
       },
     ],
   },
@@ -125,13 +125,13 @@ const BUILTIN: Record<string, OAuthProviderDef> = {
     refreshTokenSupported: false,
     extraAuthorizeParams: {},
     needsClientSecret: true,
-    setupHint: "Личные OAuth Apps живут в Settings → Developer settings.",
+    setupHint: "Personal OAuth Apps live in Settings → Developer settings.",
     consoleUrl: "https://github.com/settings/developers",
     setupSteps: [
-      { title: "Открой github.com/settings/developers → OAuth Apps." },
-      { title: "Нажми «New OAuth App»." },
+      { title: "Open github.com/settings/developers → OAuth Apps." },
+      { title: "Click \"New OAuth App\"." },
       {
-        title: "Application name — что угодно, например «Reflex».",
+        title: "Application name — anything, e.g. \"Reflex\".",
       },
       {
         title: "Homepage URL",
@@ -143,13 +143,13 @@ const BUILTIN: Record<string, OAuthProviderDef> = {
         field: "Authorization callback URL",
         copy: "http://localhost:3210/api/oauth/callback",
       },
-      { title: "Жми «Register application»." },
+      { title: "Click \"Register application\"." },
       {
-        title: "Скопируй «Client ID» отсюда → в Reflex.",
+        title: "Copy \"Client ID\" from here → into Reflex.",
       },
       {
         title:
-          "Нажми «Generate a new client secret», скопируй значение сразу (показывается один раз) → в Reflex.",
+          "Click \"Generate a new client secret\", copy the value immediately (shown only once) → into Reflex.",
       },
     ],
   },
@@ -164,31 +164,31 @@ const BUILTIN: Record<string, OAuthProviderDef> = {
     extraAuthorizeParams: { owner: "user" },
     needsClientSecret: true,
     setupHint:
-      "Reflex использует Public integration (с OAuth flow), не Internal.",
+      "Reflex uses a Public integration (with OAuth flow), not Internal.",
     consoleUrl: "https://www.notion.so/profile/integrations",
     setupSteps: [
       {
-        title: "Открой notion.so/profile/integrations → «+ New integration».",
+        title: "Open notion.so/profile/integrations → \"+ New integration\".",
       },
-      { title: "Name — «Reflex»." },
+      { title: "Name — \"Reflex\"." },
       {
-        title: "Associated workspace — твой workspace.",
+        title: "Associated workspace — your workspace.",
       },
       {
         title: "Type",
         choice: "Public",
-        body: "Internal не подходит — для OAuth flow нужна публичная integration.",
+        body: "Internal doesn't fit — the OAuth flow needs a public integration.",
       },
-      { title: "Submit → integration создана. Перейди на её страницу." },
+      { title: "Submit → integration is created. Go to its page." },
       {
-        title: "В разделе «OAuth Domain & URIs» → Redirect URIs → Add URI",
+        title: "Under \"OAuth Domain & URIs\" → Redirect URIs → Add URI",
         field: "Redirect URIs",
         copy: "http://localhost:3210/api/oauth/callback",
       },
       { title: "Save." },
       {
         title:
-          "В «Secrets» скопируй OAuth client ID и OAuth client secret сюда.",
+          "Under \"Secrets\", copy the OAuth client ID and OAuth client secret here.",
       },
     ],
   },
@@ -203,27 +203,27 @@ const BUILTIN: Record<string, OAuthProviderDef> = {
     extraAuthorizeParams: {},
     needsClientSecret: true,
     setupHint:
-      "Scopes по умолчанию (chat:write, channels:read) можно расширить в OAuth & Permissions.",
+      "Default scopes (chat:write, channels:read) can be extended in OAuth & Permissions.",
     consoleUrl: "https://api.slack.com/apps",
     setupSteps: [
       {
-        title: "Открой api.slack.com/apps → «Create New App» → «From scratch».",
+        title: "Open api.slack.com/apps → \"Create New App\" → \"From scratch\".",
       },
-      { title: "App Name — «Reflex», выбери свой workspace → Create App." },
+      { title: "App Name — \"Reflex\", pick your workspace → Create App." },
       {
         title:
-          "В левой панели открой «OAuth & Permissions» → Redirect URLs → «Add New Redirect URL»",
+          "In the left panel open \"OAuth & Permissions\" → Redirect URLs → \"Add New Redirect URL\"",
         field: "Redirect URLs",
         copy: "http://localhost:3210/api/oauth/callback",
       },
       { title: "Save URLs." },
       {
         title:
-          "Под Scopes → User Token Scopes добавь нужные (chat:write, channels:read и т.д. — из defaults Reflex).",
+          "Under Scopes → User Token Scopes add the required ones (chat:write, channels:read, etc. — from Reflex defaults).",
       },
       {
         title:
-          "Вверху страницы Install App → разреши доступ → получишь Client ID и Client Secret в «Basic Information».",
+          "At the top of the page click Install App → grant access → you'll get Client ID and Client Secret under \"Basic Information\".",
       },
     ],
   },
@@ -238,14 +238,14 @@ const BUILTIN: Record<string, OAuthProviderDef> = {
     extraAuthorizeParams: {},
     needsClientSecret: true,
     setupHint:
-      "Личная OAuth-aplication привязывается к твоему workspace.",
+      "A personal OAuth application is tied to your workspace.",
     consoleUrl: "https://linear.app/settings/api/applications/new",
     setupSteps: [
       {
         title:
-          "Открой linear.app/settings/api/applications/new (Settings → API → OAuth applications → Create new).",
+          "Open linear.app/settings/api/applications/new (Settings → API → OAuth applications → Create new).",
       },
-      { title: "Name — «Reflex», описание любое." },
+      { title: "Name — \"Reflex\", description anything." },
       {
         title: "Developer URL",
         field: "Developer URL",
@@ -258,9 +258,9 @@ const BUILTIN: Record<string, OAuthProviderDef> = {
       },
       {
         title:
-          "Scopes — отметь read + write (или те, что нужны: issues:create и т.п.).",
+          "Scopes — check read + write (or whichever you need: issues:create, etc.).",
       },
-      { title: "Submit → копируй Client ID + Client Secret сюда." },
+      { title: "Submit → copy Client ID + Client Secret here." },
     ],
   },
 };

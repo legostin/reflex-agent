@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -54,6 +55,7 @@ interface ReservedDomain {
 }
 
 export function NgrokSection({ settings, onChange }: Props) {
+  const t = useTranslations("settings");
   const ngrok = settings.ngrok;
   const [status, setStatus] = useState<TunnelView>({ running: false });
   const [cliVersion, setCliVersion] = useState<string | null>(null);
@@ -91,7 +93,7 @@ export function NgrokSection({ settings, onChange }: Props) {
       return;
     }
     setReservedDomains(r.domains);
-    if (!silent) toast.success(`Загружено доменов: ${r.domains.length}`);
+    if (!silent) toast.success(t("ngrok.domainsLoadedToast", { count: r.domains.length }));
   };
 
   // Auto-save settings.ngrok on edit so the user doesn't have to scroll
@@ -104,7 +106,7 @@ export function NgrokSection({ settings, onChange }: Props) {
     saveTimerRef.current = setTimeout(async () => {
       const res = await patchNgrokSettingsAction(partial);
       if (!res.ok) {
-        toast.error("ngrok settings: " + (res.error ?? "save failed"));
+        toast.error(t("ngrok.ngrokSaveError", { error: res.error ?? t("ngrok.saveFailedFallback") }));
         return;
       }
       setSavedTick((t) => t + 1);
@@ -157,8 +159,8 @@ export function NgrokSection({ settings, onChange }: Props) {
       }
       toast.success(
         r.publicUrl
-          ? `Tunnel запущен: ${r.publicUrl}`
-          : "Tunnel запущен, URL ещё формируется...",
+          ? t("ngrok.tunnelStarted", { url: r.publicUrl })
+          : t("ngrok.tunnelStartedNoUrl"),
       );
       await refresh();
     });
@@ -166,7 +168,7 @@ export function NgrokSection({ settings, onChange }: Props) {
   const stop = () => {
     startToggle(async () => {
       await stopTunnelAction();
-      toast.success("Tunnel остановлен");
+      toast.success(t("ngrok.tunnelStoppedToast"));
       await refresh();
     });
   };
@@ -183,8 +185,8 @@ export function NgrokSection({ settings, onChange }: Props) {
       }
       toast.success(
         r.publicUrl
-          ? `Tunnel перезапущен: ${r.publicUrl}`
-          : "Tunnel перезапущен, URL формируется...",
+          ? t("ngrok.tunnelRestarted", { url: r.publicUrl })
+          : t("ngrok.tunnelRestartedNoUrl"),
       );
       await refresh();
     });
@@ -209,7 +211,7 @@ export function NgrokSection({ settings, onChange }: Props) {
       <CardContent className="pt-5 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Globe className="h-4 w-4 text-violet-600" />
-          <span>Публичные ссылки через ngrok</span>
+          <span>{t("ngrok.headerTitle")}</span>
           {cliVersion ? (
             <span className="text-[10px] font-mono text-muted-foreground ml-1">
               {cliVersion.split("\n")[0]}
@@ -217,38 +219,40 @@ export function NgrokSection({ settings, onChange }: Props) {
           ) : (
             <span className="text-[10px] text-destructive ml-1 inline-flex items-center gap-0.5">
               <AlertTriangle className="h-3 w-3" />
-              ngrok CLI не найден
+              {t("ngrok.cliMissing")}
             </span>
           )}
           {savedTick > 0 && (
             <span
               key={savedTick}
               className="ml-auto text-[10px] text-emerald-700 inline-flex items-center gap-0.5"
-              title="Изменения сохранены автоматически"
+              title={t("ngrok.autoSavedTooltip")}
             >
               <CheckCircle2 className="h-3 w-3" />
-              сохранено
+              {t("ngrok.autoSavedLabel")}
             </span>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Reflex запускает <code className="font-mono">ngrok http</code> с твоим
-          токеном; на ngrok-домене разрешены только пути{" "}
-          <code className="font-mono">/share/*</code>. Установи{" "}
-          <a
-            href="https://ngrok.com/download"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            ngrok CLI
-          </a>{" "}
-          в PATH перед запуском.
+          {t.rich("ngrok.intro", {
+            code: (chunks) => <code className="font-mono">{chunks}</code>,
+            path: () => <code className="font-mono">/share/*</code>,
+            link: (chunks) => (
+              <a
+                href="https://ngrok.com/download"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {chunks}
+              </a>
+            ),
+          })}
         </p>
 
         <div className="grid gap-2">
           <label className="text-xs font-medium" htmlFor="ngrok-token">
-            Authtoken (agent)
+            {t("ngrok.authtokenLabel")}
           </label>
           <input
             id="ngrok-token"
@@ -260,23 +264,26 @@ export function NgrokSection({ settings, onChange }: Props) {
             className="rounded border bg-background px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-violet-400"
           />
           <p className="text-[10px] text-muted-foreground">
-            Найди в{" "}
-            <a
-              href="https://dashboard.ngrok.com/get-started/your-authtoken"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              ngrok dashboard → Your Authtoken
-            </a>
-            . Сохраняется в <code className="font-mono">~/.reflex/ngrok.yml</code>{" "}
-            (0600).
+            {t.rich("ngrok.authtokenHint", {
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+              path: () => <code className="font-mono">~/.reflex/ngrok.yml</code>,
+              link: (chunks) => (
+                <a
+                  href="https://dashboard.ngrok.com/get-started/your-authtoken"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         </div>
 
         <div className="grid gap-2">
           <label className="text-xs font-medium" htmlFor="ngrok-apikey">
-            API key (для списка доменов, опционально)
+            {t("ngrok.apiKeyLabel")}
           </label>
           <input
             id="ngrok-apikey"
@@ -288,23 +295,25 @@ export function NgrokSection({ settings, onChange }: Props) {
             className="rounded border bg-background px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-violet-400"
           />
           <p className="text-[10px] text-muted-foreground">
-            Возьми в{" "}
-            <a
-              href="https://dashboard.ngrok.com/api"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              dashboard → API → API keys
-            </a>
-            . Используется только для GET-запроса списка reserved-доменов.
+            {t.rich("ngrok.apiKeyHint", {
+              link: (chunks) => (
+                <a
+                  href="https://dashboard.ngrok.com/api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </p>
         </div>
 
         <div className="grid gap-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-medium" htmlFor="ngrok-domain">
-              Reserved domain (если есть)
+              {t("ngrok.reservedDomainLabel")}
             </label>
             <button
               type="button"
@@ -317,7 +326,7 @@ export function NgrokSection({ settings, onChange }: Props) {
               ) : (
                 <RefreshCw className="h-3 w-3" />
               )}
-              Обновить список
+              {t("ngrok.refreshList")}
             </button>
           </div>
           {reservedDomains && reservedDomains.length > 0 ? (
@@ -327,7 +336,7 @@ export function NgrokSection({ settings, onChange }: Props) {
               onChange={(e) => patch({ domain: e.target.value })}
               className="rounded border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400"
             >
-              <option value="">— random subdomain (free tier) —</option>
+              <option value="">{t("ngrok.randomSubdomain")}</option>
               {reservedDomains.map((d) => (
                 <option key={d.id} value={d.domain}>
                   {d.domain}
@@ -341,7 +350,7 @@ export function NgrokSection({ settings, onChange }: Props) {
               type="text"
               value={ngrok.domain}
               onChange={(e) => patch({ domain: e.target.value })}
-              placeholder="my-app.ngrok-free.app или оставь пустым"
+              placeholder={t("ngrok.domainPlaceholder")}
               className="rounded border bg-background px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-violet-400"
             />
           )}
@@ -350,7 +359,7 @@ export function NgrokSection({ settings, onChange }: Props) {
         <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
           <div>
             <label className="text-xs font-medium" htmlFor="ngrok-port">
-              Локальный порт
+              {t("ngrok.localPortLabel")}
             </label>
             <input
               id="ngrok-port"
@@ -371,14 +380,14 @@ export function NgrokSection({ settings, onChange }: Props) {
                 onClick={restart}
                 disabled={toggling}
                 className="rounded border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50 inline-flex items-center gap-1"
-                title="Остановить и снова запустить с текущими настройками"
+                title={t("ngrok.restartTitle")}
               >
                 {toggling ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
                   <RefreshCw className="h-3 w-3" />
                 )}
-                Перезапустить
+                {t("ngrok.restart")}
               </button>
               <button
                 type="button"
@@ -391,7 +400,7 @@ export function NgrokSection({ settings, onChange }: Props) {
                 ) : (
                   <Square className="h-3 w-3" />
                 )}
-                Остановить
+                {t("ngrok.stop")}
               </button>
             </div>
           ) : (
@@ -406,7 +415,7 @@ export function NgrokSection({ settings, onChange }: Props) {
               ) : (
                 <Play className="h-3 w-3" />
               )}
-              Запустить
+              {t("ngrok.start")}
             </button>
           )}
         </div>
@@ -415,7 +424,7 @@ export function NgrokSection({ settings, onChange }: Props) {
           <div className="rounded border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-900/50 px-3 py-2 text-xs space-y-1">
             <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-200">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Tunnel активен</span>
+              <span>{t("ngrok.tunnelActive")}</span>
             </div>
             {status.publicUrl ? (
               <a
@@ -427,11 +436,13 @@ export function NgrokSection({ settings, onChange }: Props) {
                 {status.publicUrl}
               </a>
             ) : (
-              <p className="text-muted-foreground">URL ещё формируется…</p>
+              <p className="text-muted-foreground">{t("ngrok.urlPending")}</p>
             )}
             <p className="text-[10px] text-muted-foreground">
-              Запущен {status.startedAt && new Date(status.startedAt).toLocaleTimeString()}{" "}
-              · порт {status.port}
+              {t("ngrok.startedAt", {
+                time: status.startedAt ? new Date(status.startedAt).toLocaleTimeString() : "",
+                port: status.port ?? "",
+              })}
             </p>
           </div>
         )}
@@ -440,20 +451,25 @@ export function NgrokSection({ settings, onChange }: Props) {
           <div className="rounded border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900/50 px-3 py-2 text-xs space-y-1.5">
             <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-200 font-medium">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Настройки изменились — перезапусти туннель
+              {t("ngrok.settingsChanged")}
             </div>
             <ul className="text-[11px] text-amber-900 dark:text-amber-100 list-disc pl-4 space-y-0.5">
               {domainMismatch && (
                 <li>
-                  Сейчас на хосте <code className="font-mono">{runningHost}</code>, в
-                  настройках выбран{" "}
-                  <code className="font-mono">{desiredDomain}</code>.
+                  {t.rich("ngrok.domainMismatch", {
+                    code: (chunks) => <code className="font-mono">{chunks}</code>,
+                    running: runningHost,
+                    desired: desiredDomain,
+                  })}
                 </li>
               )}
               {portMismatch && (
                 <li>
-                  Tunnel слушает порт <code className="font-mono">{status.port}</code>
-                  , в настройках указан <code className="font-mono">{ngrok.port}</code>.
+                  {t.rich("ngrok.portMismatch", {
+                    code: (chunks) => <code className="font-mono">{chunks}</code>,
+                    running: status.port ?? "",
+                    desired: ngrok.port,
+                  })}
                 </li>
               )}
             </ul>
@@ -468,7 +484,7 @@ export function NgrokSection({ settings, onChange }: Props) {
               ) : (
                 <RefreshCw className="h-3 w-3" />
               )}
-              Перезапустить с новыми настройками
+              {t("ngrok.restartWithNewSettings")}
             </button>
           </div>
         )}
@@ -477,12 +493,11 @@ export function NgrokSection({ settings, onChange }: Props) {
 
         <div>
           <h3 className="text-xs font-semibold mb-2">
-            Активные ссылки ({shares.length})
+            {t("ngrok.activeLinks", { count: shares.length })}
           </h3>
           {shares.length === 0 ? (
             <p className="text-[11px] text-muted-foreground">
-              Пока ничего не расшарено. На странице утилиты, KB-файла или дашборда
-              появится кнопка «Поделиться».
+              {t("ngrok.noShares")}
             </p>
           ) : (
             <ul className="space-y-1">
@@ -511,6 +526,7 @@ function ShareRow({
   publicHost?: string;
   onDeleted: () => void;
 }) {
+  const t = useTranslations("settings");
   const [deleting, startDelete] = useTransition();
   const url = publicHost
     ? new URL(`/share/${share.id}`, publicHost).toString()
@@ -518,14 +534,14 @@ function ShareRow({
   const label =
     share.label ||
     (share.kind === "utility"
-      ? `Утилита ${share.utilityId}`
+      ? t("ngrok.shareLabel.utility", { id: share.utilityId ?? "" })
       : share.kind === "kb-file"
-        ? `KB ${share.kbRelPath}`
+        ? t("ngrok.shareLabel.kbFile", { path: share.kbRelPath ?? "" })
         : share.kind === "kb-tree"
-          ? "Вся база знаний"
-          : "Дашборд проекта");
+          ? t("ngrok.shareLabel.kbTree")
+          : t("ngrok.shareLabel.dashboard"));
   const remove = () => {
-    if (!confirm(`Удалить ссылку "${label}"?`)) return;
+    if (!confirm(t("ngrok.deleteConfirm", { label }))) return;
     startDelete(async () => {
       await deleteShareAction(share.id);
       onDeleted();
@@ -559,7 +575,7 @@ function ShareRow({
         onClick={() => {
           void navigator.clipboard
             .writeText(url)
-            .then(() => toast.success("Ссылка скопирована"));
+            .then(() => toast.success(t("ngrok.copiedToast")));
         }}
         className="text-[10px] text-muted-foreground hover:text-foreground rounded px-1 py-0.5"
       >
@@ -570,7 +586,7 @@ function ShareRow({
         onClick={remove}
         disabled={deleting}
         className="text-muted-foreground hover:text-destructive rounded px-1"
-        title="Удалить ссылку"
+        title={t("ngrok.deleteTitle")}
       >
         {deleting ? (
           <Loader2 className="h-3 w-3 animate-spin" />

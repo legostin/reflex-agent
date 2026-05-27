@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LibraryBig, Plus } from "lucide-react";
@@ -50,6 +51,7 @@ export function WidgetsGrid({
   snapshot,
   onLayoutChanged,
 }: Props) {
+  const t = useTranslations("roots");
   const userById = useMemo(() => {
     const m = new Map<string, WidgetRecord>();
     for (const w of widgets) m.set(w.id, w);
@@ -132,10 +134,10 @@ export function WidgetsGrid({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Виджеты проекта
+            {t("widgetsCommon.projectWidgetsTitle")}
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Перетаскивай для сортировки. Скрытые можно вернуть из библиотеки.
+            {t("widgetsCommon.projectWidgetsHint")}
           </p>
         </div>
         <Button
@@ -146,16 +148,16 @@ export function WidgetsGrid({
           className="gap-1 h-8"
         >
           <LibraryBig className="h-3.5 w-3.5" />
-          Библиотека ({hidden.length} скрытых)
+          {t("widgetsCommon.library", { count: hidden.length })}
         </Button>
       </div>
 
       {visibleIds.length === 0 && (
         <div className="rounded-md border border-dashed bg-muted/20 p-6 text-center space-y-2">
           <p className="text-sm text-muted-foreground">
-            На дашборде ничего не закреплено. Попроси агента в чате создать
-            виджет — например{" "}
-            <em>«сделай сводку новостей по теме X»</em>.
+            {t.rich("widgetsCommon.emptyDashboard", {
+              example: () => <em>{t("widgetsCommon.emptyDashboardExample")}</em>,
+            })}
           </p>
           <Button
             type="button"
@@ -165,7 +167,7 @@ export function WidgetsGrid({
             className="gap-1"
           >
             <Plus className="h-3 w-3" />
-            Восстановить системные
+            {t("widgetsCommon.restoreSystem")}
           </Button>
         </div>
       )}
@@ -251,6 +253,7 @@ function SystemSlot({
   mode: WidgetSizeMode;
   onLayoutChanged: () => void;
 }) {
+  const t = useTranslations("roots");
   const isDragging = dnd.dragging === id;
   const isDropTarget = dnd.dropTarget === id && !isDragging;
   const spanClass = colSpanClassFor(mode);
@@ -292,8 +295,8 @@ function SystemSlot({
         <button
           type="button"
           onClick={() => onHide(id)}
-          aria-label="Скрыть"
-          title="Скрыть (восстановишь из библиотеки)"
+          aria-label={t("widgetsCommon.hideAria")}
+          title={t("widgetsCommon.hideSystemTitle")}
           className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"
         >
           ×

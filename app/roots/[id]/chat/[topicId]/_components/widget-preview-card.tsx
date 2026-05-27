@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Check, LayoutDashboard, Pencil, Pin, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { renderWidget } from "@/app/roots/[id]/_components/widgets/registry";
@@ -31,6 +32,7 @@ interface Props {
  * where the marker fell in the assistant's stream.
  */
 export function WidgetPreviewCard({ rootId, widget }: Props) {
+  const t = useTranslations("roots");
   const [pinned, setPinned] = useState(false);
   const [pinning, startPin] = useTransition();
   const handlePin = () => {
@@ -38,7 +40,7 @@ export function WidgetPreviewCard({ rootId, widget }: Props) {
       const res = await restoreWidgetAction(rootId, widget.widgetId);
       if (res.ok) {
         setPinned(true);
-        toast.success("Закреплено на дашборде");
+        toast.success(t("widgetPreview.pinned"));
       } else {
         toast.error(res.error);
       }
@@ -49,7 +51,9 @@ export function WidgetPreviewCard({ rootId, widget }: Props) {
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-violet-200 dark:border-violet-900/40 bg-violet-100/40 dark:bg-violet-900/20 text-xs">
         <Sparkles className="h-3 w-3 text-violet-600" />
         <span className="font-medium text-violet-900 dark:text-violet-200">
-          {widget.op === "create" ? "Виджет создан" : "Виджет обновлён"}
+          {widget.op === "create"
+            ? t("widgetPreview.created")
+            : t("widgetPreview.updated")}
         </span>
         <Badge variant="outline" className="text-[10px] font-mono">
           {widget.widgetKind}
@@ -60,7 +64,7 @@ export function WidgetPreviewCard({ rootId, widget }: Props) {
         {pinned ? (
           <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-emerald-700">
             <Check className="h-3 w-3" />
-            На дашборде
+            {t("widgetPreview.onDashboard")}
           </span>
         ) : (
           <button
@@ -68,16 +72,16 @@ export function WidgetPreviewCard({ rootId, widget }: Props) {
             onClick={handlePin}
             disabled={pinning}
             className="ml-auto inline-flex items-center gap-1 text-[10px] text-violet-700 hover:underline disabled:opacity-50"
-            title="Закрепить виджет на дашборде"
+            title={t("widgetPreview.pinToDashboardTitle")}
           >
             <Pin className="h-3 w-3" />
-            {pinning ? "..." : "Закрепить на дашборде"}
+            {pinning ? t("widgetPreview.pinning") : t("widgetPreview.pinToDashboard")}
           </button>
         )}
         <Link
           href={`/roots/${rootId}`}
           className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-violet-700"
-          title="Открыть дашборд"
+          title={t("widgetPreview.openDashboard")}
         >
           <LayoutDashboard className="h-3 w-3" />
         </Link>
@@ -94,10 +98,10 @@ export function WidgetPreviewCard({ rootId, widget }: Props) {
           </div>
           <span
             className="text-[10px] text-muted-foreground inline-flex items-center gap-0.5"
-            title="Чтобы обновить — пиши тут же в чате"
+            title={t("widgetPreview.editViaChatTitle")}
           >
             <Pencil className="h-2.5 w-2.5" />
-            редактируй через чат
+            {t("widgetPreview.editViaChat")}
           </span>
         </div>
         <div className="pt-1">

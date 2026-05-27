@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 import type { KpiData } from "@/lib/server/widgets/types";
 
@@ -11,10 +12,11 @@ export function KpiWidget({
   readonly?: boolean;
   onPatch?: (next: KpiData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   // KPI tiles are visual snapshots — refresh-driven, not click-driven.
   const items = data.items ?? [];
   if (items.length === 0) {
-    return <p className="text-xs text-muted-foreground">Нет показателей.</p>;
+    return <p className="text-xs text-muted-foreground">{t("kpiWidget.empty")}</p>;
   }
   const cols = Math.min(items.length, 3);
   return (

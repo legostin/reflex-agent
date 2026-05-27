@@ -3,15 +3,16 @@ import { reflex } from "@host/api";
 /**
  * "Explain this" feature: user highlights a snippet inside the module
  * article and asks for a deeper explanation. The agent gets the
- * surrounding paragraph as context so it understands what "это" means.
+ * surrounding paragraph as context so it understands what "this" means.
  *
  * Two modes:
  *   1. Default — `question` omitted, agent gives a generic 2-5 paragraph
  *      breakdown of the selected fragment.
  *   2. Custom — `question` supplied (book-style margin annotation), agent
  *      answers that specific question with the selection as the focal
- *      point. Lets the reader say things like "при чём тут N?" or
- *      "дай пример" instead of always getting the same boilerplate.
+ *      point. Lets the reader say things like "what does N have to do
+ *      with this?" or "give me an example" instead of always getting the
+ *      same boilerplate.
  */
 
 export interface ExplainSelectionArgs {
@@ -29,31 +30,31 @@ export default async function explainSelection(
 ): Promise<{ text: string }> {
   const userQuestion = (args.question ?? "").trim();
   const promptLines: string[] = [
-    `Курс: «${args.topic}». Модуль: «${args.moduleTitle}».`,
+    `Course: "${args.topic}". Module: "${args.moduleTitle}".`,
   ];
 
   if (userQuestion) {
     promptLines.push(
-      "Пользователь выделил фрагмент и задал конкретный вопрос про этот фрагмент.",
-      "Ответь именно на его вопрос, опираясь на выделение + окружающий контекст. 2-4 абзаца, без воды, по делу.",
-      "Markdown без заголовков; короткие фразы, пример если уместен.",
+      "The user highlighted a fragment and asked a specific question about that fragment.",
+      "Answer exactly their question, grounded in the selection + surrounding context. 2-4 paragraphs, no fluff, to the point.",
+      "Markdown without headings; short sentences, with an example when appropriate.",
     );
   } else {
     promptLines.push(
-      "Пользователь выделил фрагмент и просит объяснить подробнее.",
-      "Дай развёрнутое объяснение в 2-5 абзацах: что это значит, как работает,",
-      "почему именно так, конкретный пример. Без воды. Markdown без заголовков.",
+      "The user highlighted a fragment and is asking for a deeper explanation.",
+      "Give a thorough explanation in 2-5 paragraphs: what it means, how it works,",
+      "why it works that way, with a concrete example. No fluff. Markdown without headings.",
     );
   }
 
   promptLines.push(
     "",
-    `## Окружающий контекст\n${args.context.slice(0, 1500)}`,
+    `## Surrounding context\n${args.context.slice(0, 1500)}`,
     "",
-    `## Выделение пользователя\n«${args.selection.slice(0, 800)}»`,
+    `## User selection\n"${args.selection.slice(0, 800)}"`,
   );
   if (userQuestion) {
-    promptLines.push("", `## Вопрос пользователя\n${userQuestion.slice(0, 600)}`);
+    promptLines.push("", `## User question\n${userQuestion.slice(0, 600)}`);
   }
 
   const r = await reflex.llm.complete({

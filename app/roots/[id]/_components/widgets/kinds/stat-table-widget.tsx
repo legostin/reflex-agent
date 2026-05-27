@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { StatTableData } from "@/lib/server/widgets/types";
 
 export function StatTableWidget({
@@ -10,9 +11,10 @@ export function StatTableWidget({
   readonly?: boolean;
   onPatch?: (next: StatTableData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   const rows = data.rows ?? [];
   if (rows.length === 0) {
-    return <p className="text-xs text-muted-foreground">Таблица пустая.</p>;
+    return <p className="text-xs text-muted-foreground">{t("statTableWidget.empty")}</p>;
   }
   return (
     <div className="overflow-x-auto -mx-1">

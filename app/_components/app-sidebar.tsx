@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronRight,
@@ -41,6 +42,7 @@ interface Props {
 
 export function AppSidebar({ initialRoots }: Props) {
   const pathname = usePathname();
+  const t = useTranslations("app");
   const [roots, setRoots] = useState<RegistryEntry[]>(initialRoots);
 
   const reloadRoots = useCallback(async () => {
@@ -79,11 +81,11 @@ export function AppSidebar({ initialRoots }: Props) {
       <ScrollArea className="flex-1">
         <nav className="px-2 pt-3 pb-6">
           <div className="px-2 mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-            Пространства
+            {t("sidebar.spaces")}
           </div>
           {roots.length === 0 ? (
             <div className="px-2 py-3 text-xs text-muted-foreground">
-              Пока пусто.
+              {t("sidebar.empty")}
             </div>
           ) : (
             <ul className="space-y-0.5">
@@ -104,7 +106,7 @@ export function AppSidebar({ initialRoots }: Props) {
               className="h-7 w-full justify-start text-xs"
             >
               <Link href="/roots/new">
-                <FolderPlus className="mr-1 h-3.5 w-3.5" /> Добавить пространство
+                <FolderPlus className="mr-1 h-3.5 w-3.5" /> {t("sidebar.addSpace")}
               </Link>
             </Button>
           </div>
@@ -124,7 +126,7 @@ export function AppSidebar({ initialRoots }: Props) {
           className="w-full justify-start"
         >
           <Link href="/utilities">
-            <Boxes className="mr-2 h-4 w-4" /> Мини-приложения
+            <Boxes className="mr-2 h-4 w-4" /> {t("sidebar.utilities")}
           </Link>
         </Button>
         <Button
@@ -134,7 +136,7 @@ export function AppSidebar({ initialRoots }: Props) {
           className="w-full justify-start"
         >
           <Link href="/audit">
-            <FileSearch className="mr-2 h-4 w-4" /> Аудит
+            <FileSearch className="mr-2 h-4 w-4" /> {t("sidebar.audit")}
           </Link>
         </Button>
         <Button
@@ -159,6 +161,7 @@ function ProjectItem({
   root: RegistryEntry;
   active: boolean;
 }) {
+  const t = useTranslations("app");
   const [expanded, setExpanded] = useState(active);
   const [kbExpanded, setKbExpanded] = useState(false);
   const [topicsExpanded, setTopicsExpanded] = useState(false);
@@ -247,7 +250,7 @@ function ProjectItem({
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
-          aria-label={expanded ? "Свернуть" : "Развернуть"}
+          aria-label={expanded ? t("sidebar.collapse") : t("sidebar.expand")}
         >
           {expanded ? (
             <ChevronDown className="h-3.5 w-3.5" />
@@ -279,7 +282,7 @@ function ProjectItem({
                 <ChevronRight className="h-3 w-3 shrink-0" />
               )}
               <FileText className="h-3 w-3 shrink-0" />
-              <span className="truncate">База знаний</span>
+              <span className="truncate">{t("sidebar.kb")}</span>
               {loadingKb && (
                 <Loader2 className="ml-auto h-3 w-3 animate-spin shrink-0" />
               )}
@@ -304,7 +307,7 @@ function ProjectItem({
                 <ChevronRight className="h-3 w-3 shrink-0" />
               )}
               <MessageSquare className="h-3 w-3 shrink-0" />
-              <span className="truncate">Разговоры</span>
+              <span className="truncate">{t("sidebar.topics")}</span>
               {loadingTopics && (
                 <Loader2 className="ml-auto h-3 w-3 animate-spin shrink-0" />
               )}
@@ -334,7 +337,7 @@ function ProjectItem({
                 <ChevronRight className="h-3 w-3 shrink-0" />
               )}
               <Bot className="h-3 w-3 shrink-0" />
-              <span className="truncate">Агенты</span>
+              <span className="truncate">{t("sidebar.agents")}</span>
               {loadingAgents && (
                 <Loader2 className="ml-auto h-3 w-3 animate-spin shrink-0" />
               )}
@@ -363,9 +366,7 @@ function AgentList({
 }) {
   if (agents.length === 0) {
     return (
-      <div className="ml-4 px-3 py-1 text-[11px] italic text-muted-foreground">
-        агентов не запускалось
-      </div>
+      <AgentListEmpty />
     );
   }
   // Build parent → children map for nested rendering.
@@ -389,6 +390,15 @@ function AgentList({
         />
       ))}
     </ul>
+  );
+}
+
+function AgentListEmpty() {
+  const t = useTranslations("app");
+  return (
+    <div className="ml-4 px-3 py-1 text-[11px] italic text-muted-foreground">
+      {t("sidebar.noAgents")}
+    </div>
   );
 }
 
@@ -463,11 +473,7 @@ function KbSectionList({
   pathname: string | null;
 }) {
   if (sections.length === 0) {
-    return (
-      <div className="px-3 py-1 text-[11px] italic text-muted-foreground">
-        пусто — запусти Run init
-      </div>
-    );
+    return <KbEmpty />;
   }
   return (
     <ul className="ml-4 mt-0.5 space-y-0.5 border-l pl-1">
@@ -486,6 +492,15 @@ function KbSectionList({
         ),
       )}
     </ul>
+  );
+}
+
+function KbEmpty() {
+  const t = useTranslations("app");
+  return (
+    <div className="px-3 py-1 text-[11px] italic text-muted-foreground">
+      {t("sidebar.kbEmpty")}
+    </div>
   );
 }
 
@@ -568,11 +583,7 @@ function TopicList({
   pathname: string | null;
 }) {
   if (topics.length === 0) {
-    return (
-      <div className="ml-4 px-3 py-1 text-[11px] italic text-muted-foreground">
-        нет диалогов
-      </div>
-    );
+    return <TopicsEmpty />;
   }
   return (
     <ul className="ml-4 mt-0.5 space-y-0.5 border-l pl-1">
@@ -588,6 +599,15 @@ function TopicList({
   );
 }
 
+function TopicsEmpty() {
+  const t = useTranslations("app");
+  return (
+    <div className="ml-4 px-3 py-1 text-[11px] italic text-muted-foreground">
+      {t("sidebar.noTopics")}
+    </div>
+  );
+}
+
 function TopicRow({
   rootId,
   topic,
@@ -597,6 +617,7 @@ function TopicRow({
   topic: SidebarTopic;
   pathname: string | null;
 }) {
+  const t = useTranslations("app");
   const href = `/roots/${rootId}/chat/${topic.id}`;
   const active = pathname === href;
   const [pending, startDelete] = useTransition();
@@ -605,16 +626,16 @@ function TopicRow({
   const onDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm(`Удалить топик «${topic.title}»? Это действие необратимо — диалог и все его события будут удалены.`)) {
+    if (!confirm(t("sidebar.deleteTopicConfirm", { title: topic.title }))) {
       return;
     }
     startDelete(async () => {
       const res = await deleteTopicAction(rootId, topic.id);
       if (!res.ok) {
-        toast.error(res.error ?? "Не удалось удалить");
+        toast.error(res.error ?? t("sidebar.deleteFailed"));
         return;
       }
-      toast.success("Топик удалён");
+      toast.success(t("sidebar.topicDeleted"));
       dispatchReflex(REFLEX_EVENTS.topicsChanged(rootId));
       // If we were inside the just-deleted chat, bounce back to the dashboard.
       if (active) router.push(`/roots/${rootId}`);
@@ -635,8 +656,8 @@ function TopicRow({
           type="button"
           onClick={onDelete}
           disabled={pending}
-          aria-label="Удалить топик"
-          title="Удалить топик"
+          aria-label={t("sidebar.deleteTopic")}
+          title={t("sidebar.deleteTopic")}
           className="opacity-0 group-hover/topic:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive shrink-0"
         >
           {pending ? (

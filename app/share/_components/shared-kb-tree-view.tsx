@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FileText, FolderTree, Share2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 /**
  * Browseable index of every markdown file in the project's KB. Each row
@@ -8,7 +9,7 @@ import { FileText, FolderTree, Share2 } from "lucide-react";
  * the relative path as a query so a single share controls the auth
  * boundary for the entire tree.
  */
-export function SharedKbTreeView({
+export async function SharedKbTreeView({
   rootPath,
   files,
   shareId,
@@ -17,6 +18,7 @@ export function SharedKbTreeView({
   files: Array<{ rel: string; size: number; modifiedAt: string }>;
   shareId: string;
 }) {
+  const t = await getTranslations("app");
   const sorted = [...files].sort((a, b) =>
     a.rel.localeCompare(b.rel, "ru", { numeric: true }),
   );
@@ -30,7 +32,7 @@ export function SharedKbTreeView({
           </div>
           <h1 className="mt-1 text-lg font-semibold flex items-center gap-2">
             <FolderTree className="h-4 w-4 text-violet-600 shrink-0" />
-            База знаний ({sorted.length} файл.)
+            {t("share.tree.title", { count: sorted.length })}
           </h1>
           <p className="text-xs text-muted-foreground font-mono truncate">
             {rootPath}

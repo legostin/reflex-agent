@@ -8,8 +8,8 @@ import { extractJson } from "./_json";
  * `{done:true}` so the UI advances to outline generation.
  *
  * Keeping the wizard agent-driven means we don't hardcode "3 questions
- * about level/focus/format" — for "хочу научиться рисовать карандашом"
- * the agent will ask different questions than for "хочу выучить
+ * about level/focus/format" — for "I want to learn pencil drawing"
+ * the agent will ask different questions than for "I want to learn
  * Python". The UI just renders whatever comes back.
  */
 
@@ -22,7 +22,7 @@ export interface TutorAskArgs {
   topic: string;
   history: TutorQA[];
   /** Force-finish even if the agent wants more. UI uses this when the
-   *  user clicks "Хватит вопросов — давай уже курс". */
+   *  user clicks "Enough questions — build the course already". */
   forceFinish?: boolean;
 }
 
@@ -32,7 +32,7 @@ export interface TutorAskResult {
   question?: string;
   /** Optional pre-baked choices for a multiple-choice ask. */
   choices?: string[];
-  /** Hint to UI: short label like "уровень", "формат", "цель". */
+  /** Hint to UI: short label like "level", "format", "goal". */
   header?: string;
 }
 
@@ -51,19 +51,19 @@ export default async function tutorAsk(
     .join("\n\n");
 
   const prompt = [
-    "Ты — наставник, который собирается составить персональный курс для пользователя.",
-    `Тема: «${args.topic}».`,
-    "Тебе нужно собрать минимум информации, чтобы хорошо подобрать программу: уровень, цель, время, формат, специфика.",
-    "Задавай по ОДНОМУ вопросу за раз. Решай сам какой именно — то что важнее всего сейчас, исходя из темы и предыдущих ответов.",
-    "Если есть смысл предложить варианты ответа — добавь до 5 коротких choices.",
-    "Если ты уже знаешь достаточно (обычно после 2-4 вопросов) — верни done=true.",
-    "Ответь ТОЛЬКО JSON одной строкой, без markdown:",
-    `  {"done":false,"question":"...","header":"уровень|цель|время|формат|...","choices":["...","..."]}`,
-    "  или",
+    "You are a tutor who is about to design a personalised course for the user.",
+    `Topic: "${args.topic}".`,
+    "You need to gather the minimum information required to choose a good program: level, goal, time budget, format, specifics.",
+    "Ask ONE question at a time. Decide what to ask yourself — whatever is most important right now given the topic and prior answers.",
+    "If it makes sense to offer answer options — add up to 5 short choices.",
+    "If you already know enough (usually after 2-4 questions) — return done=true.",
+    "Reply with JSON ONLY on a single line, no markdown:",
+    `  {"done":false,"question":"...","header":"level|goal|time|format|...","choices":["...","..."]}`,
+    "  or",
     `  {"done":true}`,
     "",
-    prior ? `## Предыдущие ответы\n${prior}` : "## Это первый вопрос",
-    `\nЗадано вопросов до сих пор: ${turns} (максимум ${MAX_TURNS}).`,
+    prior ? `## Previous answers\n${prior}` : "## This is the first question",
+    `\nQuestions asked so far: ${turns} (maximum ${MAX_TURNS}).`,
   ].join("\n");
 
   const r = await reflex.llm.complete({ task: "quick", prompt });

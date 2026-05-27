@@ -33,7 +33,7 @@ export async function rememberAction(
 ): Promise<CommandResult> {
   try {
     const trimmed = text.trim();
-    if (!trimmed) return { ok: false, error: "Пусто — нечего запоминать." };
+    if (!trimmed) return { ok: false, error: "Empty — nothing to remember." };
     const entry = await getRoot(rootId);
     if (!entry) return { ok: false, error: "Root not found" };
     const firstLine = trimmed.split(/\r?\n/, 1)[0]!.trim();
@@ -50,7 +50,7 @@ export async function rememberAction(
     revalidatePath(`/roots/${rootId}`);
     return {
       ok: true,
-      message: `Сохранено в ${result.relPath}`,
+      message: `Saved to ${result.relPath}`,
     };
   } catch (err) {
     return {
@@ -71,7 +71,7 @@ export async function deleteCurrentTopicCommand(
 ): Promise<CommandResult> {
   const r = await deleteTopicAction(rootId, topicId);
   if (!r.ok) return { ok: false, error: r.error ?? "Failed" };
-  return { ok: true, redirectTo: `/roots/${rootId}`, message: "Топик удалён" };
+  return { ok: true, redirectTo: `/roots/${rootId}`, message: "Topic deleted" };
 }
 
 /**
@@ -118,7 +118,7 @@ export async function clearProjectAction(
     return {
       ok: true,
       redirectTo: `/roots/${rootId}`,
-      message: "Проект очищен. Поехали с нуля.",
+      message: "Project cleared. Starting fresh.",
     };
   } catch (err) {
     return {
@@ -215,7 +215,7 @@ export async function openUtilityAction(
   };
   if (!trimmed) {
     if (items.length === 0) {
-      return { ok: false, error: "Пока ни одного мини-приложения не установлено." };
+      return { ok: false, error: "No mini-apps installed yet." };
     }
     return {
       ok: true,
@@ -240,7 +240,7 @@ export async function openUtilityAction(
   if (matches.length === 0) {
     return {
       ok: false,
-      error: `Ничего не нашлось по «${fuzzy}». Установлено: ${items.length}.`,
+      error: `Nothing found for "${fuzzy}". Installed: ${items.length}.`,
     };
   }
   return {

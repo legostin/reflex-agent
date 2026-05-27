@@ -1,23 +1,23 @@
 import type { SpaceTemplate } from "./registry";
 
 /**
- * "Путешествия" — trip planning + travel diary. Map widget naturally
+ * "Travel" — trip planning + travel diary. Map widget naturally
  * fits here (points of interest, route, deep-links to Yandex/Google).
  * The skill keeps trip-prep checklists organized.
  */
 export const travelTemplate: SpaceTemplate = {
   id: "travel",
-  label: "Путешествия",
+  label: "Travel",
   emoji: "✈️",
   description:
-    "Планирование поездок, точки на карте, маршруты, чек-листы перед вылетом. Дневник впечатлений.",
-  defaultFolder: "Путешествия",
+    "Trip planning, map points, routes, pre-flight checklists. Diary of impressions.",
+  defaultFolder: "Travel",
   build: () => ({
     widgets: [
       {
         id: "travel-map",
-        title: "Места",
-        description: "Точки на карте — добавь свои города и POI",
+        title: "Places",
+        description: "Points on the map — add your cities and POIs",
         payload: {
           kind: "map",
           data: { points: [] },
@@ -25,25 +25,25 @@ export const travelTemplate: SpaceTemplate = {
       },
       {
         id: "travel-prep-checklist",
-        title: "Сборы перед поездкой",
+        title: "Pre-trip packing",
         payload: {
           kind: "checklist",
           data: {
             items: [
-              { text: "Загранпаспорт ≥ 6 мес.", done: false },
-              { text: "Билеты", done: false },
-              { text: "Жильё забронировано", done: false },
-              { text: "Страховка", done: false },
-              { text: "Зарядки и адаптеры", done: false },
-              { text: "Лекарства первой необходимости", done: false },
+              { text: "Passport valid ≥ 6 months", done: false },
+              { text: "Tickets", done: false },
+              { text: "Lodging booked", done: false },
+              { text: "Insurance", done: false },
+              { text: "Chargers and adapters", done: false },
+              { text: "Essential medications", done: false },
             ],
           },
         },
       },
       {
         id: "travel-trips",
-        title: "Планы поездок",
-        description: "Куда и когда",
+        title: "Trip plans",
+        description: "Where and when",
         payload: {
           kind: "link-list",
           data: { items: [] },
@@ -53,22 +53,22 @@ export const travelTemplate: SpaceTemplate = {
     topics: [
       {
         message:
-          "Я помогу спланировать поездки. Расскажи, куда хочешь поехать — добавлю точки на карту, соберу чек-лист сборов и предложу маршрут.",
+          "I'll help plan your trips. Tell me where you want to go — I'll add points to the map, assemble a packing checklist, and suggest a route.",
       },
     ],
     skills: [
       {
         id: "travel-helper",
-        title: "Помощник путешественника",
-        description: "Планирует поездки, ведёт карту мест, дневник впечатлений",
+        title: "Travel helper",
+        description: "Plans trips, maintains a map of places, diary of impressions",
         instructions: [
-          "## Помощник путешественника",
+          "## Travel helper",
           "",
-          "Ты помогаешь планировать и переживать путешествия:",
-          "  1. Когда упомянут город / POI — найди координаты (WebSearch/WebFetch geocoding, не выдумывай) и обнови `travel-map` через `<<reflex:widget-update>>`.",
-          "  2. Когда планируется поездка — добавь её в `travel-trips` (link-list) и проверь `travel-prep-checklist`.",
-          "  3. После поездки — спроси про впечатления и сохрани в KB как `kind: \"trip-log\"` с meta.dates, meta.country, meta.cities.",
-          "  4. Перед вылетом за N дней (если знаешь дату) — напомни про чек-лист.",
+          "You help plan and live through travels:",
+          "  1. When a city / POI is mentioned — find the coordinates (WebSearch/WebFetch geocoding; don't invent) and update `travel-map` via `<<reflex:widget-update>>`.",
+          "  2. When a trip is planned — add it to `travel-trips` (link-list) and review `travel-prep-checklist`.",
+          "  3. After the trip — ask about impressions and save to the KB as `kind: \"trip-log\"` with meta.dates, meta.country, meta.cities.",
+          "  4. N days before departure (if you know the date) — remind about the checklist.",
         ].join("\n"),
       },
     ],

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Calendar,
   CheckCircle2,
@@ -55,6 +56,7 @@ function GenericMeta({ data }: { data: Record<string, unknown> }) {
 }
 
 function TaskBadges({ data }: { data: Record<string, unknown> }) {
+  const t = useTranslations("roots");
   const status = str(data.status);
   const priority = str(data.priority);
   const due = str(data.due) ?? str(data.due_date);
@@ -85,7 +87,7 @@ function TaskBadges({ data }: { data: Record<string, unknown> }) {
       {due && (
         <Badge variant="secondary" className="gap-1">
           <Calendar className="h-3 w-3" />
-          до {due}
+          {t("entityBadges.dueLabel", { date: due })}
         </Badge>
       )}
       {assignee && (
@@ -105,6 +107,7 @@ function TaskBadges({ data }: { data: Record<string, unknown> }) {
 }
 
 function MeetingBadges({ data }: { data: Record<string, unknown> }) {
+  const t = useTranslations("roots");
   const attendees = arr(data.attendees);
   const decisions = arr(data.decisions);
   const actionItems = arr(data.action_items) ?? arr(data.actionItems);
@@ -121,7 +124,7 @@ function MeetingBadges({ data }: { data: Record<string, unknown> }) {
         </div>
       )}
       {decisions && decisions.length > 0 && (
-        <ListBlock title="Решения" items={decisions} />
+        <ListBlock title={t("entityBadges.decisionsTitle")} items={decisions} />
       )}
       {actionItems && actionItems.length > 0 && (
         <ListBlock title="Action items" items={actionItems} />
@@ -131,6 +134,7 @@ function MeetingBadges({ data }: { data: Record<string, unknown> }) {
 }
 
 function ProductBadges({ data }: { data: Record<string, unknown> }) {
+  const t = useTranslations("roots");
   const sku = str(data.sku);
   const price = data.price;
   const currency = str(data.currency);
@@ -163,7 +167,7 @@ function ProductBadges({ data }: { data: Record<string, unknown> }) {
           className="inline-flex items-center gap-1 text-xs text-primary underline-offset-2 hover:underline"
         >
           <ExternalLink className="h-3 w-3" />
-          открыть
+          {t("entityBadges.openLink")}
         </a>
       )}
       {tags?.map((t) => (
@@ -176,18 +180,19 @@ function ProductBadges({ data }: { data: Record<string, unknown> }) {
 }
 
 function FactBadges({ data }: { data: Record<string, unknown> }) {
+  const t = useTranslations("roots");
   const tags = arr(data.tags);
   const source = str(data.source);
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {tags?.map((t) => (
-        <Badge key={t} variant="secondary" className="gap-1">
-          <Tag className="h-3 w-3" /> {t}
+      {tags?.map((tag) => (
+        <Badge key={tag} variant="secondary" className="gap-1">
+          <Tag className="h-3 w-3" /> {tag}
         </Badge>
       ))}
       {source && (
         <Badge variant="outline" className="gap-1 max-w-[24rem]">
-          <span className="text-muted-foreground">источник:</span>
+          <span className="text-muted-foreground">{t("entityBadges.sourceLabel")}</span>
           <span className="truncate">{source}</span>
         </Badge>
       )}

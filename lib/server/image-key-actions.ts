@@ -41,7 +41,7 @@ export async function clearImageProviderKeyAction(
 /**
  * Check whether the Brave key is set in the api-keys store OR if it's
  * findable in the user's MCP server configs (`brave-search` server's
- * env.BRAVE_API_KEY). Lets Settings show a "ключ виден через MCP" hint
+ * env.BRAVE_API_KEY). Lets Settings show a "key visible via MCP" hint
  * even when the dedicated api-keys slot is empty.
  */
 export async function braveKeyStatusAction(): Promise<{

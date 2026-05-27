@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "./ui/button";
 
 export interface OAuthSetupStep {
@@ -19,6 +20,7 @@ export interface OAuthSetupStep {
  * step-by-step guidance with copy-able values next to the field names.
  */
 export function OAuthSetupSteps({ steps }: { steps: OAuthSetupStep[] }) {
+  const t = useTranslations("app");
   if (!steps || steps.length === 0) return null;
   return (
     <ol className="space-y-2 text-xs">
@@ -31,7 +33,7 @@ export function OAuthSetupSteps({ steps }: { steps: OAuthSetupStep[] }) {
             <div>{step.title}</div>
             {step.choice && (
               <div className="text-[11px]">
-                <span className="text-muted-foreground">Выбери: </span>
+                <span className="text-muted-foreground">{t("oauth.copyHint")}</span>
                 <span className="font-medium bg-muted/60 rounded px-1.5 py-0.5">
                   {step.choice}
                 </span>
@@ -61,6 +63,7 @@ export function OAuthSetupSteps({ steps }: { steps: OAuthSetupStep[] }) {
 }
 
 function CopyButton({ value }: { value: string }) {
+  const t = useTranslations("app");
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -72,13 +75,13 @@ function CopyButton({ value }: { value: string }) {
         try {
           await navigator.clipboard.writeText(value);
           setCopied(true);
-          toast.success("Скопировано");
+          toast.success(t("oauth.copied"));
           setTimeout(() => setCopied(false), 1200);
         } catch {
-          toast.error("Не удалось скопировать");
+          toast.error(t("oauth.copyFailed"));
         }
       }}
-      title="Скопировать"
+      title={t("oauth.copy")}
     >
       {copied ? (
         <Check className="h-3 w-3 text-emerald-600" />

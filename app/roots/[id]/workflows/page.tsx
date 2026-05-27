@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, LayoutDashboard, Workflow } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -15,6 +16,7 @@ export default async function WorkflowsListPage({
   const { id } = await params;
   const entry = await getRoot(id);
   if (!entry) notFound();
+  const t = await getTranslations("roots");
   const workflows = await listWorkflows(entry.path);
 
   return (
@@ -22,7 +24,7 @@ export default async function WorkflowsListPage({
       <header className="border-b px-6 py-4 flex items-center gap-4">
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href={`/roots/${entry.id}`}>
-            <LayoutDashboard className="mr-1 h-4 w-4" /> Дашборд
+            <LayoutDashboard className="mr-1 h-4 w-4" /> {t("workflowsList.backToDashboard")}
           </Link>
         </Button>
         <Button asChild variant="ghost" size="sm">
@@ -35,9 +37,7 @@ export default async function WorkflowsListPage({
             <Workflow className="h-4 w-4 text-violet-600" /> Workflows
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Автоматизации для проекта. Создаются через чат («сделай workflow
-            который…»), редактируются здесь, запускаются вручную или по
-            расписанию.
+            {t("workflowsList.subtitle")}
           </p>
         </div>
       </header>
@@ -46,12 +46,11 @@ export default async function WorkflowsListPage({
         <div className="p-6 max-w-4xl mx-auto space-y-3">
           {workflows.length === 0 ? (
             <div className="rounded-md border border-dashed bg-muted/20 p-8 text-center text-sm text-muted-foreground space-y-2">
-              <p>Здесь пока пусто.</p>
+              <p>{t("workflowsList.empty")}</p>
               <p className="text-xs">
-                Пример запроса в чате:{" "}
+                {t("workflowsList.exampleIntro")}{" "}
                 <em>
-                  «сделай workflow: каждый день качай HN-rss, агентом собирай
-                  дайджест и пиши в KB»
+                  {t("workflowsList.example")}
                 </em>
               </p>
             </div>
@@ -74,7 +73,7 @@ export default async function WorkflowsListPage({
                       </Badge>
                       <Badge variant="secondary" className="text-[10px]">
                         {wf.steps.length}{" "}
-                        {pluralRu(wf.steps.length, "шаг", "шага", "шагов")}
+                        {pluralStep(wf.steps.length, t)}
                       </Badge>
                     </div>
                     {wf.description && (
@@ -83,7 +82,10 @@ export default async function WorkflowsListPage({
                       </p>
                     )}
                     <div className="text-[10px] text-muted-foreground mt-1 font-mono">
-                      {wf.id} · обновлён {new Date(wf.updatedAt).toLocaleString()}
+                      {t("workflowsList.updatedAt", {
+                        id: wf.id,
+                        time: new Date(wf.updatedAt).toLocaleString(),
+                      })}
                     </div>
                   </div>
                 </div>
@@ -96,11 +98,19 @@ export default async function WorkflowsListPage({
   );
 }
 
-function pluralRu(n: number, one: string, few: string, many: string): string {
+/**
+ * Localized step pluralization. Russian needs three forms (one/few/many);
+ * English collapses to single/plural — handled by the translator picking
+ * which key serves each `stepOne`/`stepFew`/`stepMany` slot in its locale.
+ */
+function pluralStep(
+  n: number,
+  t: (key: string) => string,
+): string {
   const mod10 = n % 10;
   const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return many;
-  if (mod10 === 1) return one;
-  if (mod10 >= 2 && mod10 <= 4) return few;
-  return many;
+  if (mod100 >= 11 && mod100 <= 14) return t("workflowsList.stepMany");
+  if (mod10 === 1) return t("workflowsList.stepOne");
+  if (mod10 >= 2 && mod10 <= 4) return t("workflowsList.stepFew");
+  return t("workflowsList.stepMany");
 }

@@ -37,7 +37,7 @@ export async function startTunnelAction(): Promise<
   if (!s.ngrok.authtoken) {
     return {
       ok: false,
-      error: "ngrok.authtoken пуст — заполни в настройках сверху.",
+      error: "ngrok.authtoken is empty — fill it in the settings above.",
     };
   }
   const r = await startTunnel({

@@ -104,18 +104,18 @@ export async function runWorkflow(
  * happy path.
  */
 export function validateWorkflowDef(wf: WorkflowDef): string | null {
-  if (!wf.id || typeof wf.id !== "string") return "id обязателен";
-  if (!wf.label || typeof wf.label !== "string") return "label обязателен";
+  if (!wf.id || typeof wf.id !== "string") return "id is required";
+  if (!wf.label || typeof wf.label !== "string") return "label is required";
   if (!Array.isArray(wf.steps) || wf.steps.length === 0) {
-    return "steps[] не может быть пустым";
+    return "steps[] cannot be empty";
   }
   const ids = new Set<string>();
   for (const s of wf.steps) {
-    if (!s.id) return "Каждый step должен иметь id";
-    if (ids.has(s.id)) return `Дублирующийся step id: ${s.id}`;
+    if (!s.id) return "every step must have an id";
+    if (ids.has(s.id)) return `Duplicate step id: ${s.id}`;
     ids.add(s.id);
     if (!NODE_HANDLERS[s.kind]) {
-      return `Неизвестный тип step'а: ${s.kind}`;
+      return `Unknown step kind: ${s.kind}`;
     }
   }
   return null;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronRight,
@@ -41,6 +42,7 @@ interface TreeNode {
 }
 
 export function DirectoryPicker({ initialPath }: { initialPath: string }) {
+  const t = useTranslations("roots");
   const [rootPath, setRootPath] = useState(initialPath);
   const [pathInput, setPathInput] = useState(initialPath);
   const [parentPath, setParentPath] = useState<string | null>(null);
@@ -167,10 +169,10 @@ export function DirectoryPicker({ initialPath }: { initialPath: string }) {
     startCreating(async () => {
       const res = await createDirectoryAction(selected, name);
       if (!res.ok) {
-        toast.error(res.error ?? "Не удалось создать папку");
+        toast.error(res.error ?? t("picker.createFolderFailed"));
         return;
       }
-      toast.success("Папка создана");
+      toast.success(t("picker.folderCreated"));
       setCreatingFolder(false);
       setNewFolderName("");
       await refreshChildren(selected);
@@ -248,9 +250,9 @@ export function DirectoryPicker({ initialPath }: { initialPath: string }) {
                 setNewFolderName("");
               }}
               className="h-8"
-              title={`Создать папку в ${basename(selected)}`}
+              title={t("picker.createFolderTitle", { parent: basename(selected) })}
             >
-              <FolderPlus className="mr-1 h-4 w-4" /> Создать
+              <FolderPlus className="mr-1 h-4 w-4" /> {t("picker.createButton")}
             </Button>
             <label className="flex items-center gap-1 text-xs text-muted-foreground select-none">
               <input
@@ -276,7 +278,7 @@ export function DirectoryPicker({ initialPath }: { initialPath: string }) {
                 autoFocus
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="имя новой папки"
+                placeholder={t("picker.newFolderPlaceholder")}
                 className="h-8 text-sm flex-1"
                 disabled={creating}
                 onKeyDown={(e) => {
@@ -298,7 +300,7 @@ export function DirectoryPicker({ initialPath }: { initialPath: string }) {
                 ) : (
                   <FolderPlus className="mr-1 h-3.5 w-3.5" />
                 )}
-                Создать
+                {t("picker.createButton")}
               </Button>
               <Button
                 type="button"

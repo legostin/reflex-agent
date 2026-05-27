@@ -40,7 +40,7 @@ export async function searchBrave(
   const key = await resolveBraveKey();
   if (!key) {
     throw new Error(
-      "Brave API key не найден. Подключи Brave Search MCP в Settings или добавь ключ в Settings → Картинки.",
+      "Brave API key not found. Connect Brave Search MCP in Settings or add the key in Settings -> Images.",
     );
   }
   const url = new URL(ENDPOINT);

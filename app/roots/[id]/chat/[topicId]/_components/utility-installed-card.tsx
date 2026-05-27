@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Boxes, Sparkles } from "lucide-react";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function UtilityInstalledCard({ utility, rootId }: Props) {
+  const t = useTranslations("roots");
   const qs =
     utility.scope === "project" && rootId
       ? `?rootId=${encodeURIComponent(rootId)}`
@@ -31,7 +33,7 @@ export function UtilityInstalledCard({ utility, rootId }: Props) {
         <div className="min-w-0 flex-1">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
-            <span>Утилита установлена</span>
+            <span>{t("utilityCard.installed")}</span>
             <span className="font-mono normal-case tracking-normal">
               {utility.scope}
             </span>

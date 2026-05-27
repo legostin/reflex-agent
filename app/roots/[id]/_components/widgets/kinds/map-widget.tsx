@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Copy,
   Loader2,
@@ -60,6 +61,7 @@ export function MapWidget({
   readonly?: boolean;
   onPatch?: (next: MapData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   const containerRef = useRef<HTMLDivElement | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
@@ -135,8 +137,9 @@ export function MapWidget({
     script.async = true;
     script.onload = () => setLeafletReady(true);
     script.onerror = () =>
-      toast.error("Не удалось загрузить Leaflet с CDN (проверь интернет)");
+      toast.error(t("mapWidget.leafletLoadFailed"));
     document.head.appendChild(script);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Init / refresh the map. Re-runs whenever data or the visible stops change.
@@ -164,7 +167,10 @@ export function MapWidget({
 
     const markers = points.map((p, idx) => {
       const inRoute = effectiveStops.includes(idx);
-      const html = popupHtml(p, services);
+      const html = popupHtml(p, services, {
+        openIn: t("mapWidget.openIn"),
+        copyCoords: t("mapWidget.copyCoords"),
+      });
       const marker = L.marker([p.lat, p.lng], {
         opacity: routeMode && !inRoute ? 0.55 : 1,
       }).addTo(map);
@@ -193,15 +199,15 @@ export function MapWidget({
     }
 
     const onPopupClick = (e: Event) => {
-      const t = e.target as HTMLElement;
-      const copyTarget = t.closest<HTMLElement>("[data-reflex-copy]");
+      const target = e.target as HTMLElement;
+      const copyTarget = target.closest<HTMLElement>("[data-reflex-copy]");
       if (copyTarget) {
         const url = copyTarget.getAttribute("data-reflex-copy");
         if (url) {
           void navigator.clipboard
             .writeText(url)
-            .then(() => toast.success("Скопировано"))
-            .catch(() => toast.error("Буфер недоступен"));
+            .then(() => toast.success(t("mapWidget.copied")))
+            .catch(() => toast.error(t("mapWidget.clipboardUnavailable")));
         }
         e.preventDefault();
       }
@@ -246,11 +252,12 @@ export function MapWidget({
       if (!res.ok) throw new Error(`status ${res.status}`);
       const json = (await res.json()) as NominatimHit[];
       setHits(json);
-      if (json.length === 0) toast.message("Ничего не найдено");
+      if (json.length === 0) toast.message(t("mapWidget.nothingFound"));
     } catch (err) {
       toast.error(
-        "Поиск не работает: " +
-          (err instanceof Error ? err.message : String(err)),
+        t("mapWidget.searchFailed", {
+          error: err instanceof Error ? err.message : String(err),
+        }),
       );
     } finally {
       setSearching(false);
@@ -262,7 +269,7 @@ export function MapWidget({
     const lat = Number(hit.lat);
     const lng = Number(hit.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      toast.error("Неверные координаты в результате");
+      toast.error(t("mapWidget.invalidCoordinates"));
       return;
     }
     const title =
@@ -316,7 +323,7 @@ export function MapWidget({
   const saveRoute = async () => {
     if (!interactive) return;
     if (routeDraft.length < 2) {
-      toast.error("В маршруте нужно минимум 2 точки");
+      toast.error(t("mapWidget.routeNeedsTwo"));
       return;
     }
     const next: MapData = {
@@ -330,7 +337,7 @@ export function MapWidget({
   if (points.length === 0 && !interactive) {
     return (
       <p className="text-xs text-muted-foreground">
-        Точек нет — попроси агента добавить через widget-update.
+        {t("mapWidget.noPointsReadonly")}
       </p>
     );
   }
@@ -352,7 +359,7 @@ export function MapWidget({
                     void doSearch();
                   }
                 }}
-                placeholder="Найти место (адрес, POI)…"
+                placeholder={t("mapWidget.searchPlaceholder")}
                 className="w-full rounded border bg-background pl-7 pr-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400"
               />
             </div>
@@ -367,7 +374,7 @@ export function MapWidget({
               ) : (
                 <Search className="h-3 w-3" />
               )}
-              Поиск
+              {t("mapWidget.search")}
             </button>
             {routeMode ? (
               <>
@@ -375,15 +382,15 @@ export function MapWidget({
                   type="button"
                   onClick={() => void saveRoute()}
                   className="rounded px-2 py-1 text-xs bg-violet-600 text-white hover:bg-violet-700 inline-flex items-center gap-1"
-                  title="Сохранить маршрут"
+                  title={t("mapWidget.saveRouteTitle")}
                 >
-                  <Route className="h-3 w-3" /> Сохранить
+                  <Route className="h-3 w-3" /> {t("mapWidget.save")}
                 </button>
                 <button
                   type="button"
                   onClick={cancelRouteMode}
                   className="rounded border px-2 py-1 text-xs hover:bg-accent inline-flex items-center gap-1"
-                  title="Отменить"
+                  title={t("mapWidget.cancelTitle")}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -394,10 +401,10 @@ export function MapWidget({
                 onClick={startRouteMode}
                 disabled={points.length < 2}
                 className="rounded border px-2 py-1 text-xs hover:bg-accent disabled:opacity-50 inline-flex items-center gap-1"
-                title="Собрать маршрут по точкам"
+                title={t("mapWidget.routeButtonTitle")}
               >
                 <Route className="h-3 w-3" />
-                {persistedStops.length >= 2 ? "Маршрут" : "Маршрут"}
+                {t("mapWidget.route")}
               </button>
             )}
           </div>
@@ -426,8 +433,10 @@ export function MapWidget({
           )}
           {routeMode && (
             <div className="rounded border border-violet-200 bg-violet-50 dark:bg-violet-950/30 dark:border-violet-900/50 px-2 py-1.5 text-[11px] text-violet-900 dark:text-violet-200">
-              Тыкай точки на карте или в списке ниже — добавятся в маршрут (
-              <strong>{routeDraft.length}</strong> уже). Повторный клик — убрать.
+              {t.rich("mapWidget.routeModeHint", {
+                count: routeDraft.length,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </div>
           )}
         </div>
@@ -445,7 +454,7 @@ export function MapWidget({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 text-[11px] font-medium">
               <Route className="h-3 w-3 text-violet-600" />
-              Маршрут ({routeCoords.length} точки):
+              {t("mapWidget.routeLabel", { count: routeCoords.length })}
             </span>
             {services.map((svc) => (
               <RouteServiceLink
@@ -459,10 +468,10 @@ export function MapWidget({
                 type="button"
                 onClick={() => void clearRoute()}
                 className="ml-auto text-[10px] text-muted-foreground hover:text-destructive inline-flex items-center gap-0.5"
-                title="Удалить маршрут"
+                title={t("mapWidget.deleteRouteTitle")}
               >
                 <Trash2 className="h-3 w-3" />
-                Удалить
+                {t("mapWidget.delete")}
               </button>
             )}
           </div>
@@ -498,7 +507,11 @@ export function MapWidget({
                       ? "bg-violet-600 text-white border-violet-600"
                       : "bg-card text-muted-foreground")
                   }
-                  title={inRoute >= 0 ? "Убрать из маршрута" : "Добавить в маршрут"}
+                  title={
+                    inRoute >= 0
+                      ? t("mapWidget.removeFromRoute")
+                      : t("mapWidget.addToRoute")
+                  }
                 >
                   {inRoute >= 0 ? inRoute + 1 : "+"}
                 </button>
@@ -554,11 +567,12 @@ function PointActions({
   interactive: boolean;
   onRemove: () => void;
 }) {
+  const t = useTranslations("roots");
   const copyCoords = () => {
     void navigator.clipboard
       .writeText(`${point.lat}, ${point.lng}`)
-      .then(() => toast.success("Координаты скопированы"))
-      .catch(() => toast.error("Буфер недоступен"));
+      .then(() => toast.success(t("mapWidget.coordsCopied")))
+      .catch(() => toast.error(t("mapWidget.clipboardUnavailable")));
   };
   return (
     <div className="flex items-center gap-1 shrink-0">
@@ -569,7 +583,7 @@ function PointActions({
           target="_blank"
           rel="noopener noreferrer"
           className="rounded p-0.5 hover:ring-1 hover:ring-offset-1 hover:ring-violet-300"
-          title={`Маршрут в ${svc.label}`}
+          title={t("mapWidget.navigationTitle", { service: svc.label })}
         >
           <MapServiceBadge service={svc} size={18} />
         </a>
@@ -578,7 +592,7 @@ function PointActions({
         type="button"
         onClick={copyCoords}
         className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-        title="Скопировать координаты"
+        title={t("mapWidget.copyCoords")}
       >
         <Copy className="h-3 w-3" />
       </button>
@@ -587,7 +601,7 @@ function PointActions({
           type="button"
           onClick={onRemove}
           className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-destructive"
-          title="Удалить точку"
+          title={t("mapWidget.removePoint")}
         >
           <X className="h-3 w-3" />
         </button>
@@ -609,14 +623,15 @@ function RouteServiceLink({
   service: MapService;
   stops: RouteStop[];
 }) {
+  const t = useTranslations("roots");
   const url = service.routeUrlFor(stops);
   const copy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     void navigator.clipboard
       .writeText(url)
-      .then(() => toast.success(`Ссылка ${service.label} скопирована`))
-      .catch(() => toast.error("Буфер недоступен"));
+      .then(() => toast.success(t("mapWidget.linkCopied", { service: service.label })))
+      .catch(() => toast.error(t("mapWidget.clipboardUnavailable")));
   };
   return (
     <a
@@ -625,7 +640,7 @@ function RouteServiceLink({
       rel="noopener noreferrer"
       onContextMenu={copy}
       className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] hover:bg-accent"
-      title={`${service.label} — клик: открыть, правый клик: скопировать ссылку`}
+      title={t("mapWidget.openTitle", { service: service.label })}
     >
       <MapServiceBadge service={service} size={16} />
       <span className="truncate max-w-[80px]">{service.label}</span>
@@ -633,7 +648,7 @@ function RouteServiceLink({
         type="button"
         onClick={copy}
         className="text-muted-foreground hover:text-foreground"
-        title="Скопировать ссылку"
+        title={t("mapWidget.copyLinkTitle")}
       >
         <Copy className="h-2.5 w-2.5" />
       </button>
@@ -646,7 +661,11 @@ function RouteServiceLink({
  * popups don't support React). Event delegation in the map container
  * wires clipboard actions; external links use plain `<a target="_blank">`.
  */
-function popupHtml(point: MapPoint, services: MapService[]): string {
+function popupHtml(
+  point: MapPoint,
+  services: MapService[],
+  labels: { openIn: string; copyCoords: string },
+): string {
   const escape = (s: string) =>
     s
       .replace(/&/g, "&amp;")
@@ -678,9 +697,9 @@ function popupHtml(point: MapPoint, services: MapService[]): string {
       : "",
     `<div style="font-family:monospace;font-size:10px;color:#888;margin-bottom:6px">${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}</div>`,
     services.length > 0
-      ? `<div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Открыть в</div>${linksHtml}`
+      ? `<div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">${escape(labels.openIn)}</div>${linksHtml}`
       : "",
-    `<div style="margin-top:6px"><button type="button" data-reflex-copy="${point.lat}, ${point.lng}" style="font-size:11px;padding:2px 8px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer">📋 Скопировать координаты</button></div>`,
+    `<div style="margin-top:6px"><button type="button" data-reflex-copy="${point.lat}, ${point.lng}" style="font-size:11px;padding:2px 8px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer">📋 ${escape(labels.copyCoords)}</button></div>`,
     `</div>`,
   ]
     .filter(Boolean)

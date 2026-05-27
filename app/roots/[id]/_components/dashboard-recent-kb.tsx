@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ interface Props {
  * mount so the initial snapshot stays small.
  */
 export function DashboardRecentKb({ rootId, items }: Props) {
+  const t = useTranslations("roots");
   const [previews, setPreviews] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export function DashboardRecentKb({ rootId, items }: Props) {
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm flex items-center gap-2">
           <FileText className="h-4 w-4 text-emerald-700" />
-          Свежее в KB
+          {t("recentKb.title")}
         </CardTitle>
         {items.length > 0 && (
           <Badge variant="secondary" className="text-[10px]">
@@ -53,7 +55,7 @@ export function DashboardRecentKb({ rootId, items }: Props) {
       <CardContent className="space-y-2">
         {items.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            За последние 72 часа никто не писал в KB.
+            {t("recentKb.empty")}
           </p>
         )}
         {items.map((it) => (
@@ -79,7 +81,7 @@ export function DashboardRecentKb({ rootId, items }: Props) {
                   {previews[it.rel] ?? it.rel}
                 </p>
                 <div className="text-[10px] text-muted-foreground mt-1">
-                  {formatRel(it.modifiedAt)} · <span className="font-mono">{it.rel}</span>
+                  {formatRel(it.modifiedAt, t)} · <span className="font-mono">{it.rel}</span>
                 </div>
               </div>
             </div>
@@ -94,14 +96,17 @@ function encodePath(rel: string): string {
   return rel.split("/").map(encodeURIComponent).join("/");
 }
 
-function formatRel(iso: string): string {
+function formatRel(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "только что";
+  if (!Number.isFinite(ms) || ms < 0) return t("recentKb.justNow");
   const min = Math.floor(ms / 60_000);
-  if (min < 1) return "только что";
-  if (min < 60) return `${min} мин назад`;
+  if (min < 1) return t("recentKb.justNow");
+  if (min < 60) return t("recentKb.minutesAgo", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} ч назад`;
+  if (hr < 24) return t("recentKb.hoursAgo", { count: hr });
   const d = Math.floor(hr / 24);
-  return `${d} дн назад`;
+  return t("recentKb.daysAgo", { count: d });
 }

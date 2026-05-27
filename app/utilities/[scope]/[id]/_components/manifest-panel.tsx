@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +38,7 @@ export function ManifestPanel({
   manifest: Manifest;
   dir: string;
 }) {
+  const t = useTranslations("app");
   const [rebuilding, startRebuild] = useTransition();
   const [checking, startCheck] = useTransition();
   const [editing, startEdit] = useTransition();
@@ -49,7 +51,7 @@ export function ManifestPanel({
       const res = await rebuildUtilityAction(scope, id, rootId);
       if (!res.ok) toast.error(res.error ?? "fail");
       else {
-        toast.success("Bundle перезобрана");
+        toast.success(t("utilities.manifest.bundleRebuilt"));
         router.refresh();
       }
     });
@@ -63,16 +65,20 @@ export function ManifestPanel({
       }
       if (res.upToDate) {
         setUpdateBanner(null);
-        toast.success("Уже последняя версия");
+        toast.success(t("utilities.manifest.upToDate"));
       } else {
-        setUpdateBanner(`Доступен новый sha ${res.latestSha?.slice(0, 7)}`);
+        setUpdateBanner(
+          t("utilities.manifest.newShaAvailable", {
+            sha: res.latestSha?.slice(0, 7) ?? "",
+          }),
+        );
       }
     });
 
   const submitEdit = () => {
-    const text = instruction.trim();
-    if (!text) {
-      toast.error("Опиши, что изменить");
+    const instr = instruction.trim();
+    if (!instr) {
+      toast.error(t("utilities.manifest.editEmpty"));
       return;
     }
     startEdit(async () => {
@@ -80,13 +86,13 @@ export function ManifestPanel({
         scope,
         id,
         ...(rootId ? { rootId } : {}),
-        instruction: text,
+        instruction: instr,
       });
       if (!res.ok) {
         toast.error(res.error);
         return;
       }
-      toast.success("Топик стартовал — переходим в чат");
+      toast.success(t("utilities.manifest.topicStarted"));
       setInstruction("");
       router.push(`/roots/${res.rootId}/chat/${res.topicId}`);
     });
@@ -98,7 +104,7 @@ export function ManifestPanel({
     <div className="space-y-4 text-xs">
       <div>
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-          Источник
+          {t("utilities.manifest.sourceTitle")}
         </div>
         <div className="space-y-1">
           <Badge variant="secondary" className="capitalize">
@@ -119,7 +125,7 @@ export function ManifestPanel({
 
       <div>
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-          Файлы на диске
+          {t("utilities.manifest.filesTitle")}
         </div>
         <div className="font-mono break-all text-muted-foreground">{dir}</div>
       </div>
@@ -145,7 +151,7 @@ export function ManifestPanel({
       {manifest.serverActions.length > 0 && (
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-            Server actions
+            {t("utilities.manifest.serverActions")}
           </div>
           <ul className="space-y-1">
             {manifest.serverActions.map((a) => (
@@ -162,12 +168,12 @@ export function ManifestPanel({
 
       <div className="pt-2 border-t space-y-2">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-          <Pencil className="h-3 w-3" /> Изменить
+          <Pencil className="h-3 w-3" /> {t("utilities.manifest.editTitle")}
         </div>
         <Textarea
           value={instruction}
           onChange={(e) => setInstruction(e.target.value)}
-          placeholder="Что доработать? Напр.: добавь dark mode, кешируй результаты в data/cache.json, поменяй валидацию ввода…"
+          placeholder={t("utilities.manifest.editPlaceholder")}
           className="text-xs min-h-[80px]"
           disabled={editing}
         />
@@ -183,7 +189,7 @@ export function ManifestPanel({
           ) : (
             <Pencil className="mr-2 h-3.5 w-3.5" />
           )}
-          Изменить (стартует /goal)
+          {t("utilities.manifest.editButton")}
         </Button>
       </div>
 
@@ -200,7 +206,7 @@ export function ManifestPanel({
           ) : (
             <Hammer className="mr-2 h-3.5 w-3.5" />
           )}
-          Перебилдить bundle
+          {t("utilities.manifest.rebuildButton")}
         </Button>
         {isGithub && (
           <Button
@@ -215,12 +221,12 @@ export function ManifestPanel({
             ) : (
               <RefreshCw className="mr-2 h-3.5 w-3.5" />
             )}
-            Проверить обновления
+            {t("utilities.manifest.checkUpdates")}
           </Button>
         )}
         {updateBanner && (
           <div className="rounded border border-emerald-400 bg-emerald-50 px-2 py-1 text-emerald-900">
-            {updateBanner} — переустанови утилиту, чтобы применить.
+            {updateBanner}{t("utilities.manifest.updateBannerSuffix")}
           </div>
         )}
       </div>
@@ -229,6 +235,7 @@ export function ManifestPanel({
 }
 
 function PermissionsList({ manifest }: { manifest: Manifest }) {
+  const t = useTranslations("app");
   const p = manifest.permissions;
   const rows: string[] = [];
   if (p.llm?.tasks?.length) rows.push(`llm.tasks = [${p.llm.tasks.join(", ")}]`);
@@ -243,7 +250,7 @@ function PermissionsList({ manifest }: { manifest: Manifest }) {
   if (p.workers?.enabled)
     rows.push(`workers (max ${p.workers.maxConcurrent ?? 1})`);
   if (rows.length === 0) {
-    return <p className="text-muted-foreground italic">Без разрешений.</p>;
+    return <p className="text-muted-foreground italic">{t("utilities.manifest.noPermissions")}</p>;
   }
   return (
     <ul className="space-y-0.5 font-mono">

@@ -55,15 +55,11 @@ const AssignmentSchema = z.object({
   allowedTools: z.array(z.string()).default([]),
 });
 
-export const LANGUAGE_PRESETS = [
-  "english",
-  "русский",
-  "español",
-  "deutsch",
-  "français",
-  "中文",
-  "日本語",
-] as const;
+/**
+ * Locale codes the UI supports. The content-generation language is derived
+ * from the same value via `contentLanguageName()` in `i18n/request.ts`.
+ */
+export const LANGUAGE_PRESETS = ["en", "ru"] as const;
 
 export const IMAGE_FORMATS = ["auto", "jpeg", "webp", "original"] as const;
 export type ImageFormat = (typeof IMAGE_FORMATS)[number];
@@ -90,17 +86,18 @@ export type ImageProcessing = z.infer<typeof ImageProcessingSchema>;
 export const SettingsSchema = z.object({
   version: z.literal(1).default(1),
   /**
-   * Natural language the agent should generate Markdown artifacts in.
-   * Freeform — preset list is a UI convenience, not a constraint.
+   * UI language and the language the agent generates content in.
+   * Legacy values ("english", "russian") still parse via `normalizeLocale()`
+   * in `i18n/request.ts` so existing settings.json files keep working.
    */
-  language: z.string().min(1).default("english"),
+  language: z.string().min(1).default("en"),
   /**
    * First-run wizard completion timestamp. Absent → user lands on
    * `/onboarding` instead of the home page. Set once and never cleared
    * automatically (user can re-run wizard from settings).
    */
   onboardedAt: z.string().optional(),
-  /** User's display name (used in "Доброе утро, …" greetings). */
+  /** User's display name (used in "Good morning, …" greetings). */
   userName: z.string().default(""),
   /** IANA timezone (e.g. "Europe/Moscow"). Used for daily-digest cadence. */
   timezone: z.string().default(""),
@@ -165,7 +162,7 @@ export const SettingsSchema = z.object({
       },
     }),
   /**
-   * Which map/routing services appear in the map-widget's "Маршрут в…"
+   * Which map/routing services appear in the map-widget's "Route to…"
    * popup. Free-form string ids so users can add custom providers later
    * without a schema migration; UI maps known ids to MAP_SERVICES entries
    * (see `lib/client/map-services.ts`).

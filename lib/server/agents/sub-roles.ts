@@ -73,7 +73,7 @@ export const SUB_AGENT_ROLES: Record<SubAgentRoleId, SubAgentRoleDef> = {
     id: "researcher",
     label: "Researcher",
     description:
-      "Глубокое чтение KB / поиск по проекту / web research. Read-only — не пишет файлы. Используй когда нужно найти/собрать факты.",
+      "Deep KB reading / project search / web research. Read-only — never writes files. Use when you need to find or gather facts.",
     allowedTools: READ_TOOLS,
     systemPrompt: ({ language, root, reflexScope, brief }) =>
       [
@@ -93,7 +93,7 @@ export const SUB_AGENT_ROLES: Record<SubAgentRoleId, SubAgentRoleDef> = {
     id: "coder",
     label: "Coder",
     description:
-      "Пишет/редактирует исходный код, конфиги, схемы. Может создать утилиту. Используй когда нужны изменения файлов.",
+      "Writes/edits source code, configs, schemas. Can create a utility. Use when file changes are required.",
     allowedTools: WRITE_TOOLS,
     systemPrompt: ({ language, root, reflexScope, brief }) =>
       [
@@ -113,7 +113,7 @@ export const SUB_AGENT_ROLES: Record<SubAgentRoleId, SubAgentRoleDef> = {
     id: "summarizer",
     label: "Summarizer",
     description:
-      "Сжимает большой текст / длинный transcript / список файлов в короткое summary. Без инструментов — только текст в брифе.",
+      "Compresses a large text / long transcript / file list into a short summary. No tools — only the text in the brief.",
     allowedTools: [],
     systemPrompt: ({ language, brief }) =>
       [
@@ -131,7 +131,7 @@ export const SUB_AGENT_ROLES: Record<SubAgentRoleId, SubAgentRoleDef> = {
     id: "kb-writer",
     label: "KB Writer",
     description:
-      "Структурированная запись в базу знаний (kind/title/body/frontmatter). Используй когда orchestrator решил что-то сохранить.",
+      "Structured knowledge-base entry (kind/title/body/frontmatter). Use when the orchestrator decides to save something.",
     allowedTools: READ_TOOLS,
     systemPrompt: ({ language, root, reflexScope, brief }) =>
       [
@@ -154,7 +154,7 @@ export const SUB_AGENT_ROLES: Record<SubAgentRoleId, SubAgentRoleDef> = {
     id: "utility-builder",
     label: "Utility Builder",
     description:
-      "Спроектировать утилиту: manifest + ui.tsx + (опц.) server actions. Используй когда пользователь явно просит создать утилиту.",
+      "Design a utility: manifest + ui.tsx + (optional) server actions. Use when the user explicitly asks to create a utility.",
     allowedTools: READ_TOOLS,
     systemPrompt: ({ language, root, brief }) =>
       [

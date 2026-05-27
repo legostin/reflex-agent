@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Github, Hammer, ListTree } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +23,7 @@ export default async function UtilityDetailPage({
   const { scope, id } = await params;
   const { rootId } = await searchParams;
   if (scope !== "global" && scope !== "project") notFound();
+  const t = await getTranslations("app");
   if (scope === "project" && !rootId) {
     const matches = (await listUtilities({ scope: "project" })).filter(
       (u) => u.manifest.id === id,
@@ -37,15 +39,17 @@ export default async function UtilityDetailPage({
         <header className="border-b px-6 py-3 flex items-start gap-4">
           <Button asChild variant="ghost" size="sm" className="-ml-3 mt-0.5">
             <Link href="/utilities">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Утилиты
+              <ArrowLeft className="mr-1 h-4 w-4" /> {t("utilities.utilitiesLink")}
             </Link>
           </Button>
           <div className="min-w-0 flex-1">
             <h1 className="text-base font-medium truncate">
-              Утилита установлена в нескольких проектах
+              {t("utilities.installedInManyProjects")}
             </h1>
             <p className="text-xs text-muted-foreground">
-              Выбери, в каком открыть <code className="font-mono">{id}</code>
+              {t("utilities.pickProjectPrefix")}{" "}
+              <code className="font-mono">{id}</code>{" "}
+              {t("utilities.pickProjectSuffix")}
             </p>
           </div>
         </header>
@@ -76,7 +80,7 @@ export default async function UtilityDetailPage({
       <header className="border-b px-6 py-3 flex items-start gap-4">
         <Button asChild variant="ghost" size="sm" className="-ml-3 mt-0.5">
           <Link href="/utilities">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Утилиты
+            <ArrowLeft className="mr-1 h-4 w-4" /> {t("utilities.utilitiesLink")}
           </Link>
         </Button>
         <div className="min-w-0 flex-1">

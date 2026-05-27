@@ -43,7 +43,7 @@ export async function summarizeYoutubeAction(args: {
       ok: false,
       needsKey: true,
       error:
-        "Gemini API key не сохранён — введи его, чтобы суммаризировать видео.",
+        "Gemini API key is not saved — enter it to summarize videos.",
     };
   }
   const settings = await loadSettings();
@@ -70,7 +70,7 @@ export async function summarizeYoutubeAction(args: {
       return {
         ok: false,
         error:
-          "Gemini вернул пустой ответ — возможно видео недоступно или приватное.",
+          "Gemini returned an empty response — the video may be unavailable or private.",
       };
     }
     return { ok: true, text, model };
@@ -168,18 +168,22 @@ export async function saveGeminiModelChoiceAction(args: {
 }
 
 function defaultPrompt(language: string): string {
-  const isRu = /russ/i.test(language) || /рус/i.test(language);
+  // Match both English ("russian") and the Cyrillic-spelled locale.
+  // The second pattern is built from unicode escapes so this source stays ASCII.
+  const isRu =
+    /russ/i.test(language) ||
+    new RegExp("\u0440\u0443\u0441", "i").test(language);
   if (isRu) {
     return [
-      "Сделай структурированную выжимку этого YouTube-видео:",
+      "Produce a structured summary of this YouTube video:",
       "",
-      "1. Один абзац — о чём видео целиком и для кого.",
-      "2. Главные тезисы списком с тайм-кодами вида `[mm:ss]`.",
-      "3. Ключевые цитаты (если есть запоминающиеся фразы) — с тайм-кодами.",
-      "4. Если показаны диаграммы / схемы / код — кратко опиши что в них.",
-      "5. Вывод 1-3 предложения: главное, что стоит унести.",
+      "1. One paragraph — what the video is about and who it's for.",
+      "2. Main points as a bulleted list with `[mm:ss]` timestamps.",
+      "3. Notable quotes (any memorable phrases) — with timestamps.",
+      "4. If diagrams / slides / code are shown — briefly describe them.",
+      "5. 1-3 sentence takeaway: the main point worth retaining.",
       "",
-      "Пиши на русском, лаконично. Без воды.",
+      "Respond in Russian, concisely. No filler.",
     ].join("\n");
   }
   return [

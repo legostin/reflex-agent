@@ -79,8 +79,8 @@ function successPage(provider: string): string {
   return shell(
     `${provider} authorized`,
     `<h1 class="ok">✓ ${provider} authorized</h1>
-     <p>Токены сохранены в <code>~/.reflex/oauth/tokens/${provider}.json</code>.</p>
-     <p>Можешь закрыть эту вкладку и вернуться в Reflex.</p>`,
+     <p>Tokens saved to <code>~/.reflex/oauth/tokens/${provider}.json</code>.</p>
+     <p>You can close this tab and return to Reflex.</p>`,
   );
 }
 
@@ -89,7 +89,7 @@ function errorPage(title: string, message: string): string {
     title,
     `<h1 class="bad">${escapeHtml(title)}</h1>
      <p>${escapeHtml(message)}</p>
-     <p>Закрой эту вкладку и попробуй авторизацию ещё раз из Settings.</p>`,
+     <p>Close this tab and retry authorization from Settings.</p>`,
   );
 }
 

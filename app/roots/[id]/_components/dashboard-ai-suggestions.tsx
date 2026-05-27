@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ArrowRight,
   Lightbulb,
@@ -32,6 +33,7 @@ const FRESH_TTL_MS = 24 * 60 * 60 * 1000;
  * `~/.reflex/roots/<id>/suggestions.json`, persists between visits.
  */
 export function DashboardAiSuggestions({ rootId, cache }: Props) {
+  const t = useTranslations("roots");
   const [current, setCurrent] = useState<SuggestionsCache | null>(cache);
   const [refreshing, startRefresh] = useTransition();
   const router = useRouter();
@@ -49,7 +51,7 @@ export function DashboardAiSuggestions({ rootId, cache }: Props) {
           error?: string;
         };
         if (!data.ok) {
-          toast.error(data.error ?? "Не удалось перегенерировать");
+          toast.error(data.error ?? t("aiSuggestions.regenerateFailed"));
           return;
         }
         if (data.cache) setCurrent(data.cache);
@@ -68,10 +70,10 @@ export function DashboardAiSuggestions({ rootId, cache }: Props) {
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-amber-500" />
-          Что дальше — предложения Reflex
+          {t("aiSuggestions.title")}
           {stale && (
             <Badge variant="outline" className="text-[10px]">
-              устарело
+              {t("aiSuggestions.stale")}
             </Badge>
           )}
         </CardTitle>
@@ -88,20 +90,19 @@ export function DashboardAiSuggestions({ rootId, cache }: Props) {
           ) : (
             <RefreshCw className="h-3 w-3" />
           )}
-          Пересчитать
+          {t("aiSuggestions.recompute")}
         </Button>
       </CardHeader>
       <CardContent className="space-y-2">
         {!current && !refreshing && (
           <p className="text-xs text-muted-foreground">
-            Нажми «Пересчитать», чтобы получить 2-4 идеи о том, что стоит
-            сделать в проекте дальше. Использует quick-модель из Settings.
+            {t("aiSuggestions.intro")}
           </p>
         )}
 
         {current && current.items.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            Модель не нашла ничего срочного — попробуй позже.
+            {t("aiSuggestions.nothingUrgent")}
           </p>
         )}
 
@@ -131,8 +132,11 @@ export function DashboardAiSuggestions({ rootId, cache }: Props) {
 
         {current && (
           <p className="text-[10px] text-muted-foreground pt-1">
-            Сгенерировано {formatRel(current.generatedAt)} · модель{" "}
-            <code className="font-mono">{current.model}</code>
+            {t.rich("aiSuggestions.generatedAt", {
+              time: formatRel(current.generatedAt, t),
+              model: current.model,
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </p>
         )}
       </CardContent>
@@ -150,6 +154,7 @@ function SuggestionActionButton({
   router: ReturnType<typeof useRouter>;
 }) {
   const [busy, startBusy] = useTransition();
+  const t = useTranslations("roots");
   const { action } = item;
   if (action.kind === "none") return null;
   if (action.kind === "open-topic" && action.target) {
@@ -182,7 +187,7 @@ function SuggestionActionButton({
         try {
           const res = await startTopicAction(rootId, action.target!, [], undefined);
           if (!res.ok) {
-            toast.error(res.error ?? "Не удалось отправить");
+            toast.error(res.error ?? t("aiSuggestions.sendFailed"));
             return;
           }
           dispatchReflex(REFLEX_EVENTS.topicsChanged(rootId));
@@ -213,14 +218,17 @@ function SuggestionActionButton({
   return null;
 }
 
-function formatRel(iso: string): string {
+function formatRel(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "только что";
+  if (!Number.isFinite(ms) || ms < 0) return t("aiSuggestions.justNow");
   const min = Math.floor(ms / 60_000);
-  if (min < 1) return "только что";
-  if (min < 60) return `${min} мин назад`;
+  if (min < 1) return t("aiSuggestions.justNow");
+  if (min < 60) return t("aiSuggestions.minutesAgo", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} ч назад`;
+  if (hr < 24) return t("aiSuggestions.hoursAgo", { count: hr });
   const d = Math.floor(hr / 24);
-  return `${d} дн назад`;
+  return t("aiSuggestions.daysAgo", { count: d });
 }

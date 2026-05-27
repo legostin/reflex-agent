@@ -1,19 +1,19 @@
 {
   "id": "learn-anything",
-  "name": "🎓 Изучи что угодно",
+  "name": "🎓 Learn Anything",
   "version": "0.4.7",
-  "description": "Универсальный AI-наставник: курсы под твой уровень с контентом, тестами и тренажёрами",
+  "description": "Universal AI tutor: courses tailored to your level with content, quizzes, and trainers",
   "author": "reflex-org",
   "category": "study",
   "ui": "ui.tsx",
   "icon": "lucide:GraduationCap",
   "card": {
     "kind": "kpi",
-    "title": "🎓 Учусь",
+    "title": "🎓 Learning",
     "data": {
       "items": [
-        { "label": "Активных курсов", "value": "0" },
-        { "label": "Прогресс", "value": "—", "hint": "среднее по курсам" }
+        { "label": "Active courses", "value": "0" },
+        { "label": "Progress", "value": "—", "hint": "average across courses" }
       ]
     }
   },

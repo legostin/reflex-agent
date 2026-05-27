@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Loader2, Target, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,13 +23,14 @@ interface Props {
  * Both link straight into the chat for the topic.
  */
 export function DashboardActiveGoals({ rootId, activeGoals, runningAgents }: Props) {
+  const t = useTranslations("roots");
   const total = activeGoals.length + runningAgents.length;
   return (
     <Card>
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm flex items-center gap-2">
           <Target className="h-4 w-4 text-violet-600" />
-          Active goals & running agents
+          {t("activeGoals.title")}
         </CardTitle>
         {total > 0 && (
           <Badge variant="secondary" className="text-[10px]">
@@ -39,7 +41,7 @@ export function DashboardActiveGoals({ rootId, activeGoals, runningAgents }: Pro
       <CardContent className="space-y-2">
         {total === 0 && (
           <p className="text-xs text-muted-foreground">
-            Нет активных целей и работающих агентов.
+            {t("activeGoals.empty")}
           </p>
         )}
 
@@ -64,9 +66,9 @@ export function DashboardActiveGoals({ rootId, activeGoals, runningAgents }: Pro
                   {g.goal}
                 </p>
                 <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                  <span>итерация {g.goalIterations}</span>
+                  <span>{t("activeGoals.iterationLabel", { count: g.goalIterations })}</span>
                   <span>·</span>
-                  <span>обновлено {formatRel(g.updatedAt)}</span>
+                  <span>{t("activeGoals.updatedLabel", { time: formatRel(g.updatedAt, t) })}</span>
                 </div>
               </div>
             </div>
@@ -87,7 +89,7 @@ export function DashboardActiveGoals({ rootId, activeGoals, runningAgents }: Pro
                 </span>
                 <Loader2 className="h-3 w-3 animate-spin text-amber-600 shrink-0" />
                 <span className="text-[10px] text-muted-foreground">
-                  агент работает
+                  {t("activeGoals.agentRunning")}
                 </span>
               </div>
             </div>
@@ -98,14 +100,17 @@ export function DashboardActiveGoals({ rootId, activeGoals, runningAgents }: Pro
   );
 }
 
-function formatRel(iso: string): string {
+function formatRel(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "только что";
+  if (!Number.isFinite(ms) || ms < 0) return t("activeGoals.justNow");
   const min = Math.floor(ms / 60_000);
-  if (min < 1) return "только что";
-  if (min < 60) return `${min} мин назад`;
+  if (min < 1) return t("activeGoals.justNow");
+  if (min < 60) return t("activeGoals.minutesAgo", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} ч назад`;
+  if (hr < 24) return t("activeGoals.hoursAgo", { count: hr });
   const d = Math.floor(hr / 24);
-  return `${d} дн назад`;
+  return t("activeGoals.daysAgo", { count: d });
 }

@@ -1,6 +1,6 @@
 /**
  * Popular routing/maps services. Used by the map widget to surface a
- * "Маршрут в…" popup per pin, and by Settings → Map services to let the
+ * "Route to…" popup per pin, and by Settings -> Map services to let the
  * user toggle which ones appear.
  *
  * `urlFor(lat, lng)` returns a deep-link that opens a routing query to the
@@ -42,7 +42,7 @@ export const MAP_SERVICES: MapService[] = [
   {
     id: "google",
     label: "Google Maps",
-    description: "Глобальный, navigation+street view. Работает везде кроме РФ-блокировок.",
+    description: "Global, navigation + street view. Works everywhere except where the RF blocks it.",
     brand: "#4285F4",
     glyph: "G",
     urlFor: (lat, lng) =>
@@ -61,10 +61,10 @@ export const MAP_SERVICES: MapService[] = [
   },
   {
     id: "yandex",
-    label: "Яндекс.Карты",
-    description: "СНГ, лучшая детализация по РФ и пробки в реальном времени.",
+    label: "Yandex Maps",
+    description: "CIS region, best RF detail and real-time traffic.",
     brand: "#FFCC00",
-    glyph: "Я",
+    glyph: "Y",
     urlFor: (lat, lng) =>
       `https://yandex.ru/maps/?rtext=~${lat},${lng}&rtt=auto`,
     routeUrlFor: (stops) =>
@@ -72,8 +72,8 @@ export const MAP_SERVICES: MapService[] = [
   },
   {
     id: "2gis",
-    label: "2ГИС",
-    description: "СНГ, точные адреса и POI. Уникальная свойственность РФ-городов.",
+    label: "2GIS",
+    description: "CIS region, precise addresses and POI. Uniquely strong on RF cities.",
     brand: "#1BA049",
     glyph: "2",
     urlFor: (lat, lng) => `https://2gis.ru/routeSearch/to/${lng},${lat}`,
@@ -92,7 +92,7 @@ export const MAP_SERVICES: MapService[] = [
   {
     id: "apple",
     label: "Apple Maps",
-    description: "Откроется в нативном приложении на iOS/macOS, иначе на сайте.",
+    description: "Opens in the native app on iOS/macOS, otherwise on the website.",
     brand: "#1d1d1f",
     glyph: "A",
     urlFor: (lat, lng) => `https://maps.apple.com/?daddr=${lat},${lng}`,
@@ -109,7 +109,7 @@ export const MAP_SERVICES: MapService[] = [
   {
     id: "osm",
     label: "OpenStreetMap",
-    description: "Открытые данные, без аккаунта. Базовая навигация.",
+    description: "Open data, no account required. Basic navigation.",
     brand: "#7EB73F",
     glyph: "OSM",
     urlFor: (lat, lng) =>
@@ -122,7 +122,7 @@ export const MAP_SERVICES: MapService[] = [
   {
     id: "waze",
     label: "Waze",
-    description: "Авто-навигация с краудсорсингом пробок и предупреждений.",
+    description: "Car navigation with crowd-sourced traffic and alerts.",
     brand: "#33CCFF",
     glyph: "W",
     urlFor: (lat, lng) => `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`,
@@ -135,7 +135,7 @@ export const MAP_SERVICES: MapService[] = [
   {
     id: "organic",
     label: "Organic Maps",
-    description: "Офлайн-карты с открытыми данными. Открывается в приложении.",
+    description: "Offline maps with open data. Opens in the app.",
     brand: "#006C35",
     glyph: "OM",
     urlFor: (lat, lng) => `om://map?ll=${lat},${lng}`,

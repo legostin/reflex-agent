@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { ExternalLink, Link as LinkIcon, Trash2 } from "lucide-react";
 import type { LinkListData } from "@/lib/server/widgets/types";
 
@@ -21,6 +22,7 @@ export function LinkListWidget({
   readonly?: boolean;
   onPatch?: (next: LinkListData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   const initial = data.items ?? [];
   const [items, setItems] = useState<Item[]>(initial);
   const [pending, startSave] = useTransition();
@@ -52,7 +54,7 @@ export function LinkListWidget({
   };
 
   if (items.length === 0) {
-    return <p className="text-xs text-muted-foreground">Нет ссылок.</p>;
+    return <p className="text-xs text-muted-foreground">{t("linkListWidget.empty")}</p>;
   }
   return (
     <ul className="space-y-0.5">
@@ -85,7 +87,7 @@ export function LinkListWidget({
               type="button"
               onClick={() => remove(i)}
               disabled={pending}
-              aria-label="Удалить ссылку"
+              aria-label={t("linkListWidget.removeAria")}
               className="absolute top-1.5 right-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive disabled:opacity-30"
             >
               <Trash2 className="h-3 w-3" />

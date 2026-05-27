@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   Check,
   ExternalLink,
@@ -28,35 +29,37 @@ import {
  * Gemini section).
  */
 export function ImageSearchSection() {
+  const t = useTranslations("settings");
   return (
     <Card>
       <CardContent className="pt-5 space-y-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <ImageIcon className="h-4 w-4" />
-          <span>Картинки из сети</span>
+          <span>{t("imageSearch.headerTitle")}</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Ключи к API stock-фотобанков. Используются виджетом «Картинка в KB»
-          и хост-API утилит (<code className="font-mono">reflex.images.search</code>).
-          Хранятся локально в <code className="font-mono">~/.reflex/api-keys/</code> (0600).
+          {t.rich("imageSearch.description", {
+            api: () => <code className="font-mono">reflex.images.search</code>,
+            dir: () => <code className="font-mono">~/.reflex/api-keys/</code>,
+          })}
         </p>
         <ProviderKey
           provider="unsplash"
           label="Unsplash"
           docsHref="https://unsplash.com/developers"
-          hint="Бесплатно 50 запросов/час. Атрибуция авторов обязательна — модалка вставляет её автоматически."
+          hint={t("imageSearch.unsplash.hint")}
         />
         <ProviderKey
           provider="pexels"
           label="Pexels"
           docsHref="https://pexels.com/api/"
-          hint="Без жёсткого лимита для разумного использования. Атрибуция рекомендована."
+          hint={t("imageSearch.pexels.hint")}
         />
         <ProviderKey
           provider="brave"
-          label="Brave (весь веб)"
+          label={t("imageSearch.brave.label")}
           docsHref="https://api-dashboard.search.brave.com/app/keys"
-          hint="Поиск картинок по всему вебу (не только stock). Если у тебя уже подключён Brave Search MCP — ключ оттуда подхватится автоматически, поле можно не заполнять."
+          hint={t("imageSearch.brave.hint")}
         />
       </CardContent>
     </Card>
@@ -74,6 +77,7 @@ function ProviderKey({
   docsHref: string;
   hint: string;
 }) {
+  const t = useTranslations("settings");
   const [hasKey, setHasKey] = useState(false);
   const [viaMcp, setViaMcp] = useState(false);
   const [draftKey, setDraftKey] = useState("");
@@ -92,7 +96,7 @@ function ProviderKey({
 
   const onSave = () => {
     if (!draftKey.trim()) {
-      toast.error("Введи ключ");
+      toast.error(t("imageSearch.enterKeyError"));
       return;
     }
     startSaving(async () => {
@@ -101,7 +105,7 @@ function ProviderKey({
         toast.error(r.error);
         return;
       }
-      toast.success(`${label} key сохранён`);
+      toast.success(t("imageSearch.keySavedToast", { label }));
       setDraftKey("");
       setHasKey(true);
     });
@@ -113,14 +117,14 @@ function ProviderKey({
         <span className="text-sm font-medium">{label}</span>
         {hasKey ? (
           <Badge variant="secondary" className="gap-1">
-            <Check className="h-3 w-3" /> key сохранён
+            <Check className="h-3 w-3" /> {t("imageSearch.keySaved")}
           </Badge>
         ) : viaMcp ? (
           <Badge variant="secondary" className="gap-1">
-            <Check className="h-3 w-3" /> ключ найден через MCP
+            <Check className="h-3 w-3" /> {t("imageSearch.viaMcp")}
           </Badge>
         ) : (
-          <Badge variant="outline">не настроен</Badge>
+          <Badge variant="outline">{t("imageSearch.notConfigured")}</Badge>
         )}
         <a
           href={docsHref}
@@ -141,7 +145,7 @@ function ProviderKey({
           type="password"
           value={draftKey}
           onChange={(e) => setDraftKey(e.target.value)}
-          placeholder={hasKey ? "••••" : `${label} access key`}
+          placeholder={hasKey ? "••••" : t("imageSearch.keyPlaceholder", { label })}
           className="font-mono text-sm flex-1 h-8"
           disabled={saving}
         />
@@ -157,7 +161,7 @@ function ProviderKey({
           ) : (
             <Save className="h-3 w-3" />
           )}
-          Сохранить
+          {t("imageSearch.saveButton")}
         </Button>
       </div>
     </div>

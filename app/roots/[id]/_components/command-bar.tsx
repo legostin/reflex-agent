@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -22,16 +23,17 @@ interface Props {
 }
 
 export function CommandBar({ rootId, focusFile }: Props) {
+  const t = useTranslations("roots");
   const [, start] = useTransition();
   const router = useRouter();
 
   return (
-    <CommandBarFrame label="Спроси Reflex">
+    <CommandBarFrame label={t("commandBar.label")}>
       <ChatInputForm
         rootId={rootId}
-        placeholder="Задай вопрос о проекте или дай команду…"
-        submitLabel="Начать"
-        pendingLabel="Старт"
+        placeholder={t("commandBar.placeholder")}
+        submitLabel={t("commandBar.submit")}
+        pendingLabel={t("commandBar.submitPending")}
         SubmitIcon={Send}
         onSubmit={async ({ message, attachments }) =>
           await new Promise<boolean>((resolve) => {
@@ -43,7 +45,7 @@ export function CommandBar({ rootId, focusFile }: Props) {
                 focusFile,
               );
               if (!res.ok) {
-                toast.error(res.error ?? "Failed to start");
+                toast.error(res.error ?? t("commandBar.startFailed"));
                 resolve(false);
                 return;
               }

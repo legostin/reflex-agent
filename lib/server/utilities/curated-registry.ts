@@ -31,11 +31,11 @@ export interface CuratedUtility {
 const INLINE_BASELINE: CuratedUtility[] = [
   {
     id: "learn-anything",
-    name: "Изучи что угодно",
+    name: "Learn anything",
     emoji: "🎓",
     category: "study",
     description:
-      "Универсальный AI-наставник. Спроси «хочу выучить X» — соберёт курс под твой уровень: программа, статьи, видео, схемы, тесты, домашка и интерактивные тренажёры.",
+      "Universal AI tutor. Say \"I want to learn X\" — it builds a course for your level: syllabus, articles, videos, diagrams, quizzes, homework, and interactive drills.",
     github: "builtin:learn-anything@0.1.0",
     suggestedScope: "project",
     author: "reflex-org",

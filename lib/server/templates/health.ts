@@ -1,57 +1,57 @@
 import type { SpaceTemplate } from "./registry";
 
 /**
- * "Здоровье" — daily habits, supplements/medications schedule, weight
+ * "Health" — daily habits, supplements/medications schedule, weight
  * tracking. The agent learns to log meals/workouts/symptoms into KB and
  * roll them up into the dashboard.
  */
 export const healthTemplate: SpaceTemplate = {
   id: "health",
-  label: "Здоровье",
+  label: "Health",
   emoji: "🩺",
   description:
-    "Привычки дня, витамины, тренировки, симптомы. Скажи «принял витамин D» — отметится в чек-листе.",
-  defaultFolder: "Здоровье",
+    "Daily habits, vitamins, workouts, symptoms. Say \"took vitamin D\" — it gets ticked off in the checklist.",
+  defaultFolder: "Health",
   build: () => ({
     widgets: [
       {
         id: "health-daily-habits",
-        title: "Привычки дня",
-        description: "Чек-лист на сегодня",
+        title: "Daily habits",
+        description: "Today's checklist",
         payload: {
           kind: "checklist",
           data: {
             items: [
-              { text: "Витамин D", done: false },
-              { text: "2 литра воды", done: false },
-              { text: "Прогулка 30 минут", done: false },
-              { text: "Зарядка", done: false },
+              { text: "Vitamin D", done: false },
+              { text: "2 liters of water", done: false },
+              { text: "30-minute walk", done: false },
+              { text: "Exercise", done: false },
             ],
           },
         },
       },
       {
         id: "health-kpi",
-        title: "Здоровье — сводка",
+        title: "Health — summary",
         payload: {
           kind: "kpi",
           data: {
             items: [
-              { label: "Вес", value: "—", hint: "обнови раз в неделю" },
-              { label: "Шаги (сегодня)", value: "0" },
-              { label: "Сон", value: "—", hint: "часов вчера" },
+              { label: "Weight", value: "—", hint: "update once a week" },
+              { label: "Steps (today)", value: "0" },
+              { label: "Sleep", value: "—", hint: "hours last night" },
             ],
           },
         },
       },
       {
         id: "health-goals",
-        title: "Долгосрочные цели",
+        title: "Long-term goals",
         payload: {
           kind: "progress",
           data: {
             items: [
-              { label: "Бегать 3 раза в неделю", current: 0, target: 3, unit: "раз" },
+              { label: "Run 3 times a week", current: 0, target: 3, unit: "times" },
             ],
           },
         },
@@ -60,26 +60,26 @@ export const healthTemplate: SpaceTemplate = {
     topics: [
       {
         message:
-          "Расскажи мне о своих привычках и целях по здоровью. Я буду отмечать прогресс. Пиши «принял витамин», «поспал 8 часов», «вес 72» — я разнесу по карточкам.",
+          "Tell me about your habits and health goals. I'll track progress. Say \"took a vitamin\", \"slept 8 hours\", \"weight 72\" — I'll sort it into the cards.",
       },
     ],
     skills: [
       {
         id: "health-helper",
-        title: "Помощник по здоровью",
-        description: "Логирует привычки, сон, вес, тренировки",
+        title: "Health helper",
+        description: "Logs habits, sleep, weight, workouts",
         instructions: [
-          "## Помощник по здоровью",
+          "## Health helper",
           "",
-          "Ты помогаешь вести здоровый образ жизни. Когда пользователь пишет про привычки/здоровье:",
-          "  1. Распознай: привычка-чек / измерение (вес, сон, шаги) / тренировка / симптом / витамин.",
-          "  2. Запиши в KB через `<<reflex:kb>>` с `kind: \"habit\"|\"measurement\"|\"workout\"|\"symptom\"` и `meta.date`, `meta.value`, `meta.unit`.",
-          "  3. Обнови карточки:",
-          "     - `health-daily-habits`: тыкни галку для упомянутого пункта (если не существует — добавь).",
-          "     - `health-kpi`: обнови value для веса/сна/шагов.",
-          "     - `health-goals`: продвинь counter для упомянутой цели.",
-          "  4. В чате — поддерживающее короткое подтверждение. Без морализаторства.",
-          "  5. Если есть пропуск (вчера не упомянули привычку) — не упрекай, можно мягко напомнить.",
+          "You help maintain a healthy lifestyle. When the user writes about habits/health:",
+          "  1. Recognize: habit check / measurement (weight, sleep, steps) / workout / symptom / vitamin.",
+          "  2. Write to the KB via `<<reflex:kb>>` with `kind: \"habit\"|\"measurement\"|\"workout\"|\"symptom\"` and `meta.date`, `meta.value`, `meta.unit`.",
+          "  3. Update the cards:",
+          "     - `health-daily-habits`: tick the box for the mentioned item (if it doesn't exist — add it).",
+          "     - `health-kpi`: update the value for weight/sleep/steps.",
+          "     - `health-goals`: advance the counter for the mentioned goal.",
+          "  4. In chat — a short supportive confirmation. No moralizing.",
+          "  5. If something was skipped (yesterday a habit wasn't mentioned) — don't scold; a gentle reminder is fine.",
         ].join("\n"),
       },
     ],

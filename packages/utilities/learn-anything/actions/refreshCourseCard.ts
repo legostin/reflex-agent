@@ -32,14 +32,14 @@ export default async function refreshCourseCard(): Promise<{ courses: number; av
   await reflex.cards.update({
     snapshot: {
       kind: "kpi",
-      title: "🎓 Учусь",
+      title: "🎓 Learning",
       data: {
         items: [
-          { label: "Активных курсов", value: String(courses) },
+          { label: "Active courses", value: String(courses) },
           {
-            label: "Прогресс",
+            label: "Progress",
             value: courses === 0 ? "—" : `${avg}%`,
-            hint: "среднее по курсам",
+            hint: "average across courses",
             ...(avg >= 60
               ? ({ delta: "up" } as const)
               : avg < 30 && courses > 0

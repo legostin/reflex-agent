@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   Check,
   ExternalLink,
@@ -44,6 +45,7 @@ interface ModelOption {
  * hardcoded names go 404 after a while.
  */
 export function GeminiSection() {
+  const t = useTranslations("settings");
   const [hasKey, setHasKey] = useState<boolean>(false);
   const [draftKey, setDraftKey] = useState("");
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -89,7 +91,7 @@ export function GeminiSection() {
 
   const saveKey = () => {
     if (!draftKey.trim()) {
-      toast.error("Введи ключ");
+      toast.error(t("gemini.enterKeyError"));
       return;
     }
     startSaveKey(async () => {
@@ -98,7 +100,7 @@ export function GeminiSection() {
         toast.error(r.error);
         return;
       }
-      toast.success("Gemini key сохранён");
+      toast.success(t("gemini.keySavedToast"));
       setDraftKey("");
       setHasKey(true);
       refreshModels(true);
@@ -117,7 +119,7 @@ export function GeminiSection() {
         toast.error(r.error);
         return;
       }
-      toast.success("Сохранено");
+      toast.success(t("gemini.savedToast"));
       if (field === "model") setCurrentModel(value);
       else setCurrentVideoModel(value);
     });
@@ -131,36 +133,35 @@ export function GeminiSection() {
           <span>Gemini API</span>
           {hasKey ? (
             <Badge variant="secondary" className="gap-1">
-              <Check className="h-3 w-3" /> key сохранён
+              <Check className="h-3 w-3" /> {t("gemini.keySaved")}
             </Badge>
           ) : (
-            <Badge variant="outline">не настроен</Badge>
+            <Badge variant="outline">{t("gemini.notConfigured")}</Badge>
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          Используется для суммаризации YouTube (нативная поддержка
-          мультимодальных URL) <strong>и для генерации картинок</strong>{" "}
-          через модель Nano Banana (
-          <code className="font-mono">gemini-2.5-flash-image</code>, ~$0.04
-          за картинку). Ключ хранится локально в{" "}
-          <code className="font-mono">~/.reflex/api-keys/gemini.json</code>{" "}
-          (0600), агентам не передаётся. Возьми ключ в{" "}
-          <a
-            href="https://aistudio.google.com/apikey"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-violet-700 hover:underline"
-          >
-            aistudio.google.com/apikey
-            <ExternalLink className="h-3 w-3" />
-          </a>{" "}
-          — есть бесплатный tier (15 RPM / 1500 RPD).
+          {t.rich("gemini.description", {
+            strong: (chunks) => <strong>{chunks}</strong>,
+            model: () => <code className="font-mono">gemini-2.5-flash-image</code>,
+            path: () => <code className="font-mono">~/.reflex/api-keys/gemini.json</code>,
+            link: (chunks) => (
+              <a
+                href="https://aistudio.google.com/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-violet-700 hover:underline"
+              >
+                {chunks}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ),
+          })}
         </p>
 
         <div className="space-y-1.5">
           <Label className="text-xs flex items-center gap-1">
             <KeyRound className="h-3 w-3" />
-            {hasKey ? "Заменить ключ" : "API key"}
+            {hasKey ? t("gemini.replaceKey") : t("gemini.apiKeyLabel")}
           </Label>
           <div className="flex gap-2">
             <Input
@@ -183,7 +184,7 @@ export function GeminiSection() {
               ) : (
                 <Save className="h-3 w-3" />
               )}
-              Сохранить
+              {t("gemini.saveButton")}
             </Button>
           </div>
         </div>
@@ -192,9 +193,10 @@ export function GeminiSection() {
           <div className="space-y-3 pt-1 border-t">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                Модели подтянуты с{" "}
-                <code className="font-mono">v1beta/models</code>{" "}
-                {models.length > 0 && `(${models.length})`}
+                {t.rich("gemini.modelsFromBeta", {
+                  path: () => <code className="font-mono">v1beta/models</code>,
+                  count: models.length > 0 ? `(${models.length})` : "",
+                })}
               </span>
               <Button
                 type="button"
@@ -209,13 +211,13 @@ export function GeminiSection() {
                 ) : (
                   <RefreshCw className="h-3 w-3" />
                 )}
-                Обновить
+                {t("gemini.refreshButton")}
               </Button>
             </div>
 
             <ModelPicker
-              label="Default model"
-              hint="Используется для общих вызовов Gemini, когда конкретная задача не указана."
+              label={t("gemini.defaultModelLabel")}
+              hint={t("gemini.defaultModelHint")}
               value={currentModel}
               models={models}
               disabled={savingChoice || loadingModels}
@@ -223,8 +225,8 @@ export function GeminiSection() {
             />
 
             <ModelPicker
-              label="Модель для YouTube"
-              hint="Для суммаризации видео. Flash-варианты быстрее и обычно достаточно умные."
+              label={t("gemini.youtubeModelLabel")}
+              hint={t("gemini.youtubeModelHint")}
               value={currentVideoModel}
               models={models}
               disabled={savingChoice || loadingModels}

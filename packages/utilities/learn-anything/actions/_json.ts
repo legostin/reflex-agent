@@ -68,7 +68,7 @@ export function extractJson<T = unknown>(raw: string): T | null {
  * the user can see what went wrong without us shipping the full reply.
  */
 export function snippet(s: string, max = 240): string {
-  if (!s) return "(пусто)";
+  if (!s) return "(empty)";
   const trimmed = s.trim();
   if (trimmed.length <= max) return trimmed;
   return trimmed.slice(0, max) + "…";
@@ -164,28 +164,28 @@ function buildReflectionPrompt(
 ): string {
   const reasonLine =
     reason === "no-json"
-      ? "Твой предыдущий ответ нельзя было распарсить как JSON (вероятно: markdown-фенсы, лишний текст до/после, незакрытые скобки, одинарные кавычки)."
+      ? "Your previous reply could not be parsed as JSON (likely cause: markdown fences, extra text before/after, unclosed brackets, single quotes)."
       : reason === "empty-result"
-        ? "Твой предыдущий ответ был валидным JSON но пустым (нет нужных полей или массивы пустые)."
-        : "Твой предыдущий ответ был валидным JSON, но не соответствовал ожидаемой схеме (не все поля заполнены или неверные типы).";
+        ? "Your previous reply was valid JSON but empty (required fields missing or arrays empty)."
+        : "Your previous reply was valid JSON but did not match the expected schema (some fields missing or wrong types).";
   const lines = [
     original,
     "",
-    "## КРИТИЧНО — это попытка номер " + attempt,
+    "## CRITICAL — this is attempt number " + attempt,
     reasonLine,
     "",
-    "Вот что ты вернул в прошлый раз (фрагмент):",
+    "Here is what you returned last time (excerpt):",
     "```",
     snippet(lastText, 600),
     "```",
     "",
-    "Теперь:",
-    "  1. ОДНОЙ строкой комментария `// причина: ...` опиши что было не так (для самопроверки).",
-    "  2. Сразу после комментария — корректный JSON.",
+    "Now:",
+    "  1. On a SINGLE comment line `// reason: ...` describe what was wrong (for self-check).",
+    "  2. Immediately after the comment — the correct JSON.",
     shape
-      ? `\nОжидаемая форма:\n${shape}`
+      ? `\nExpected shape:\n${shape}`
       : "",
-    "\nВНИМАНИЕ: ответ должен начинаться или с `//` (комментарий) или с `{`. Никаких ```fence```, никакой прозы перед JSON.",
+    "\nNOTE: the reply must begin with either `//` (comment) or `{`. No ```fence```, no prose before the JSON.",
   ];
   return lines.filter(Boolean).join("\n");
 }

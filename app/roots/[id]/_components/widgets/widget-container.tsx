@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Clock,
   GripVertical,
@@ -69,6 +70,7 @@ export function WidgetContainer({
   onLayoutChanged,
   dnd,
 }: Props) {
+  const t = useTranslations("roots");
   const [pendingHide, startHide] = useTransition();
   const isDragging = dnd.dragging === widget.id;
   const isDropTarget = dnd.dropTarget === widget.id && !isDragging;
@@ -104,7 +106,7 @@ export function WidgetContainer({
       <CardHeader className="pb-2 flex flex-row items-start gap-2 space-y-0">
         <GripVertical
           className="h-3.5 w-3.5 text-muted-foreground/60 cursor-grab active:cursor-grabbing mt-1 shrink-0"
-          aria-label="Перетащить"
+          aria-label={t("widgetsCommon.dragHandle")}
         />
         <div className="min-w-0 flex-1">
           <CardTitle className="text-sm flex items-center gap-2 flex-wrap">
@@ -130,8 +132,8 @@ export function WidgetContainer({
             <Link
               href={`/roots/${rootId}/chat/${widget.sourceTopicId}`}
               className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-              aria-label="Редактировать через топик"
-              title="Открыть исходный топик для редактирования"
+              aria-label={t("widgetsCommon.editViaTopicAria")}
+              title={t("widgetsCommon.editViaTopicTitle")}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Link>
@@ -145,8 +147,8 @@ export function WidgetContainer({
               })
             }
             disabled={pendingHide || hiding}
-            aria-label="Скрыть"
-            title="Скрыть (восстановишь из меню «библиотека виджетов»)"
+            aria-label={t("widgetsCommon.hideAria")}
+            title={t("widgetsCommon.hideTitle")}
             className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive"
           >
             <X className="h-3.5 w-3.5" />
@@ -162,8 +164,8 @@ export function WidgetContainer({
               newData,
             );
             if (!r.ok) {
-              toast.error(r.error ?? "Не удалось сохранить");
-              throw new Error(r.error ?? "patch failed");
+              toast.error(r.error ?? t("widgetsCommon.savePatchFailed"));
+              throw new Error(r.error ?? t("widgetsCommon.patchFailed"));
             }
           },
         })}
@@ -180,6 +182,7 @@ function RefreshControls({
   rootId: string;
   widget: WidgetRecord;
 }) {
+  const t = useTranslations("roots");
   const [pendingRefresh, startRefresh] = useTransition();
   const [pendingCadence, startCadence] = useTransition();
   const refresh = widget.refresh ?? "manual";
@@ -192,12 +195,14 @@ function RefreshControls({
         widget.id,
         next as WidgetRefresh,
       );
-      if (!r.ok) toast.error(r.error ?? "Не удалось");
+      if (!r.ok) toast.error(r.error ?? t("widgetsCommon.cadenceFailed"));
       else
         toast.success(
           next === "manual"
-            ? "Авто-обновление выключено"
-            : `Обновление: ${cadenceLabel(next as WidgetRefresh)}`,
+            ? t("widgetsCommon.autoRefreshOff")
+            : t("widgetsCommon.cadenceSet", {
+                cadence: cadenceLabel(next as WidgetRefresh, t),
+              }),
         );
     });
   };
@@ -205,8 +210,8 @@ function RefreshControls({
   const onRefreshNow = () => {
     startRefresh(async () => {
       const r = await refreshWidgetNowAction(rootId, widget.id);
-      if (!r.ok) toast.error(r.error ?? "Не удалось");
-      else toast.success("Запустил обновление — следи за исходным топиком");
+      if (!r.ok) toast.error(r.error ?? t("widgetsCommon.refreshFailed"));
+      else toast.success(t("widgetsCommon.refreshStarted"));
     });
   };
 
@@ -220,7 +225,9 @@ function RefreshControls({
   return (
     <div className="flex items-center gap-2 pt-2 border-t text-[11px] text-muted-foreground">
       <Clock className="h-3 w-3 shrink-0" />
-      <span className="shrink-0">обновлено {formatRel(last)}</span>
+      <span className="shrink-0">
+        {t("widgetsCommon.updatedAt", { time: formatRel(last, t) })}
+      </span>
       <div className="ml-auto flex items-center gap-1.5 shrink-0">
         <Select
           value={refresh}
@@ -231,10 +238,10 @@ function RefreshControls({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="manual">Вручную</SelectItem>
-            <SelectItem value="hourly">Раз в час</SelectItem>
-            <SelectItem value="daily">Раз в день</SelectItem>
-            <SelectItem value="weekly">Раз в неделю</SelectItem>
+            <SelectItem value="manual">{t("widgetsCommon.manual")}</SelectItem>
+            <SelectItem value="hourly">{t("widgetsCommon.hourly")}</SelectItem>
+            <SelectItem value="daily">{t("widgetsCommon.daily")}</SelectItem>
+            <SelectItem value="weekly">{t("widgetsCommon.weekly")}</SelectItem>
           </SelectContent>
         </Select>
         <button
@@ -242,33 +249,39 @@ function RefreshControls({
           onClick={onRefreshNow}
           disabled={pendingRefresh}
           className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 hover:bg-accent text-foreground/80 hover:text-foreground"
-          title="Обновить сейчас (запустит исходный топик)"
+          title={t("widgetsCommon.refreshNowTitle")}
         >
           <RefreshCw
             className={`h-3 w-3 ${pendingRefresh ? "animate-spin" : ""}`}
           />
-          Обновить
+          {t("widgetsCommon.refreshLabel")}
         </button>
       </div>
     </div>
   );
 }
 
-function cadenceLabel(r: WidgetRefresh): string {
-  if (r === "hourly") return "раз в час";
-  if (r === "daily") return "раз в день";
-  if (r === "weekly") return "раз в неделю";
-  return "вручную";
+function cadenceLabel(
+  r: WidgetRefresh,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (r === "hourly") return t("widgetsCommon.cadenceHourly");
+  if (r === "daily") return t("widgetsCommon.cadenceDaily");
+  if (r === "weekly") return t("widgetsCommon.cadenceWeekly");
+  return t("widgetsCommon.cadenceManual");
 }
 
-function formatRel(iso: string): string {
+function formatRel(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "только что";
+  if (!Number.isFinite(ms) || ms < 0) return t("widgetsCommon.justNow");
   const min = Math.floor(ms / 60_000);
-  if (min < 1) return "только что";
-  if (min < 60) return `${min} мин назад`;
+  if (min < 1) return t("widgetsCommon.justNow");
+  if (min < 60) return t("widgetsCommon.minutesAgo", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} ч назад`;
+  if (hr < 24) return t("widgetsCommon.hoursAgo", { count: hr });
   const d = Math.floor(hr / 24);
-  return `${d} дн назад`;
+  return t("widgetsCommon.daysAgo", { count: d });
 }

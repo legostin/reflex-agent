@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronUp,
@@ -48,6 +49,7 @@ interface Props {
 }
 
 export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
+  const t = useTranslations("roots");
   const router = useRouter();
   const [wf, setWf] = useState<WorkflowDef>(initial);
   const [runs, setRuns] = useState<WorkflowRun[]>(initialRuns);
@@ -60,7 +62,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
     setWf(next);
     startSave(async () => {
       const r = await saveWorkflowAction(rootId, next);
-      if (!r.ok) toast.error(r.error ?? "Не удалось сохранить");
+      if (!r.ok) toast.error(r.error ?? t("workflowEditor.saveFailed"));
     });
   };
 
@@ -76,15 +78,15 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
         toast.error(r.error);
         return;
       }
-      if (r.run.status === "completed") toast.success("Workflow выполнен");
+      if (r.run.status === "completed") toast.success(t("workflowEditor.completed"));
       else if (r.run.status === "failed")
-        toast.error("Workflow упал — детали в run history");
+        toast.error(t("workflowEditor.failedRun"));
       void refreshRuns();
     });
   };
 
   const onDelete = () => {
-    if (!confirm(`Удалить workflow «${wf.label}»? Это необратимо.`)) return;
+    if (!confirm(t("workflowEditor.deleteConfirm", { label: wf.label }))) return;
     startSave(async () => {
       const r = await deleteWorkflowAction(rootId, wf.id);
       if (!r.ok) {
@@ -143,7 +145,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
       <div className="rounded-md border bg-card p-4 space-y-3">
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">
-            Название
+            {t("workflowEditor.nameLabel")}
           </label>
           <Input
             value={wf.label}
@@ -153,19 +155,19 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">
-            Описание
+            {t("workflowEditor.descriptionLabel")}
           </label>
           <Input
             value={wf.description ?? ""}
             onChange={(e) => save({ ...wf, description: e.target.value })}
             className="text-sm"
-            placeholder="Что делает workflow"
+            placeholder={t("workflowEditor.descriptionPlaceholder")}
           />
         </div>
         <div className="flex items-center gap-3">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Триггер
+              {t("workflowEditor.triggerLabel")}
             </label>
             <Select
               value={wf.trigger}
@@ -177,10 +179,10 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="manual">Вручную</SelectItem>
-                <SelectItem value="hourly">Раз в час</SelectItem>
-                <SelectItem value="daily">Раз в день</SelectItem>
-                <SelectItem value="weekly">Раз в неделю</SelectItem>
+                <SelectItem value="manual">{t("workflowEditor.triggerManual")}</SelectItem>
+                <SelectItem value="hourly">{t("workflowEditor.triggerHourly")}</SelectItem>
+                <SelectItem value="daily">{t("workflowEditor.triggerDaily")}</SelectItem>
+                <SelectItem value="weekly">{t("workflowEditor.triggerWeekly")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -189,14 +191,14 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
               href={`/roots/${rootId}/chat/${wf.sourceTopicId}`}
               className="text-xs text-muted-foreground hover:underline self-end pb-2"
             >
-              Редактировать через топик →
+              {t("workflowEditor.editViaTopic")}
             </Link>
           )}
           <div className="ml-auto flex items-center gap-2 self-end pb-1">
             {saving && (
               <span className="text-[11px] text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin inline mr-1" />
-                сохранение…
+                {t("workflowEditor.saving")}
               </span>
             )}
             <Button
@@ -208,7 +210,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
               className="text-muted-foreground hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5 mr-1" />
-              Удалить
+              {t("workflowEditor.delete")}
             </Button>
             <Button
               type="button"
@@ -222,7 +224,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
               ) : (
                 <Play className="h-3.5 w-3.5" />
               )}
-              Запустить
+              {t("workflowEditor.run")}
             </Button>
           </div>
         </div>
@@ -230,7 +232,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
 
       <section className="space-y-2">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Шаги ({wf.steps.length})
+          {t("workflowEditor.stepsHeading", { count: wf.steps.length })}
         </h2>
         {wf.steps.map((step, idx) => (
           <StepCard
@@ -252,7 +254,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
         {picker === "open" ? (
           <div className="rounded-md border bg-card p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-medium">Выбери тип шага</h3>
+              <h3 className="text-xs font-medium">{t("workflowEditor.pickStepKind")}</h3>
               <Button
                 type="button"
                 size="sm"
@@ -260,7 +262,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
                 onClick={() => setPicker("closed")}
                 className="h-6 text-xs"
               >
-                Отмена
+                {t("workflowEditor.cancel")}
               </Button>
             </div>
             <div className="grid gap-1.5">
@@ -288,7 +290,7 @@ export function WorkflowEditor({ rootId, initial, initialRuns }: Props) {
             className="w-full gap-1 border-dashed"
           >
             <Plus className="h-3.5 w-3.5" />
-            Добавить шаг
+            {t("workflowEditor.addStep")}
           </Button>
         )}
       </section>
@@ -319,6 +321,7 @@ function StepCard({
   onRemove: () => void;
   onChange: (patch: Partial<WorkflowStep>) => void;
 }) {
+  const t = useTranslations("roots");
   const meta = getKindMeta(step.kind);
   return (
     <div className="rounded-md border bg-card overflow-hidden">
@@ -384,7 +387,7 @@ function StepCard({
         <div className="border-t bg-muted/30 px-3 py-3 space-y-2.5">
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-muted-foreground">
-              Label
+              {t("workflowEditor.labelField")}
             </label>
             <Input
               value={step.label}
@@ -456,7 +459,7 @@ function StepCard({
               className="h-7 text-xs gap-1"
             >
               <Save className="h-3 w-3" />
-              Готово
+              {t("workflowEditor.done")}
             </Button>
           </div>
         </div>
@@ -472,14 +475,15 @@ function RunHistory({
   runs: WorkflowRun[];
   onRefresh: () => Promise<void>;
 }) {
+  const t = useTranslations("roots");
   const [refreshing, startRefresh] = useTransition();
   if (runs.length === 0) {
     return (
       <section className="space-y-2">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          История запусков
+          {t("workflowEditor.runHistory")}
         </h2>
-        <p className="text-xs text-muted-foreground">Пока пусто.</p>
+        <p className="text-xs text-muted-foreground">{t("workflowEditor.noRuns")}</p>
       </section>
     );
   }
@@ -487,7 +491,7 @@ function RunHistory({
     <section className="space-y-2">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          История запусков
+          {t("workflowEditor.runHistory")}
         </h2>
         <Button
           type="button"
@@ -500,7 +504,7 @@ function RunHistory({
           {refreshing ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            "Обновить"
+            t("workflowEditor.refresh")
           )}
         </Button>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Check, Loader2, Plus, Square, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ type Item = ChecklistData["items"][number];
  * Interactive checklist:
  *   - click the box to toggle `done` (line-through + dim when done)
  *   - X button per item to delete
- *   - "+ Добавить" pinned at the bottom to add new items
+ *   - "+ Add" pinned at the bottom to add new items
  *
  * Optimistic state: every mutation updates local items immediately, then
  * fires `onPatch` with the new full data. On server error the toast
@@ -29,6 +30,7 @@ export function ChecklistWidget({
   readonly?: boolean;
   onPatch?: (next: ChecklistData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   const initial = data.items ?? [];
   const [items, setItems] = useState<Item[]>(initial);
   const [pending, startSave] = useTransition();
@@ -77,7 +79,7 @@ export function ChecklistWidget({
   };
 
   if (items.length === 0 && readonly) {
-    return <p className="text-xs text-muted-foreground">Список пустой.</p>;
+    return <p className="text-xs text-muted-foreground">{t("checklistWidget.empty")}</p>;
   }
 
   return (
@@ -94,7 +96,11 @@ export function ChecklistWidget({
               type="button"
               onClick={() => toggle(i)}
               disabled={readonly || pending}
-              aria-label={it.done ? "Снять отметку" : "Отметить выполненным"}
+              aria-label={
+                it.done
+                  ? t("checklistWidget.uncheckAria")
+                  : t("checklistWidget.checkAria")
+              }
               className="shrink-0 mt-0.5 disabled:opacity-50"
             >
               {it.done ? (
@@ -115,7 +121,7 @@ export function ChecklistWidget({
                 type="button"
                 onClick={() => remove(i)}
                 disabled={pending}
-                aria-label="Удалить пункт"
+                aria-label={t("checklistWidget.removeAria")}
                 className="opacity-0 group-hover/row:opacity-100 transition-opacity shrink-0 p-0.5 text-muted-foreground hover:text-destructive disabled:opacity-30"
               >
                 <Trash2 className="h-3 w-3" />
@@ -137,7 +143,7 @@ export function ChecklistWidget({
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Новый пункт…"
+            placeholder={t("checklistWidget.newItemPlaceholder")}
             className="h-7 text-xs flex-1 border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
             disabled={pending}
           />
@@ -152,7 +158,7 @@ export function ChecklistWidget({
               {pending ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                "Добавить"
+                t("checklistWidget.add")
               )}
             </Button>
           )}

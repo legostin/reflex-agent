@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ArrowRight,
   Pencil,
@@ -26,12 +27,13 @@ interface Props {
  * link straight to the editor where the user can tweak/run.
  */
 export function WorkflowPreviewCard({ rootId, workflow }: Props) {
+  const t = useTranslations("roots");
   return (
     <div className="my-3 rounded-lg border border-violet-200 bg-violet-50/40 dark:border-violet-900/40 dark:bg-violet-950/20 overflow-hidden">
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-violet-200 dark:border-violet-900/40 bg-violet-100/40 dark:bg-violet-900/20 text-xs">
         <Sparkles className="h-3 w-3 text-violet-600" />
         <span className="font-medium text-violet-900 dark:text-violet-200">
-          Workflow создан
+          {t("workflowPreview.created")}
         </span>
         <Badge variant="outline" className="text-[10px] font-mono">
           {workflow.trigger}
@@ -51,8 +53,11 @@ export function WorkflowPreviewCard({ rootId, workflow }: Props) {
               </p>
             )}
             <p className="text-[10px] text-muted-foreground mt-1">
-              {workflow.stepCount} шагов · триггер{" "}
-              <code className="font-mono">{workflow.trigger}</code>
+              {t.rich("workflowPreview.stepsCount", {
+                count: workflow.stepCount,
+                trigger: workflow.trigger,
+                code: (chunks) => <code className="font-mono">{chunks}</code>,
+              })}
             </p>
           </div>
         </div>
@@ -62,11 +67,11 @@ export function WorkflowPreviewCard({ rootId, workflow }: Props) {
             className="inline-flex items-center gap-1 rounded px-2 py-1 bg-violet-600 text-white hover:bg-violet-700"
           >
             <ArrowRight className="h-3 w-3" />
-            Открыть в редакторе
+            {t("workflowPreview.openInEditor")}
           </Link>
           <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
             <Pencil className="h-2.5 w-2.5" />
-            редактируй здесь же через чат
+            {t("workflowPreview.editHereViaChat")}
           </span>
         </div>
       </div>

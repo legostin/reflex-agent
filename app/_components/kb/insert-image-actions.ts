@@ -130,13 +130,13 @@ export async function attachAction(
     });
     const alt = sanitizeAlt(input.alt || "image");
     const attributionLine = input.attribution
-      ? `\n\n_Фото: [${input.attribution.name}](${input.attribution.link})_`
+      ? `\n\n_Photo: [${input.attribution.name}](${input.attribution.link})_`
       : "";
     const markdown = `![${alt}](${stored.urlPath})${attributionLine}`;
     let kbRelPath: string | undefined;
     if (input.attachToKb) {
       kbRelPath = await writeImageKbEntry(input.rootId, {
-        title: input.alt || "Найденная картинка",
+        title: input.alt || "Found image",
         markdown,
         meta: {
           source: "web",
@@ -177,7 +177,7 @@ export async function uploadAction(
     let kbRelPath: string | undefined;
     if (input.attachToKb) {
       kbRelPath = await writeImageKbEntry(input.rootId, {
-        title: input.alt || "Загруженная картинка",
+        title: input.alt || "Uploaded image",
         markdown,
         meta: { source: "upload", sha: stored.sha, mime: input.mime },
       });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface Props {
  * event bus).
  */
 export function Dashboard({ rootId, initialSnapshot }: Props) {
+  const t = useTranslations("roots");
   const [snapshot, setSnapshot] = useState<DashboardSnapshot>(initialSnapshot);
   const [refreshing, startRefresh] = useTransition();
 
@@ -43,7 +45,7 @@ export function Dashboard({ rootId, initialSnapshot }: Props) {
           error?: string;
         };
         if (!data.ok || !data.snapshot) {
-          toast.error(data.error ?? "Не удалось обновить дашборд");
+          toast.error(data.error ?? t("dashboard.refreshFailed"));
           return;
         }
         setSnapshot(data.snapshot);
@@ -51,7 +53,7 @@ export function Dashboard({ rootId, initialSnapshot }: Props) {
         toast.error(err instanceof Error ? err.message : String(err));
       }
     });
-  }, [rootId]);
+  }, [rootId, t]);
 
   useReflexEvent(REFLEX_EVENTS.topicsChanged(rootId), refresh);
   useReflexEvent(REFLEX_EVENTS.kbChanged(rootId), refresh);
@@ -92,11 +94,10 @@ export function Dashboard({ rootId, initialSnapshot }: Props) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Обзор проекта
+              {t("dashboard.projectOverview")}
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Перетаскивай блоки. Скрытые возвращаются из библиотеки. Виджеты
-              создаются и обновляются через чат с агентом.
+              {t("dashboard.projectOverviewHint")}
             </p>
           </div>
           <Button
@@ -110,7 +111,7 @@ export function Dashboard({ rootId, initialSnapshot }: Props) {
             <RefreshCw
               className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
             />
-            Обновить
+            {t("dashboard.refresh")}
           </Button>
         </div>
 

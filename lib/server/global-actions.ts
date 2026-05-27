@@ -24,7 +24,7 @@ import {
 export interface GlobalSpaceSummary {
   rootId: string;
   path: string;
-  /** Last segment of the path — "Финансы", "Здоровье" etc. */
+  /** Last segment of the path — e.g. "Finance", "Health". */
   label: string;
   kbFileCount: number;
   /** ISO timestamp of the most recently-modified KB file (or empty). */

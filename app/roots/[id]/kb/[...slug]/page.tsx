@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FolderOpen, LayoutDashboard } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +24,7 @@ export default async function KbViewerPage({
   const { id, slug } = await params;
   const entry = await getRoot(id);
   if (!entry) notFound();
+  const t = await getTranslations("roots");
   const files = await walkKbMarkdown(entry.path);
   const fileCount = files.length;
   const rel = slug.map(decodeURIComponent).join("/");
@@ -33,7 +35,7 @@ export default async function KbViewerPage({
       <header className="border-b px-6 py-4 flex items-center gap-4">
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href={`/roots/${entry.id}`}>
-            <LayoutDashboard className="mr-1 h-4 w-4" /> Дашборд
+            <LayoutDashboard className="mr-1 h-4 w-4" /> {t("detail.kbViewerBackToDashboard")}
           </Link>
         </Button>
         <Button asChild variant="ghost" size="sm">

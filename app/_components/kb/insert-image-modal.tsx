@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Image as ImageIcon, Search, Sparkles, Upload, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +72,7 @@ export function InsertImageModal({
   onOpenChange,
   onInsert,
 }: Props) {
+  const t = useTranslations("app");
   // ---- Generate tab state -----------------------------------------------
   const [prompt, setPrompt] = useState("");
   const [genProvider, setGenProvider] = useState<GenProvider>("gemini");
@@ -135,8 +137,8 @@ export function InsertImageModal({
     onInsert?.(genResult);
     toast.success(
       genResult.kbRelPath
-        ? `Сохранено в KB: ${genResult.kbRelPath}`
-        : "Картинка готова",
+        ? t("images.savedToKb", { path: genResult.kbRelPath })
+        : t("images.ready"),
     );
     onOpenChange(false);
   };
@@ -181,8 +183,8 @@ export function InsertImageModal({
       });
       toast.success(
         res.kbRelPath
-          ? `Сохранено в KB: ${res.kbRelPath}`
-          : "Картинка добавлена в проект",
+          ? t("images.savedToKb", { path: res.kbRelPath })
+          : t("images.savedToProject"),
       );
       onOpenChange(false);
     });
@@ -210,8 +212,8 @@ export function InsertImageModal({
       });
       toast.success(
         res.kbRelPath
-          ? `Сохранено в KB: ${res.kbRelPath}`
-          : "Картинка загружена",
+          ? t("images.savedToKb", { path: res.kbRelPath })
+          : t("images.uploaded"),
       );
       onOpenChange(false);
     });
@@ -232,7 +234,7 @@ export function InsertImageModal({
       <div className="relative bg-card border rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b">
           <ImageIcon className="h-4 w-4 text-violet-600" />
-          <h2 className="text-sm font-medium flex-1">Картинка в KB</h2>
+          <h2 className="text-sm font-medium flex-1">{t("images.titleHeader")}</h2>
           <Button
             type="button"
             size="icon"
@@ -247,31 +249,31 @@ export function InsertImageModal({
         <Tabs defaultValue="generate" className="flex-1 min-h-0 flex flex-col">
           <TabsList className="mx-4 mt-3 self-start">
             <TabsTrigger value="generate">
-              <Sparkles className="mr-1 h-3.5 w-3.5" /> Сгенерировать
+              <Sparkles className="mr-1 h-3.5 w-3.5" /> {t("images.tabGenerate")}
             </TabsTrigger>
             <TabsTrigger value="search">
-              <Search className="mr-1 h-3.5 w-3.5" /> Найти
+              <Search className="mr-1 h-3.5 w-3.5" /> {t("images.tabSearch")}
             </TabsTrigger>
             <TabsTrigger value="upload">
-              <Upload className="mr-1 h-3.5 w-3.5" /> Загрузить
+              <Upload className="mr-1 h-3.5 w-3.5" /> {t("images.tabUpload")}
             </TabsTrigger>
           </TabsList>
 
           <ScrollArea className="flex-1 min-h-0">
             <TabsContent value="generate" className="px-4 py-4 space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="img-prompt">Промпт</Label>
+                <Label htmlFor="img-prompt">{t("images.promptLabel")}</Label>
                 <Textarea
                   id="img-prompt"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Подробное описание: стиль, композиция, освещение..."
+                  placeholder={t("images.promptPlaceholder")}
                   rows={4}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>Провайдер</Label>
+                  <Label>{t("images.providerLabel")}</Label>
                   <Select
                     value={genProvider}
                     onValueChange={(v) => setGenProvider(v as GenProvider)}
@@ -286,7 +288,7 @@ export function InsertImageModal({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Соотношение</Label>
+                  <Label>{t("images.aspectLabel")}</Label>
                   <Select
                     value={aspectRatio}
                     onValueChange={setAspectRatio}
@@ -310,7 +312,7 @@ export function InsertImageModal({
                   checked={genAttachKb}
                   onChange={(e) => setGenAttachKb(e.target.checked)}
                 />
-                Сохранить как отдельную запись в KB (kind: image)
+                {t("images.saveToKb")}
               </label>
               <div className="flex items-center gap-2">
                 <Button
@@ -319,11 +321,11 @@ export function InsertImageModal({
                   onClick={onGenerate}
                   disabled={generating || !prompt.trim()}
                 >
-                  {generating ? "Генерирую..." : "Сгенерировать"}
+                  {generating ? t("images.generating") : t("images.generate")}
                 </Button>
                 {generating && (
                   <span className="text-xs text-muted-foreground">
-                    Может занять до минуты
+                    {t("images.takesAMinute")}
                   </span>
                 )}
               </div>
@@ -344,10 +346,10 @@ export function InsertImageModal({
                       variant="outline"
                       onClick={() => setGenResult(null)}
                     >
-                      Ещё раз
+                      {t("images.again")}
                     </Button>
                     <Button type="button" size="sm" onClick={insertGenerated}>
-                      Вставить
+                      {t("images.insert")}
                     </Button>
                   </div>
                 </div>
@@ -359,7 +361,7 @@ export function InsertImageModal({
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="например: mountains sunrise"
+                  placeholder={t("images.searchPlaceholder")}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") onSearch();
                   }}
@@ -376,7 +378,7 @@ export function InsertImageModal({
                   <SelectContent>
                     <SelectItem value="unsplash">Unsplash</SelectItem>
                     <SelectItem value="pexels">Pexels</SelectItem>
-                    <SelectItem value="brave">Brave (весь веб)</SelectItem>
+                    <SelectItem value="brave">{t("images.braveWeb")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button
@@ -385,7 +387,7 @@ export function InsertImageModal({
                   onClick={onSearch}
                   disabled={searching || !query.trim()}
                 >
-                  Найти
+                  {t("images.find")}
                 </Button>
               </div>
               <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -394,7 +396,7 @@ export function InsertImageModal({
                   checked={searchAttachKb}
                   onChange={(e) => setSearchAttachKb(e.target.checked)}
                 />
-                Сохранить как отдельную запись в KB (kind: image)
+                {t("images.saveToKb")}
               </label>
               {searching && hits.length === 0 ? (
                 <div className="grid grid-cols-3 gap-2">
@@ -424,7 +426,7 @@ export function InsertImageModal({
                       </div>
                       {attachingUrl === h.url && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-xs text-white">
-                          Сохраняю…
+                          {t("images.saving")}
                         </div>
                       )}
                     </button>
@@ -432,19 +434,19 @@ export function InsertImageModal({
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Нужен ключ Unsplash / Pexels в Settings → Images.
+                  {t("images.noKeys")}
                 </p>
               )}
             </TabsContent>
 
             <TabsContent value="upload" className="px-4 py-4 space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="img-alt">Подпись (alt)</Label>
+                <Label htmlFor="img-alt">{t("images.altLabel")}</Label>
                 <Input
                   id="img-alt"
                   value={uploadAlt}
                   onChange={(e) => setUploadAlt(e.target.value)}
-                  placeholder="Что на картинке"
+                  placeholder={t("images.altPlaceholder")}
                 />
               </div>
               <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -453,7 +455,7 @@ export function InsertImageModal({
                   checked={uploadAttachKb}
                   onChange={(e) => setUploadAttachKb(e.target.checked)}
                 />
-                Сохранить как отдельную запись в KB (kind: image)
+                {t("images.saveToKb")}
               </label>
               <Input
                 type="file"
@@ -465,7 +467,7 @@ export function InsertImageModal({
                 }}
               />
               {uploading && (
-                <p className="text-xs text-muted-foreground">Загружаю…</p>
+                <p className="text-xs text-muted-foreground">{t("images.uploading")}</p>
               )}
             </TabsContent>
           </ScrollArea>

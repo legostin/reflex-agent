@@ -1,0 +1,71 @@
+{
+  "header": {
+    "welcome": "Добро пожаловать в Reflex",
+    "stepCounter": "Шаг {current} из {total} · {title}"
+  },
+  "stepTitles": {
+    "0": "Здравствуй",
+    "1": "AI-движок",
+    "2": "Что важно для тебя",
+    "3": "Готово"
+  },
+  "step0": {
+    "title": "Как тебя зовут?",
+    "description": "Reflex будет звать тебя по имени — на дашборде, в утренних приветствиях, в напоминаниях.",
+    "nameLabel": "Имя",
+    "namePlaceholder": "Например, Люда",
+    "languageLabel": "Язык общения",
+    "languageRu": "Русский",
+    "languageEn": "English",
+    "languageEs": "Español",
+    "languageDe": "Deutsch",
+    "languageFr": "Français",
+    "timezoneDetected": "Часовой пояс определён:"
+  },
+  "step1": {
+    "title": "На каком движке работаем",
+    "description": "Reflex использует одну из двух нейросетей. Выбери ту, что тебе ближе — потом можно поменять в настройках.",
+    "checking": "Проверяю что у тебя установлено…",
+    "claudeTitle": "Claude (умный)",
+    "claudeDescription": "Лучше всех понимает контекст и пишет тексты. Работает через Claude Code CLI.",
+    "claudeReady": "готов",
+    "claudeMissing": "Не найден — установи Claude Code CLI и авторизуйся",
+    "codexTitle": "Codex (быстрый GPT)",
+    "codexDescription": "OpenAI Codex CLI с GPT-5. Быстрее Claude, требует подписку OpenAI.",
+    "codexReady": "готов",
+    "codexMissing": "Не найден — установи Codex CLI и логин через OpenAI",
+    "ollamaTitle": "Ollama (локальная, бесплатно)",
+    "ollamaDescription": "Полностью локальная модель. Бесплатно, приватно, медленнее.",
+    "ollamaModels": "{count} моделей доступно",
+    "ollamaMissing": "Не отвечает на localhost:11434 — запусти Ollama",
+    "installLink": "как установить →"
+  },
+  "step2": {
+    "title": "Что важно для тебя сейчас",
+    "description": "Выбери области жизни, с которыми Reflex поможет. На каждую он создаст отдельное пространство с готовыми карточками и разговорами. Можно добавить ещё в любой момент.",
+    "folderHint": "Пространства создаются в папке ~/Reflex/ — можно перенести позже."
+  },
+  "step3": {
+    "title": "Готовы начать?",
+    "description": "Reflex создаст для тебя:",
+    "profileLabel": "Профиль:",
+    "engineLabel": "Движок:",
+    "spacesLabel": "Пространства:",
+    "engineClaude": "Claude",
+    "engineCodex": "Codex (GPT-5)",
+    "engineOllama": "Ollama",
+    "empty": "—",
+    "footer": "После клика «Начать» откроется главный экран. Все настройки можно поменять позже."
+  },
+  "nav": {
+    "back": "Назад",
+    "next": "Дальше",
+    "start": "Начать"
+  },
+  "errors": {
+    "generic": "Что-то пошло не так"
+  },
+  "success": {
+    "created": "Создано: {spaces} пространств, {widgets} карточек."
+  }
+}

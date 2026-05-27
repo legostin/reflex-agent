@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -21,13 +22,14 @@ export default async function AgentDetailPage({
   if (!entry) notFound();
   const allEvents = await readEvents(entry.path, agent.topicId);
   const events = allEvents.filter((e) => e.agentId === agent.id);
+  const t = await getTranslations("app");
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
       <header className="border-b px-6 py-3 flex items-start gap-4">
         <Button asChild variant="ghost" size="sm" className="-ml-3 mt-0.5">
           <Link href={`/roots/${agent.rootId}/chat/${agent.topicId}`}>
-            <ArrowLeft className="mr-1 h-4 w-4" /> Топик
+            <ArrowLeft className="mr-1 h-4 w-4" /> {t("agents.topicLink")}
           </Link>
         </Button>
         <div className="min-w-0 flex-1">

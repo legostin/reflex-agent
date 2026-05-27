@@ -1,4 +1,5 @@
 import { LayoutDashboard, Share2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import type { DashboardLayout, WidgetRecord } from "@/lib/server/widgets/types";
 
 /**
@@ -12,7 +13,7 @@ import type { DashboardLayout, WidgetRecord } from "@/lib/server/widgets/types";
  * project state (pending approvals, AI suggestions) that's not safe to
  * surface publicly.
  */
-export function SharedProjectView({
+export async function SharedProjectView({
   rootPath,
   widgets,
   layout,
@@ -21,6 +22,7 @@ export function SharedProjectView({
   widgets: WidgetRecord[];
   layout: DashboardLayout;
 }) {
+  const t = await getTranslations("app");
   const byId = new Map(widgets.map((w) => [w.id, w]));
   const ordered = layout.order
     .filter((id) => !id.startsWith("sys:"))
@@ -44,7 +46,7 @@ export function SharedProjectView({
         </header>
         {ordered.length === 0 ? (
           <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground text-center">
-            На дашборде нет публичных виджетов.
+            {t("share.project.noPublicWidgets")}
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -69,8 +71,7 @@ export function SharedProjectView({
           </div>
         )}
         <p className="text-[10px] text-muted-foreground text-center">
-          Виджеты сериализованы на момент создания ссылки. Авто-обновление и
-          интерактивность доступны только в Reflex.
+          {t("share.project.footer")}
         </p>
       </div>
     </main>

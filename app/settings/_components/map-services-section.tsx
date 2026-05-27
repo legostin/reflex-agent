@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink, Map } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { MAP_SERVICES } from "@/lib/client/map-services";
 import type { Settings } from "@/lib/settings";
@@ -12,11 +13,12 @@ interface Props {
 
 /**
  * Toggle which routing/maps services show up in the map widget's
- * "Маршрут в…" popup. Pure presentation — actual persistence happens
+ * "Route to…" popup. Pure presentation — actual persistence happens
  * via the settings-form save flow. Free-form id list (not enum) so
  * users can later add custom providers without a schema migration.
  */
 export function MapServicesSection({ settings, onChange }: Props) {
+  const t = useTranslations("settings");
   const enabled = new Set(settings.mapServices.enabled);
   const toggle = (id: string) => {
     const next = new Set(enabled);
@@ -31,12 +33,10 @@ export function MapServicesSection({ settings, onChange }: Props) {
       <CardContent className="pt-5 space-y-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Map className="h-4 w-4 text-emerald-700" />
-          <span>Сервисы маршрутов</span>
+          <span>{t("mapServices.headerTitle")}</span>
         </div>
         <p className="text-xs text-muted-foreground">
-          Выбранные сервисы появятся в попапе на каждой точке карта-виджета —
-          «Маршрут в…». Ссылка генерится прямо из координат, без посредников.
-          Можно проверить превью-ссылку (точка по умолчанию — центр Москвы).
+          {t("mapServices.cardHint")}
         </p>
         <ul className="space-y-1.5">
           {MAP_SERVICES.map((svc) => {
@@ -67,9 +67,9 @@ export function MapServicesSection({ settings, onChange }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] text-muted-foreground hover:underline inline-flex items-center gap-0.5 shrink-0 mt-1"
-                  title="Открыть превью-ссылку"
+                  title={t("mapServices.previewTitle")}
                 >
-                  превью
+                  {t("mapServices.previewLabel")}
                   <ExternalLink className="h-2.5 w-2.5" />
                 </a>
               </li>

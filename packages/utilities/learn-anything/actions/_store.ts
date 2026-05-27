@@ -207,9 +207,9 @@ function parseWizardField(v: unknown): CourseState["wizardAnswers"] | null {
 }
 
 function parseModulesFromBody(raw: string): CourseState["modules"] {
-  // Body shape from old generateOutline: "1. **Title** — objective (~N мин)"
+  // Body shape from old generateOutline: "1. **Title** — objective (~N min)"
   const out: CourseState["modules"] = [];
-  const re = /^\s*(\d+)\.\s+\*\*(.+?)\*\*\s*[—-]\s*(.*?)(?:\s*\(~?(\d+)\s*мин\))?$/gm;
+  const re = /^\s*(\d+)\.\s+\*\*(.+?)\*\*\s*[—-]\s*(.*?)(?:\s*\(~?(\d+)\s*min\))?$/gm;
   let m: RegExpExecArray | null;
   while ((m = re.exec(raw))) {
     out.push({

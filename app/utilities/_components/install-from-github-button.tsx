@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,7 @@ interface PreviewState {
 }
 
 export function InstallFromGithubButton() {
+  const t = useTranslations("app");
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [preview, setPreview] = useState<PreviewState | null>(null);
@@ -73,7 +75,7 @@ export function InstallFromGithubButton() {
         toast.error(res.error);
         return;
       }
-      toast.success(`Установлена: ${res.id}`);
+      toast.success(t("utilities.github.installedToast", { id: res.id }));
       setOpen(false);
       setUrl("");
       setPreview(null);
@@ -84,7 +86,7 @@ export function InstallFromGithubButton() {
   if (!open) {
     return (
       <Button onClick={() => setOpen(true)}>
-        <Github className="mr-2 h-4 w-4" /> Установить из GitHub
+        <Github className="mr-2 h-4 w-4" /> {t("utilities.github.installButton")}
       </Button>
     );
   }
@@ -94,11 +96,10 @@ export function InstallFromGithubButton() {
       <CardHeader className="flex flex-row items-start justify-between gap-3">
         <div className="space-y-1">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Github className="h-4 w-4" /> Установка из GitHub
+            <Github className="h-4 w-4" /> {t("utilities.github.cardTitle")}
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Утилита будет работать в изолированном iframe. Все её вызовы пройдут
-            через Host API с проверкой разрешений.
+            {t("utilities.github.cardSubtitle")}
           </p>
         </div>
         <Button
@@ -124,16 +125,16 @@ export function InstallFromGithubButton() {
           <Input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo  или  github:owner/repo@tag"
+            placeholder={t("utilities.github.urlPlaceholder")}
             className="font-mono text-xs"
           />
           <Button type="submit" disabled={previewing || !url.trim()}>
             {previewing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Запрос…
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("utilities.github.requesting")}
               </>
             ) : (
-              "Получить превью"
+              t("utilities.github.getPreview")
             )}
           </Button>
         </form>
@@ -152,7 +153,7 @@ export function InstallFromGithubButton() {
             </div>
             {preview.manifest.author && (
               <p className="text-xs text-muted-foreground">
-                Автор: {preview.manifest.author}
+                {t("utilities.github.author", { author: preview.manifest.author })}
               </p>
             )}
             {preview.manifest.description && (
@@ -161,14 +162,14 @@ export function InstallFromGithubButton() {
 
             <div>
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
-                <ShieldAlert className="h-3 w-3" /> Запрашиваемые разрешения
+                <ShieldAlert className="h-3 w-3" /> {t("utilities.github.permissionsTitle")}
               </div>
               <PermissionsView permissions={preview.manifest.permissions} />
             </div>
 
             <details className="text-xs">
               <summary className="cursor-pointer text-muted-foreground">
-                Файлы в репозитории ({Object.keys(preview.files).length})
+                {t("utilities.github.filesInRepo", { count: Object.keys(preview.files).length })}
               </summary>
               <ul className="mt-1 font-mono text-[11px] space-y-0.5">
                 {Object.entries(preview.sizes).map(([name, size]) => (
@@ -184,7 +185,7 @@ export function InstallFromGithubButton() {
 
             <div className="flex items-center gap-3 pt-2 border-t">
               <div className="flex-1">
-                <Label className="text-xs">Куда установить</Label>
+                <Label className="text-xs">{t("utilities.github.installInto")}</Label>
                 <Select
                   value={scope}
                   onValueChange={(v) => setScope(v as UtilityScope)}
@@ -194,10 +195,10 @@ export function InstallFromGithubButton() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="global">
-                      Глобально (~/.reflex/utilities/)
+                      {t("utilities.github.globalOption")}
                     </SelectItem>
                     <SelectItem value="project" disabled>
-                      В проект — нужно открыть конкретный проект
+                      {t("utilities.github.projectOption")}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -210,11 +211,11 @@ export function InstallFromGithubButton() {
               >
                 {installing ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Ставим…
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("utilities.github.installing")}
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="mr-2 h-4 w-4" /> Установить
+                    <ShieldCheck className="mr-2 h-4 w-4" /> {t("utilities.github.installButtonShort")}
                   </>
                 )}
               </Button>
@@ -222,9 +223,7 @@ export function InstallFromGithubButton() {
             <div className="flex items-start gap-2 text-[11px] text-muted-foreground rounded bg-amber-100/40 border border-amber-200 px-2 py-1.5">
               <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-700" />
               <span>
-                Это код от другого пользователя. Reflex ставит CSP-запрет на прямые
-                сетевые вызовы, но проверь список разрешений выше — особенно домены
-                под web.fetch и kb.write.
+                {t("utilities.github.warning")}
               </span>
             </div>
           </div>
@@ -235,6 +234,7 @@ export function InstallFromGithubButton() {
 }
 
 function PermissionsView({ permissions }: { permissions: Permissions }) {
+  const t = useTranslations("app");
   const chips: { label: string; severity: "info" | "warn" | "danger" }[] = [];
   if (permissions.llm?.tasks?.length) {
     chips.push({
@@ -262,7 +262,7 @@ function PermissionsView({ permissions }: { permissions: Permissions }) {
   if (chips.length === 0) {
     return (
       <span className="text-xs italic text-muted-foreground">
-        Без разрешений — утилита чисто UI.
+        {t("utilities.github.noPermissions")}
       </span>
     );
   }

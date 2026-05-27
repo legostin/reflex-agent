@@ -47,13 +47,13 @@ function renderReadme(spec: McpUtilitySpec): string {
   const lines = [
     `# ${spec.name}`,
     "",
-    `Reflex-обёртка над MCP-сервером. Tools (${spec.tools.length}):`,
+    `Reflex wrapper around an MCP server. Tools (${spec.tools.length}):`,
     "",
     ...spec.tools.map(
       (t) => `- **${t.name}**${t.description ? ` — ${t.description}` : ""}`,
     ),
     "",
-    "Конфиг сервера — в `mcp.json` рядом с этим файлом.",
+    "Server configuration lives in `mcp.json` next to this file.",
     "",
   ];
   return lines.join("\n");
@@ -190,7 +190,7 @@ function ToolCard({ tool }: { tool: Tool }) {
             );
           })}
           <Button onClick={run} disabled={busy}>
-            {busy ? "Выполняется…" : "Запустить"}
+            {busy ? "Running…" : "Run"}
           </Button>
           {error && (
             <pre className="text-xs whitespace-pre-wrap text-red-700 bg-red-50 border border-red-200 rounded p-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   Check,
   ChevronDown,
@@ -45,6 +46,7 @@ export interface QuestionState {
 }
 
 export function PermissionCard({ perm }: { perm: PermissionState }) {
+  const t = useTranslations("roots");
   const [pending, start] = useTransition();
   const resolved = perm.resolved;
   const respond = (
@@ -81,7 +83,7 @@ export function PermissionCard({ perm }: { perm: PermissionState }) {
       <div className="rounded-md bg-background/95 backdrop-blur p-4">
         <div className="flex items-center gap-2 mb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
           <Lock className="h-3.5 w-3.5" />
-          <span>Запрос разрешения</span>
+          <span>{t("permissionCard.title")}</span>
           {perm.tool && (
             <span className="font-mono normal-case tracking-normal">
               {perm.tool}
@@ -104,12 +106,16 @@ export function PermissionCard({ perm }: { perm: PermissionState }) {
             {resolved.decision === "allow" ? (
               <>
                 <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                <span>Разрешено{resolved.scope ? ` (${resolved.scope})` : ""}</span>
+                <span>
+                  {t("permissionCard.allowed", {
+                    scope: resolved.scope ? ` (${resolved.scope})` : "",
+                  })}
+                </span>
               </>
             ) : (
               <>
                 <X className="h-4 w-4 text-destructive" />
-                <span>Отклонено</span>
+                <span>{t("permissionCard.denied")}</span>
               </>
             )}
           </div>
@@ -125,7 +131,7 @@ export function PermissionCard({ perm }: { perm: PermissionState }) {
               ) : (
                 <Check className="mr-2 h-3.5 w-3.5" />
               )}
-              Разрешить
+              {t("permissionCard.allow")}
             </Button>
             <Button
               size="sm"
@@ -134,7 +140,7 @@ export function PermissionCard({ perm }: { perm: PermissionState }) {
               disabled={pending}
             >
               <ShieldCheck className="mr-2 h-3.5 w-3.5" />
-              Разрешать всегда
+              {t("permissionCard.allowAlways")}
             </Button>
             <Button
               size="sm"
@@ -143,7 +149,7 @@ export function PermissionCard({ perm }: { perm: PermissionState }) {
               disabled={pending}
             >
               <X className="mr-2 h-3.5 w-3.5" />
-              Отклонить
+              {t("permissionCard.deny")}
             </Button>
           </div>
         )}
@@ -153,6 +159,7 @@ export function PermissionCard({ perm }: { perm: PermissionState }) {
 }
 
 export function QuestionCard({ question }: { question: QuestionState }) {
+  const t = useTranslations("roots");
   const [draft, setDraft] = useState("");
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [pending, start] = useTransition();
@@ -213,7 +220,7 @@ export function QuestionCard({ question }: { question: QuestionState }) {
       <div className="rounded-md bg-background/95 backdrop-blur p-4">
         <div className="flex items-center gap-2 mb-2 text-[11px] uppercase tracking-wider text-muted-foreground flex-wrap">
           <HelpCircle className="h-3.5 w-3.5" />
-          <span>Вопрос от агента</span>
+          <span>{t("questionCard.title")}</span>
           {question.header && (
             <span className="rounded bg-violet-100 dark:bg-violet-950/60 text-violet-900 dark:text-violet-200 px-1.5 py-0.5 text-[10px] uppercase font-mono">
               {question.header}
@@ -221,7 +228,7 @@ export function QuestionCard({ question }: { question: QuestionState }) {
           )}
           {question.multiSelect && (
             <span className="text-[10px] normal-case tracking-normal italic">
-              можно выбрать несколько
+              {t("questionCard.multiSelect")}
             </span>
           )}
           <span className="ml-auto font-mono normal-case tracking-normal">
@@ -231,7 +238,7 @@ export function QuestionCard({ question }: { question: QuestionState }) {
         <p className="text-sm font-medium mb-3">{question.prompt}</p>
         {resolved ? (
           <p className="text-sm text-muted-foreground">
-            Ответ:{" "}
+            {t("questionCard.answerLabel")}{" "}
             <span className="text-foreground">{formatAnswer(resolved.answer)}</span>
           </p>
         ) : (
@@ -304,7 +311,7 @@ export function QuestionCard({ question }: { question: QuestionState }) {
             {question.multiSelect && options.length > 0 && (
               <div className="flex items-center justify-end gap-2 pt-1">
                 <span className="text-[11px] text-muted-foreground">
-                  выбрано: {picked.size}
+                  {t("questionCard.selected", { count: picked.size })}
                 </span>
                 <Button
                   type="button"
@@ -317,7 +324,7 @@ export function QuestionCard({ question }: { question: QuestionState }) {
                   ) : (
                     <Check className="mr-2 h-3.5 w-3.5" />
                   )}
-                  Отправить
+                  {t("questionCard.submit")}
                 </Button>
               </div>
             )}
@@ -331,7 +338,7 @@ export function QuestionCard({ question }: { question: QuestionState }) {
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Свой ответ…"
+                placeholder={t("questionCard.ownAnswerPlaceholder")}
                 disabled={pending}
                 className="h-9 text-sm"
               />
@@ -345,7 +352,7 @@ export function QuestionCard({ question }: { question: QuestionState }) {
                 ) : (
                   <Check className="mr-2 h-3.5 w-3.5" />
                 )}
-                Отправить
+                {t("questionCard.submit")}
               </Button>
             </form>
           </div>
@@ -390,6 +397,7 @@ export interface McpAddState {
 }
 
 export function McpAddCard({ entry }: { entry: McpAddState }) {
+  const t = useTranslations("roots");
   const [pending, start] = useTransition();
   const [values, setValues] = useState<Record<string, string>>({});
   const resolved = entry.resolved;
@@ -403,7 +411,7 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
         // hard if not, but a friendly client message is nicer).
         if (s.oauth) continue;
         if (s.required && !values[s.envKey]?.trim()) {
-          toast.error(`${s.label || s.envKey} обязателен`);
+          toast.error(t("mcpAddCard.secretRequired", { label: s.label || s.envKey }));
           return;
         }
       }
@@ -438,7 +446,7 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
       <div className="rounded-md bg-background/95 backdrop-blur p-4">
         <div className="flex items-center gap-2 mb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
           <Plug className="h-3.5 w-3.5" />
-          <span>Регистрация MCP-сервера</span>
+          <span>{t("mcpAddCard.title")}</span>
           <span className="font-mono normal-case tracking-normal">
             {entry.server}
           </span>
@@ -458,7 +466,7 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
         {entry.secrets && entry.secrets.length > 0 && !resolved && (
           <div className="space-y-2 mb-3">
             <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Заполни секреты
+              {t("mcpAddCard.fillSecrets")}
             </div>
             {entry.secrets.map((s) =>
               s.oauth ? (
@@ -483,7 +491,9 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
                     onChange={(e) =>
                       setValues((v) => ({ ...v, [s.envKey]: e.target.value }))
                     }
-                    placeholder={s.required ? "обязательно" : "опционально"}
+                    placeholder={
+                      s.required ? t("mcpAddCard.required") : t("mcpAddCard.optional")
+                    }
                     className="font-mono text-xs h-8"
                   />
                 </div>
@@ -496,12 +506,12 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
             {resolved.decision === "approve" ? (
               <>
                 <Check className="h-4 w-4 text-emerald-600" />
-                <span>Зарегистрирован</span>
+                <span>{t("mcpAddCard.registered")}</span>
               </>
             ) : (
               <>
                 <X className="h-4 w-4 text-destructive" />
-                <span>Отклонено</span>
+                <span>{t("mcpAddCard.rejected")}</span>
               </>
             )}
           </div>
@@ -515,7 +525,7 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
               disabled={pending}
             >
               {pending && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
-              <Check className="h-3.5 w-3.5 mr-1" /> Зарегистрировать
+              <Check className="h-3.5 w-3.5 mr-1" /> {t("mcpAddCard.register")}
             </Button>
             <Button
               type="button"
@@ -524,7 +534,7 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
               onClick={() => respond("reject")}
               disabled={pending}
             >
-              <X className="h-3.5 w-3.5 mr-1" /> Отклонить
+              <X className="h-3.5 w-3.5 mr-1" /> {t("mcpAddCard.reject")}
             </Button>
           </div>
         )}
@@ -538,7 +548,7 @@ export function McpAddCard({ entry }: { entry: McpAddState }) {
  * the agent declares which provider owns this env var. We show the provider's
  * status (configured? authorized?) and a one-click button that kicks off the
  * OAuth flow. The actual token never enters chat — when the user clicks
- * Зарегистрировать, the server writes `$oauth:<provider>` into the config,
+ * "Register", the server writes `$oauth:<provider>` into the config,
  * and tokens are hydrated at MCP-call time.
  */
 function OAuthSlotRow({
@@ -552,6 +562,7 @@ function OAuthSlotRow({
     oauth?: string;
   };
 }) {
+  const t = useTranslations("roots");
   const [status, setStatus] = useState<{
     hasClient: boolean;
     hasTokens: boolean;
@@ -607,7 +618,7 @@ function OAuthSlotRow({
   const saveClient = () => {
     if (!slot.oauth) return;
     if (!clientId.trim()) {
-      toast.error("client_id обязателен");
+      toast.error(t("mcpAddCard.clientIdRequired"));
       return;
     }
     startSave(async () => {
@@ -623,7 +634,7 @@ function OAuthSlotRow({
         toast.error(res.error);
         return;
       }
-      toast.success("Client сохранён");
+      toast.success(t("mcpAddCard.clientSaved"));
       setClientSecret("");
       await refresh();
     });
@@ -648,14 +659,14 @@ function OAuthSlotRow({
       const startedAt = Date.now();
       const tick = async () => {
         if (Date.now() - startedAt > 5 * 60_000) {
-          toast.error("Authorization timed out");
+          toast.error(t("mcpAddCard.authorizationTimedOut"));
           return;
         }
         const r = await listOAuthStatusesAction();
         if (r.ok) {
           const cur = r.statuses.find((x) => x.id === slot.oauth);
           if (cur?.hasTokens) {
-            toast.success(`${slot.oauth} authorized`);
+            toast.success(t("mcpAddCard.providerAuthorized", { provider: slot.oauth! }));
             setStatus({ hasClient: cur.hasClient, hasTokens: cur.hasTokens });
             return;
           }
@@ -675,7 +686,7 @@ function OAuthSlotRow({
         <span className="font-mono">{slot.envKey}</span>
         <span className="text-muted-foreground">{slot.label}</span>
         <span className="text-[10px] uppercase tracking-wider text-violet-700 ml-auto">
-          OAuth · {slot.oauth}
+          {t("mcpAddCard.oauthLabel", { provider: slot.oauth ?? "" })}
         </span>
       </label>
       {slot.description && (
@@ -685,7 +696,7 @@ function OAuthSlotRow({
       <div className="flex items-center gap-2 flex-wrap">
         {status?.hasTokens ? (
           <span className="text-xs text-emerald-700 flex items-center gap-1">
-            <Check className="h-3 w-3" /> Авторизован
+            <Check className="h-3 w-3" /> {t("mcpAddCard.authorized")}
           </span>
         ) : status?.hasClient ? (
           <Button
@@ -697,11 +708,11 @@ function OAuthSlotRow({
             className="h-7 text-xs"
           >
             {working && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-            Authorize via {slot.oauth}
+            {t("mcpAddCard.authorizeVia", { provider: slot.oauth ?? "" })}
           </Button>
         ) : (
           <span className="text-xs text-amber-700">
-            client_id не настроен — заполни ниже
+            {t("mcpAddCard.clientIdNotConfigured")}
           </span>
         )}
         {!needsClient && (
@@ -717,7 +728,7 @@ function OAuthSlotRow({
                 expanded ? "rotate-180" : ""
               }`}
             />
-            {expanded ? "Скрыть client" : "Изменить client"}
+            {expanded ? t("mcpAddCard.hideClient") : t("mcpAddCard.editClient")}
           </Button>
         )}
         <Button
@@ -727,7 +738,7 @@ function OAuthSlotRow({
           onClick={() => void refresh()}
           className="h-7 text-xs text-muted-foreground ml-auto"
         >
-          Обновить
+          {t("mcpAddCard.refresh")}
         </Button>
       </div>
 
@@ -745,18 +756,18 @@ function OAuthSlotRow({
             className="text-[11px] text-violet-700 hover:underline inline-flex items-center gap-1"
           >
             <ExternalLink className="h-3 w-3" />
-            Открыть консоль провайдера
+            {t("mcpAddCard.openProviderConsole")}
           </a>
           {meta.setupSteps.length > 0 && (
             <div className="rounded border border-violet-200 bg-white/60 p-2">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">
-                Пошагово
+                {t("mcpAddCard.stepByStep")}
               </div>
               <OAuthSetupSteps steps={meta.setupSteps} />
             </div>
           )}
           <div>
-            <Label className="text-[10px]">Client ID</Label>
+            <Label className="text-[10px]">{t("mcpAddCard.clientIdLabel")}</Label>
             <Input
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
@@ -767,10 +778,10 @@ function OAuthSlotRow({
           {meta.needsClientSecret && (
             <div>
               <Label className="text-[10px]">
-                Client secret{" "}
+                {t("mcpAddCard.clientSecretLabel")}{" "}
                 {hasSavedSecret && (
                   <span className="text-muted-foreground">
-                    (сохранён, пусто — не менять)
+                    {t("mcpAddCard.clientSecretSavedHint")}
                   </span>
                 )}
               </Label>
@@ -796,7 +807,7 @@ function OAuthSlotRow({
               ) : (
                 <Save className="mr-1 h-3 w-3" />
               )}
-              Сохранить client
+              {t("mcpAddCard.saveClient")}
             </Button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
 
 /**
@@ -10,7 +11,7 @@ import { Sparkles } from "lucide-react";
  * the home page, focus-file chip on the project page if we ever want one).
  */
 export function CommandBarFrame({
-  label = "Спроси Reflex",
+  label,
   headerRight,
   children,
 }: {
@@ -18,6 +19,8 @@ export function CommandBarFrame({
   headerRight?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("roots");
+  const resolvedLabel = label ?? t("commandBarFrame.label");
   return (
     <div className="border-t bg-background">
       <div className="mx-auto max-w-3xl px-6 py-5">
@@ -28,7 +31,7 @@ export function CommandBarFrame({
                 <Sparkles className="h-3.5 w-3.5" />
               </span>
               <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                {label}
+                {resolvedLabel}
               </span>
               {headerRight && (
                 <span className="ml-auto flex items-center gap-1">

@@ -12,7 +12,7 @@ export interface InitOptions {
   harness?: Config["agentBackend"];
   /** Model id to pass to the underlying CLI (e.g. `claude-opus-4-7`). */
   model?: string;
-  /** Language artifacts should be generated in (e.g. "english", "русский"). */
+  /** Language artifacts should be generated in (e.g. "english", "russian"). */
   language?: string;
 }
 

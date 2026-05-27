@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { ArrowLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { getRoot } from "@/lib/registry";
 import { readKbFile } from "@/lib/server/kb";
 import {
@@ -40,6 +41,7 @@ export default async function SharedKbFilePage({
   if (!entry) notFound();
   const content = await readKbFile(entry.path, rel).catch(() => null);
   if (content == null) notFound();
+  const t = await getTranslations("app");
   return (
     <div>
       <div className="mx-auto max-w-3xl px-4 pt-6">
@@ -48,7 +50,7 @@ export default async function SharedKbFilePage({
           className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-violet-700"
         >
           <ArrowLeft className="h-3 w-3" />
-          Назад к списку
+          {t("share.page.backToList")}
         </Link>
       </div>
       <SharedKbView path={rel} content={content} rootLabel={entry.path} />

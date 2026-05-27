@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { FileText, X } from "lucide-react";
 import type { KbPinnedData } from "@/lib/server/widgets/types";
 
@@ -24,6 +25,7 @@ export function KbPinnedWidget({
   readonly?: boolean;
   onPatch?: (next: KbPinnedData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   const initial = data.items ?? [];
   const [items, setItems] = useState<Item[]>(initial);
   const [pending, startSave] = useTransition();
@@ -56,7 +58,7 @@ export function KbPinnedWidget({
 
   if (items.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground">Нет закреплённых файлов.</p>
+      <p className="text-xs text-muted-foreground">{t("kbPinnedWidget.empty")}</p>
     );
   }
   return (
@@ -89,8 +91,8 @@ export function KbPinnedWidget({
                 type="button"
                 onClick={() => unpin(i)}
                 disabled={pending}
-                aria-label="Открепить"
-                title="Открепить"
+                aria-label={t("kbPinnedWidget.unpinAria")}
+                title={t("kbPinnedWidget.unpinTitle")}
                 className="absolute top-1.5 right-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive disabled:opacity-30"
               >
                 <X className="h-3 w-3" />

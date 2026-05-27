@@ -26,6 +26,11 @@ export interface Attachment {
   mime: string;
 }
 
+// Cyrillic prefix (\u0440\u0443\u0441 = "rus" in Russian) — kept as a
+// unicode-escaped string so this source stays ASCII while still matching
+// localized russian-spelled language settings at runtime.
+const RU_PREFIX = "\u0440\u0443\u0441";
+
 /**
  * Spawn (or reuse) the topic's orchestrator and run one turn for the given
  * user message. Called from both POST /send and from startTopicAction so the
@@ -216,30 +221,31 @@ export async function startOrchestratorTurn(args: {
  * "fix this URL") the agent just answers directly without the directive.
  */
 function youtubeSummaryInstructions(urls: string[], language: string): string {
-  const isRu = /russ/i.test(language) || /рус/i.test(language);
+  const isRu =
+    /russ/i.test(language) || new RegExp(RU_PREFIX, "i").test(language);
   const urlList = urls.map((u) => `- ${u}`).join("\n");
   if (isRu) {
     return [
-      "## YouTube-видео в сообщении",
+      "## YouTube video in the message",
       "",
-      "В сообщении пользователя есть ссылки на YouTube:",
+      "The user's message contains YouTube URL(s):",
       urlList,
       "",
-      "**Реши, нужно ли тебе содержимое ролика для ответа.**",
+      "**Decide whether you actually need the video's content to answer.**",
       "",
-      "- Если пользователь хочет узнать **о чём ролик** / **что в нём говорится** / **описание** / **выжимку** / **цитаты** / **факты из видео** — попроси Reflex запустить Gemini-выжимку:",
+      "- If the user wants to know **what the video is about** / **what's said in it** / a description / summary / quotes / facts — ask Reflex to run a Gemini summary:",
       "",
       "```",
       `<<reflex:youtube-summary>>{"url":"<URL>"}<</reflex:youtube-summary>>`,
       "```",
       "",
-      "  По одному маркеру на видео в одном ходе. Сразу после маркеров **STOP** — не пытайся ответить в этом же turn'e. Reflex дождётся Gemini и перезапустит тебя с готовой выжимкой в контексте.",
+      "  One marker per video, all in the same turn. After emitting markers **STOP** — do not try to answer in this same turn. Reflex will wait for Gemini and re-invoke you with the summary in context.",
       "",
-      "- Если запрос **не требует** содержимого ролика (например \"какой плеер лучше\", \"почини ссылку\", \"добавь к этому ещё одно видео\") — отвечай напрямую, без директивы.",
+      "- If the request **doesn't need** the video's content (for example \"which player is better\", \"fix this link\", \"add another video to this\") — answer directly, no directive.",
       "",
-      "- **Не используй WebFetch** для YouTube URL'ов — он не получит ни субтитры, ни видео. Только директива выше.",
+      "- **Do not use WebFetch** for YouTube URLs — it returns neither captions nor video. Only the directive above.",
       "",
-      "- Если Gemini-выжимка не получилась (Reflex вернёт сообщение об ошибке), извинись и предложи пользователю сохранить ключ в Settings → Gemini.",
+      "- If the Gemini summary fails (Reflex will return an error message), apologise and suggest saving a key in Settings -> Gemini. Respond in Russian.",
     ].join("\n");
   }
   return [
@@ -300,20 +306,21 @@ function focusFileInstructions(
   language: string,
 ): string {
   const abs = path.join(reflexScope, relPath);
-  const isRu = /russ/i.test(language) || /рус/i.test(language);
+  const isRu =
+    /russ/i.test(language) || new RegExp(RU_PREFIX, "i").test(language);
   if (isRu) {
     return [
-      "## Открытый документ — приоритетный контекст",
+      "## Open document — primary context",
       "",
-      `Пользователь сейчас читает файл базы знаний: \`${relPath}\``,
-      `Полный путь: \`${abs}\``,
+      `The user is currently reading this KB file: \`${relPath}\``,
+      `Absolute path: \`${abs}\``,
       "",
-      "Правила работы с этим вопросом/заданием:",
-      "1. **Сначала прочитай этот файл целиком через Read** — это первоисточник контекста.",
-      "2. Отвечай в первую очередь на основе содержимого этого файла.",
-      "3. Только если в нём не хватает информации — посмотри соседние файлы (та же директория, INDEX.md рядом, родительская папка).",
-      "4. Не угадывай: если ответа нет ни в открытом файле, ни в соседних — скажи об этом явно и предложи где искать.",
-      "5. При ссылках в ответе используй относительные пути от корня KB (как в открытом файле).",
+      "Rules for this turn (respond in Russian):",
+      "1. **Read this file in full via the Read tool first** — it is the primary source of context.",
+      "2. Base your answer primarily on its contents.",
+      "3. Only fall back to neighbouring files (same directory, sibling INDEX.md, parent dir) if the open file lacks the needed info.",
+      "4. Don't guess: if neither the open file nor its neighbours contain the answer, say so explicitly and suggest where to look.",
+      "5. When linking in your reply, use paths relative to the KB root (matching the open file).",
     ].join("\n");
   }
   return [

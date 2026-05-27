@@ -114,11 +114,11 @@ async function agentPick(input: PickBestInput): Promise<PickBestResult> {
   // 2. Build a prompt that lists the paths and instructs the agent to
   // Read each (which returns image content for vision-capable models).
   const lines: string[] = [
-    `Курс/тема: ${input.context}`,
-    `Поисковый запрос: "${input.query}"`,
-    `Что должно быть на картинке: ${input.alt}`,
+    `Course/topic: ${input.context}`,
+    `Search query: "${input.query}"`,
+    `What the image should depict: ${input.alt}`,
     "",
-    `На диске лежат ${usable.length} кандидатов поисковой выдачи. ОТКРОЙ КАЖДОГО через Read tool — он вернёт картинку как vision-контент, ты её увидишь:`,
+    `On disk you have ${usable.length} search-result candidates. OPEN EACH ONE through the Read tool — it returns the image as vision content so you can see it:`,
     "",
   ];
   for (let i = 0; i < usable.length; i++) {
@@ -130,21 +130,21 @@ async function agentPick(input: PickBestInput): Promise<PickBestResult> {
       /* keep */
     }
     lines.push(
-      `  [${i}] ${usable[i]!.path}  (источник: ${host}, автор: ${c.attribution.name})`,
+      `  [${i}] ${usable[i]!.path}  (source: ${host}, author: ${c.attribution.name})`,
     );
   }
   lines.push(
     "",
-    "Прочитай каждую (Read tool, по одной), посмотри что РЕАЛЬНО на картинке, выбери одну ЛУЧШЕ ВСЕГО подходящую как учебная иллюстрация.",
+    "Read each one (Read tool, one at a time), look at what is REALLY in the image, and pick the ONE that BEST works as an educational illustration.",
     "",
-    "Критерии (в порядке важности):",
-    "  1. На картинке РЕАЛЬНО изображено то, что просит запрос. Например, если запрос «гипсовый шар», а на картинке рука — отклоняй.",
-    "  2. Качество годится для учебника: не клипарт, не мем, не logo, не размытое.",
-    "  3. Контекст соответствует теме курса.",
-    "  4. Если ВСЕ кандидаты не подходят — верни pick: -1, тогда система сгенерирует AI-иллюстрацию вместо подобранной.",
+    "Criteria (in order of importance):",
+    "  1. The image ACTUALLY depicts what the query asks for. For example, if the query is \"plaster sphere\" and the image shows a hand — reject it.",
+    "  2. Quality is textbook-grade: not clipart, not a meme, not a logo, not blurry.",
+    "  3. The context matches the course topic.",
+    "  4. If ALL candidates are unsuitable — return pick: -1, and the system will generate an AI illustration instead.",
     "",
-    `В САМОМ КОНЦЕ ответа выведи ОДНУ строку с JSON: {"pick": число от 0 до ${usable.length - 1} ИЛИ -1, "reason": "коротко по-русски"}`,
-    "До этой строки можешь думать вслух / описывать что видишь — мне важна только последняя JSON-строка.",
+    `At the VERY END of your response, output ONE line of JSON: {"pick": number from 0 to ${usable.length - 1} OR -1, "reason": "short rationale"}`,
+    "Before that line you may think out loud / describe what you see — only the final JSON line matters.",
   );
 
   // 3. Run through user's chat harness. Generous timeout because vision

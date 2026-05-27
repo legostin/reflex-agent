@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Check,
@@ -55,6 +56,7 @@ interface Status {
 }
 
 export function OAuthProvidersSection() {
+  const t = useTranslations("settings");
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [loading, startLoad] = useTransition();
   const [adding, setAdding] = useState(false);
@@ -79,7 +81,7 @@ export function OAuthProvidersSection() {
     return (
       <Card>
         <CardContent className="py-6 text-sm text-muted-foreground">
-          <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> Loading…
+          <Loader2 className="inline h-4 w-4 animate-spin mr-2" /> {t("oauth.loading")}
         </CardContent>
       </Card>
     );
@@ -108,7 +110,7 @@ export function OAuthProvidersSection() {
           className="gap-2 text-muted-foreground"
         >
           <Plus className="h-4 w-4" />
-          Добавить кастомный provider
+          {t("oauth.addCustomButton")}
         </Button>
       )}
     </div>
@@ -122,6 +124,7 @@ function ProviderRow({
   status: Status;
   onChanged: () => void;
 }) {
+  const t = useTranslations("settings");
   const [expanded, setExpanded] = useState(false);
   const [client, setClient] = useState<{
     clientId: string;
@@ -170,7 +173,7 @@ function ProviderRow({
         toast.error(res.error);
         return;
       }
-      toast.success("Client config saved");
+      toast.success(t("oauth.savedToast"));
       setClientSecret("");
       onChanged();
       const reload = await getOAuthClientAction(status.id);
@@ -198,14 +201,14 @@ function ProviderRow({
       const startedAt = Date.now();
       const tick = async () => {
         if (Date.now() - startedAt > 5 * 60_000) {
-          toast.error("Authorization timed out");
+          toast.error(t("oauth.authTimeoutToast"));
           return;
         }
         const r = await listOAuthStatusesAction();
         if (r.ok) {
           const cur = r.statuses.find((s) => s.id === status.id);
           if (cur?.hasTokens && !status.hasTokens) {
-            toast.success("Authorized");
+            toast.success(t("oauth.authorizedToast"));
             onChanged();
             return;
           }
@@ -220,29 +223,27 @@ function ProviderRow({
     startProbe(async () => {
       const r = await probeOAuthAction(status.id);
       if (!r.ok) {
-        toast.error(r.error ?? "probe failed");
+        toast.error(r.error ?? t("oauth.probeFailToast"));
         return;
       }
-      toast.success("Access token живой");
+      toast.success(t("oauth.probeOkToast"));
     });
   };
 
   const disconnect = async () => {
-    if (!confirm(`Удалить сохранённые токены для ${status.label}?`)) return;
+    if (!confirm(t("oauth.disconnectConfirm", { label: status.label }))) return;
     const res = await disconnectOAuthAction(status.id);
     if (!res.ok) {
       toast.error(res.error);
       return;
     }
-    toast.success("Disconnected");
+    toast.success(t("oauth.disconnectedToast"));
     onChanged();
   };
 
   const forgetClient = async () => {
     if (
-      !confirm(
-        `Удалить весь OAuth-конфиг для ${status.label} (client_id, secret и токены)?`,
-      )
+      !confirm(t("oauth.forgetClientConfirm", { label: status.label }))
     )
       return;
     const res = await deleteOAuthClientAction(status.id);
@@ -250,7 +251,7 @@ function ProviderRow({
       toast.error(res.error);
       return;
     }
-    toast.success("Forgotten");
+    toast.success(t("oauth.forgottenToast"));
     setClient(null);
     setClientId("");
     setScopesText("");
@@ -274,20 +275,19 @@ function ProviderRow({
                 </Badge>
               )}
               {!status.hasClient ? (
-                <Badge variant="outline">не настроен</Badge>
+                <Badge variant="outline">{t("oauth.notConfigured")}</Badge>
               ) : !status.hasTokens ? (
                 <Badge variant="outline" className="border-amber-400 text-amber-700">
-                  готов к авторизации
+                  {t("oauth.readyToAuthorize")}
                 </Badge>
               ) : (
                 <Badge variant="secondary" className="gap-1">
-                  <Check className="h-3 w-3" /> авторизован
+                  <Check className="h-3 w-3" /> {t("oauth.authorized")}
                 </Badge>
               )}
               {status.hasTokens && status.expiresAt && (
                 <span className="text-[10px] text-muted-foreground">
-                  истекает{" "}
-                  {new Date(status.expiresAt).toLocaleTimeString()}
+                  {t("oauth.expiresAt", { time: new Date(status.expiresAt).toLocaleTimeString() })}
                 </span>
               )}
             </div>
@@ -304,7 +304,7 @@ function ProviderRow({
                 expanded ? "rotate-180" : ""
               }`}
             />
-            {expanded ? "Свернуть" : "Настроить"}
+            {expanded ? t("oauth.collapse") : t("oauth.configure")}
           </Button>
         </div>
 
@@ -323,12 +323,12 @@ function ProviderRow({
               className="inline-flex items-center gap-1 text-xs text-violet-700 hover:underline"
             >
               <ExternalLink className="h-3 w-3" />
-              Открыть консоль {status.label}
+              {t("oauth.openConsole", { label: status.label })}
             </a>
             {status.setupSteps && status.setupSteps.length > 0 && (
               <div className="rounded border border-violet-200 bg-violet-50/30 p-3">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">
-                  Пошагово
+                  {t("oauth.stepByStep")}
                 </div>
                 <OAuthSetupSteps steps={status.setupSteps} />
               </div>
@@ -345,10 +345,10 @@ function ProviderRow({
             </div>
             <div>
               <Label className="text-xs">
-                Client secret
+                {t("oauth.clientSecretLabel")}
                 {client?.hasSecret && (
                   <span className="ml-2 text-muted-foreground">
-                    (сохранён, оставь пустым чтобы не менять)
+                    {t("oauth.clientSecretSaved")}
                   </span>
                 )}
               </Label>
@@ -364,9 +364,9 @@ function ProviderRow({
             </div>
             <div>
               <Label className="text-xs">
-                Scopes{" "}
+                {t("oauth.scopesLabel")}{" "}
                 <span className="text-muted-foreground">
-                  (по умолчанию: {defaultScopes.join(" ") || "—"})
+                  {t("oauth.scopesDefault", { scopes: defaultScopes.join(" ") || "—" })}
                 </span>
               </Label>
               <Input
@@ -389,7 +389,7 @@ function ProviderRow({
                 ) : (
                   <Save className="mr-1 h-3.5 w-3.5" />
                 )}
-                Сохранить
+                {t("oauth.saveButton")}
               </Button>
               <Button
                 type="button"
@@ -404,7 +404,7 @@ function ProviderRow({
                 ) : (
                   <ExternalLink className="h-3.5 w-3.5" />
                 )}
-                {status.hasTokens ? "Re-authorize" : "Authorize"}
+                {status.hasTokens ? t("oauth.reAuthorize") : t("oauth.authorize")}
               </Button>
               {status.hasTokens && (
                 <>
@@ -418,7 +418,7 @@ function ProviderRow({
                     {probing && (
                       <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
                     )}
-                    <Plug className="mr-1 h-3.5 w-3.5" /> Проверить токен
+                    <Plug className="mr-1 h-3.5 w-3.5" /> {t("oauth.probeButton")}
                   </Button>
                   <Button
                     type="button"
@@ -427,7 +427,7 @@ function ProviderRow({
                     onClick={disconnect}
                   >
                     <Unlink className="mr-1 h-3.5 w-3.5" />
-                    Disconnect
+                    {t("oauth.disconnect")}
                   </Button>
                 </>
               )}
@@ -440,7 +440,7 @@ function ProviderRow({
                   className="text-muted-foreground"
                 >
                   <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                  Forget client
+                  {t("oauth.forgetClient")}
                 </Button>
               )}
               {status.origin === "user" && (
@@ -451,9 +451,7 @@ function ProviderRow({
                   className="text-destructive ml-auto"
                   onClick={async () => {
                     if (
-                      !confirm(
-                        `Удалить custom provider "${status.id}" полностью (вместе с client + tokens)?`,
-                      )
+                      !confirm(t("oauth.removeProviderConfirm", { id: status.id }))
                     )
                       return;
                     const res = await removeCustomOAuthProviderAction(
@@ -464,20 +462,21 @@ function ProviderRow({
                       return;
                     }
                     await deleteOAuthClientAction(status.id);
-                    toast.success("Provider удалён");
+                    toast.success(t("oauth.providerRemovedToast"));
                     onChanged();
                   }}
                 >
                   <Trash2 className="mr-1 h-3.5 w-3.5" />
-                  Удалить provider
+                  {t("oauth.removeProvider")}
                 </Button>
               )}
             </div>
 
             <p className="text-[10px] text-muted-foreground">
-              Используй <code className="font-mono">$oauth:{status.id}</code> в
-              env/headers любого MCP-сервера — Reflex подставит свежий
-              access_token при каждом вызове (с авто-refresh'ем).
+              {t.rich("oauth.usageHint", {
+                code: (chunks) => <code className="font-mono">{chunks}</code>,
+                id: status.id,
+              })}
             </p>
           </div>
         )}
@@ -499,6 +498,7 @@ function CustomProviderForm({
   onCancel: () => void;
   onAdded: () => void;
 }) {
+  const t = useTranslations("settings");
   const [id, setId] = useState("");
   const [label, setLabel] = useState("");
   const [authorizeUrl, setAuthorizeUrl] = useState("");
@@ -515,15 +515,15 @@ function CustomProviderForm({
   const save = () => {
     const slug = id.trim().toLowerCase();
     if (!slug) {
-      toast.error("id обязателен");
+      toast.error(t("oauth.custom.idRequired"));
       return;
     }
     if (existingIds.includes(slug)) {
-      toast.error(`provider "${slug}" уже существует`);
+      toast.error(t("oauth.custom.providerExists", { id: slug }));
       return;
     }
     if (!authorizeUrl.trim() || !tokenUrl.trim()) {
-      toast.error("authorizeUrl и tokenUrl обязательны");
+      toast.error(t("oauth.custom.urlsRequired"));
       return;
     }
     let extra: Record<string, string> = {};
@@ -531,7 +531,7 @@ function CustomProviderForm({
       try {
         extra = JSON.parse(extraParamsText);
       } catch {
-        toast.error("extraAuthorizeParams должен быть JSON-объектом");
+        toast.error(t("oauth.custom.extraMustBeJson"));
         return;
       }
     }
@@ -558,7 +558,7 @@ function CustomProviderForm({
         toast.error(res.error);
         return;
       }
-      toast.success(`Provider "${slug}" добавлен`);
+      toast.success(t("oauth.custom.addedToast", { id: slug }));
       onAdded();
     });
   };
@@ -568,7 +568,7 @@ function CustomProviderForm({
       <CardContent className="pt-5 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium flex items-center gap-2">
-            <Plus className="h-4 w-4" /> Кастомный OAuth provider
+            <Plus className="h-4 w-4" /> {t("oauth.custom.title")}
           </h3>
           <Button
             type="button"
@@ -581,17 +581,18 @@ function CustomProviderForm({
           </Button>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Любой OAuth 2.0 сервис со стандартным Authorization Code flow.
-          Redirect URI:{" "}
-          <code className="font-mono">
-            http://localhost:3210/api/oauth/callback
-          </code>
-          .
+          {t.rich("oauth.custom.description", {
+            uri: () => (
+              <code className="font-mono">
+                http://localhost:3210/api/oauth/callback
+              </code>
+            ),
+          })}
         </p>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs">ID (kebab-case)</Label>
+            <Label className="text-xs">{t("oauth.custom.idLabel")}</Label>
             <Input
               value={id}
               onChange={(e) => setId(e.target.value)}
@@ -600,7 +601,7 @@ function CustomProviderForm({
             />
           </div>
           <div>
-            <Label className="text-xs">Label</Label>
+            <Label className="text-xs">{t("oauth.custom.labelLabel")}</Label>
             <Input
               value={label}
               onChange={(e) => setLabel(e.target.value)}
@@ -611,7 +612,7 @@ function CustomProviderForm({
         </div>
 
         <div>
-          <Label className="text-xs">Authorize URL</Label>
+          <Label className="text-xs">{t("oauth.custom.authorizeUrlLabel")}</Label>
           <Input
             value={authorizeUrl}
             onChange={(e) => setAuthorizeUrl(e.target.value)}
@@ -620,7 +621,7 @@ function CustomProviderForm({
           />
         </div>
         <div>
-          <Label className="text-xs">Token URL</Label>
+          <Label className="text-xs">{t("oauth.custom.tokenUrlLabel")}</Label>
           <Input
             value={tokenUrl}
             onChange={(e) => setTokenUrl(e.target.value)}
@@ -629,7 +630,7 @@ function CustomProviderForm({
           />
         </div>
         <div>
-          <Label className="text-xs">Default scopes (space-separated)</Label>
+          <Label className="text-xs">{t("oauth.custom.defaultScopesLabel")}</Label>
           <Input
             value={scopesText}
             onChange={(e) => setScopesText(e.target.value)}
@@ -638,7 +639,7 @@ function CustomProviderForm({
           />
         </div>
         <div>
-          <Label className="text-xs">Console URL (где брать credentials)</Label>
+          <Label className="text-xs">{t("oauth.custom.consoleUrlLabel")}</Label>
           <Input
             value={consoleUrl}
             onChange={(e) => setConsoleUrl(e.target.value)}
@@ -647,11 +648,11 @@ function CustomProviderForm({
           />
         </div>
         <div>
-          <Label className="text-xs">Setup hint (показывается пользователю)</Label>
+          <Label className="text-xs">{t("oauth.custom.setupHintLabel")}</Label>
           <Textarea
             value={setupHint}
             onChange={(e) => setSetupHint(e.target.value)}
-            placeholder="Иди в Dropbox App Console → Create App → Permission type: Scoped access. Redirect URI: http://localhost:3210/api/oauth/callback."
+            placeholder={t("oauth.custom.setupHintPlaceholder")}
             className="text-xs"
             rows={3}
           />
@@ -683,7 +684,7 @@ function CustomProviderForm({
           </label>
         </div>
         <div>
-          <Label className="text-xs">Extra authorize params (JSON, optional)</Label>
+          <Label className="text-xs">{t("oauth.custom.extraParamsLabel")}</Label>
           <Textarea
             value={extraParamsText}
             onChange={(e) => setExtraParamsText(e.target.value)}
@@ -700,7 +701,7 @@ function CustomProviderForm({
             size="sm"
             onClick={onCancel}
           >
-            Отмена
+            {t("oauth.custom.cancel")}
           </Button>
           <Button
             type="button"
@@ -709,7 +710,7 @@ function CustomProviderForm({
             disabled={saving || !id.trim() || !authorizeUrl.trim() || !tokenUrl.trim()}
           >
             {saving && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />}
-            Создать provider
+            {t("oauth.custom.create")}
           </Button>
         </div>
       </CardContent>

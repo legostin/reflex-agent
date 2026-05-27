@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Lock, Share2 } from "lucide-react";
 import { cookies } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { getRoot } from "@/lib/registry";
 import { getShare, shareExpired, touchShare, verifyPassword } from "@/lib/server/shares/store";
 import { readKbFile, walkKbMarkdown } from "@/lib/server/kb";
@@ -35,11 +36,12 @@ export default async function SharePage({
   const { pw, error } = await searchParams;
   const share = await getShare(id);
   if (!share) notFound();
+  const t = await getTranslations("app");
   if (shareExpired(share)) {
     return (
       <ShareGoneFrame>
         <p className="text-sm text-muted-foreground">
-          Срок действия ссылки истёк.
+          {t("share.page.expired")}
         </p>
       </ShareGoneFrame>
     );
@@ -51,7 +53,7 @@ export default async function SharePage({
   const provided = pw ?? cookiePw ?? "";
   if (share.passwordHash && !verifyPassword(share, provided)) {
     return (
-      <ShareGoneFrame title="Требуется пароль">
+      <ShareGoneFrame title={t("share.page.needPassword")}>
         <ShareAuthForm shareId={id} {...(error ? { error } : {})} />
       </ShareGoneFrame>
     );
@@ -126,13 +128,14 @@ export default async function SharePage({
   notFound();
 }
 
-function ShareGoneFrame({
+async function ShareGoneFrame({
   title = "Reflex Share",
   children,
 }: {
   title?: string;
   children: React.ReactNode;
 }) {
+  const t = await getTranslations("app");
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-muted/20 px-4">
       <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-sm space-y-4">
@@ -143,7 +146,7 @@ function ShareGoneFrame({
         {children}
         <p className="text-[10px] text-muted-foreground flex items-center gap-1">
           <Share2 className="h-3 w-3" />
-          Reflex Share — read-only публичная ссылка
+          {t("share.page.footer")}
         </p>
       </div>
     </main>

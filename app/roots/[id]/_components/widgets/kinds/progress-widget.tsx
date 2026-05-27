@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Minus, Plus } from "lucide-react";
 import type { ProgressData } from "@/lib/server/widgets/types";
 
@@ -21,6 +22,7 @@ export function ProgressWidget({
   readonly?: boolean;
   onPatch?: (next: ProgressData) => Promise<void> | void;
 }) {
+  const t = useTranslations("roots");
   const initial = data.items ?? [];
   const [items, setItems] = useState<Item[]>(initial);
   const [pending, startSave] = useTransition();
@@ -56,7 +58,7 @@ export function ProgressWidget({
   };
 
   if (items.length === 0) {
-    return <p className="text-xs text-muted-foreground">Нет целей.</p>;
+    return <p className="text-xs text-muted-foreground">{t("progressWidget.empty")}</p>;
   }
   return (
     <ul className="space-y-2.5">

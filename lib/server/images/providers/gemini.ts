@@ -58,7 +58,7 @@ export async function generateWithGemini(
       .join(" ")
       ?.slice(0, 300);
     throw new Error(
-      `Gemini вернул не-картинку (${reason})${text ? ": " + text : ""}`,
+      `Gemini returned a non-image response (${reason})${text ? ": " + text : ""}`,
     );
   }
   const bytes = Buffer.from(out.data, "base64");

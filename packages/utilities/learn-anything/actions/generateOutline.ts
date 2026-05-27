@@ -38,20 +38,20 @@ export default async function generateOutline(
     .map((qa) => `Q: ${qa.question}\nA: ${qa.answer}`)
     .join("\n\n");
   const prompt = [
-    "Составь учебный курс по теме «${TOPIC}» под пользователя с такими ответами:".replace(
+    "Design a learning course on the topic \"${TOPIC}\" tailored to a user with the following answers:".replace(
       "${TOPIC}",
       args.topic,
     ),
     "",
-    prior || "(нет ответов)",
+    prior || "(no answers)",
     "",
-    "Требования:",
-    "  • 5-9 модулей, от базовых к продвинутым.",
-    "  • Каждый модуль самодостаточен (можно открыть и пройти за один присест).",
-    "  • objective — одна точная фраза «к концу модуля ты сможешь …».",
-    "  • estMinutes — реалистичная оценка чистого времени учёбы (15-60).",
-    "  • id модуля — kebab-case, латиница+цифры.",
-    "Верни ТОЛЬКО JSON одной строкой, без markdown:",
+    "Requirements:",
+    "  • 5-9 modules, from basic to advanced.",
+    "  • Each module is self-contained (can be opened and completed in one sitting).",
+    "  • objective — one precise phrase \"by the end of this module you will be able to …\".",
+    "  • estMinutes — a realistic estimate of pure study time (15-60).",
+    "  • module id — kebab-case, latin letters + digits.",
+    "Reply with JSON ONLY on a single line, no markdown:",
     `  {"modules":[{"id":"intro","title":"…","objective":"…","estMinutes":30}, ...]}`,
   ].join("\n");
 
@@ -60,8 +60,8 @@ export default async function generateOutline(
     invoke: (p) => reflex.agent.invoke({ prompt: p, timeoutMs: 4 * 60_000 }),
     maxAttempts: 4,
     shapeHint:
-      `{"modules":[{"id":"intro","title":"Введение","objective":"к концу модуля сможешь …","estMinutes":30}, ...]}\n` +
-      `Минимум 5 модулей. id — kebab-case, без пробелов и кириллицы.`,
+      `{"modules":[{"id":"intro","title":"Introduction","objective":"by the end of this module you will be able to …","estMinutes":30}, ...]}\n` +
+      `At least 5 modules. id — kebab-case, no spaces, latin letters only.`,
     validate: (parsed) => {
       const v = parsed as { modules?: unknown };
       const modules = sanitizeModules(v?.modules);
@@ -71,8 +71,8 @@ export default async function generateOutline(
 
   if (!result.ok) {
     throw new Error(
-      `Не удалось собрать программу курса за ${result.attempts} попыток (${result.reason}). ` +
-        `Последний ответ агента: «${snippet(result.lastText, 200)}». Попробуй переформулировать тему.`,
+      `Failed to build the course outline in ${result.attempts} attempts (${result.reason}). ` +
+        `Last agent reply: "${snippet(result.lastText, 200)}". Try rephrasing the topic.`,
     );
   }
   const modules = result.value;
@@ -82,11 +82,11 @@ export default async function generateOutline(
   const body = [
     `# ${args.topic}`,
     "",
-    "## Программа",
+    "## Program",
     "",
     ...modules.map(
       (mod, i) =>
-        `${i + 1}. **${mod.title}** — ${mod.objective} (~${mod.estMinutes} мин)`,
+        `${i + 1}. **${mod.title}** — ${mod.objective} (~${mod.estMinutes} min)`,
     ),
   ].join("\n");
 

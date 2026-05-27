@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { setWidgetSizeAction } from "@/lib/server/widgets/actions";
 import {
@@ -8,10 +9,10 @@ import {
   type WidgetSizeMode,
 } from "@/lib/server/widgets/types";
 
-const OPTIONS: { mode: WidgetSizeMode; label: string; title: string }[] = [
-  { mode: "sm", label: "S", title: "Маленький — 3 в ряд" },
-  { mode: "md", label: "M", title: "Средний — 2 в ряд" },
-  { mode: "wide", label: "W", title: "Широкий — на всю строку" },
+const SIZE_OPTIONS: { mode: WidgetSizeMode; label: string; titleKey: string }[] = [
+  { mode: "sm", label: "S", titleKey: "widgetsCommon.sizeSm" },
+  { mode: "md", label: "M", titleKey: "widgetsCommon.sizeMd" },
+  { mode: "wide", label: "W", titleKey: "widgetsCommon.sizeWide" },
 ];
 
 /**
@@ -34,13 +35,14 @@ export function WidgetSizePicker({
   mode: WidgetSizeMode;
   onChanged: () => void;
 }) {
+  const t = useTranslations("roots");
   const [pending, start] = useTransition();
   const pick = (next: WidgetSizeMode) => {
     if (next === mode) return;
     start(async () => {
       const r = await setWidgetSizeAction(rootId, widgetId, next);
       if (!r.ok) {
-        toast.error(r.error ?? "Не удалось");
+        toast.error(r.error ?? t("widgetsCommon.sizeFailed"));
         return;
       }
       onChanged();
@@ -49,19 +51,28 @@ export function WidgetSizePicker({
   return (
     <div
       role="radiogroup"
-      aria-label="Размер виджета"
+      aria-label={t("widgetsCommon.sizeAria")}
       className="inline-flex items-center rounded border bg-background/80 backdrop-blur overflow-hidden text-[10px] leading-none"
     >
-      {OPTIONS.map((opt) => {
+      {SIZE_OPTIONS.map((opt) => {
         const active = opt.mode === mode;
+        // Key list is closed, so static dispatch keeps the next-intl type
+        // checker happy (would balk at `t(opt.titleKey)` because `titleKey`
+        // is widened to `string`).
+        const title =
+          opt.mode === "sm"
+            ? t("widgetsCommon.sizeSm")
+            : opt.mode === "md"
+              ? t("widgetsCommon.sizeMd")
+              : t("widgetsCommon.sizeWide");
         return (
           <button
             key={opt.mode}
             type="button"
             role="radio"
             aria-checked={active}
-            aria-label={opt.title}
-            title={opt.title}
+            aria-label={title}
+            title={title}
             onClick={() => pick(opt.mode)}
             disabled={pending}
             className={[

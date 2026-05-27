@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Image as ImageIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { InsertImageModal } from "./insert-image-modal";
 
@@ -24,6 +25,7 @@ interface Props {
 export function InsertImageButton({ rootId, redirectToKb = true }: Props) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const t = useTranslations("app");
   return (
     <>
       <Button
@@ -32,7 +34,7 @@ export function InsertImageButton({ rootId, redirectToKb = true }: Props) {
         size="sm"
         onClick={() => setOpen(true)}
       >
-        <ImageIcon className="mr-1 h-4 w-4" /> Картинка
+        <ImageIcon className="mr-1 h-4 w-4" /> {t("images.button")}
       </Button>
       <InsertImageModal
         rootId={rootId}

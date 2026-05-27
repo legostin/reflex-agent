@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { CheckCircle2, Target, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function GoalBadge({
   status,
   iterations,
 }: Props) {
+  const t = useTranslations("roots");
   const [pending, start] = useTransition();
   const Icon = pickIcon(status);
   return (
@@ -55,15 +57,15 @@ export function GoalBadge({
           className="h-7 shrink-0"
           disabled={pending}
           onClick={() => {
-            if (!confirm("Остановить выполнение цели?")) return;
+            if (!confirm(t("goalBadge.stopConfirm"))) return;
             start(async () => {
               const res = await clearTopicGoalAction(rootId, topicId);
-              if (!res.ok) toast.error(res.error ?? "Не удалось остановить");
-              else toast.success("Цель снята с активного режима");
+              if (!res.ok) toast.error(res.error ?? t("goalBadge.stopFailed"));
+              else toast.success(t("goalBadge.stopSuccess"));
             });
           }}
         >
-          <X className="mr-1 h-3 w-3" /> остановить
+          <X className="mr-1 h-3 w-3" /> {t("goalBadge.stop")}
         </Button>
       )}
       {(status === "completed" || status === "abandoned") && (

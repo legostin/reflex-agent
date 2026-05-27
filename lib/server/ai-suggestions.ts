@@ -12,9 +12,9 @@ import { getRoot } from "@/lib/registry";
 
 /**
  * AI-driven "what's next" suggestions for a project. On-demand only (the
- * dashboard has a "Пересчитать" button). Results are cached per-root at
+ * dashboard has a "Recompute" button). Results are cached per-root at
  * `~/.reflex/roots/<rootId>/suggestions.json` (mode 0600). Stale after 24h
- * but still served — UI renders a "устарело" badge instead of auto-firing.
+ * but still served — UI renders a "stale" badge instead of auto-firing.
  *
  * Uses the user-configured `quick` assignment (Settings → Assignments), so
  * suggestions run through whatever harness/model the user picked for cheap
@@ -111,8 +111,8 @@ export async function regenerateSuggestions(
       model: "n/a",
       items: [
         {
-          title: "Проект пуст",
-          why: "Нет тем, нет KB-файлов — нечего предлагать. Начни с /chat или создай первую запись.",
+          title: "Project is empty",
+          why: "No topics, no KB files — nothing to suggest. Start with /chat or create your first entry.",
           action: { kind: "none", label: "OK" },
         },
       ],
@@ -253,7 +253,7 @@ function parseSuggestionsJson(text: string): SuggestionItem[] {
   }
   const parsed = JSON.parse(payload) as { items?: unknown };
   if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.items)) {
-    throw new Error("Модель вернула не-JSON или без items[]");
+    throw new Error("Model returned non-JSON or missing items[]");
   }
   const items: SuggestionItem[] = [];
   for (const raw of parsed.items as unknown[]) {
@@ -271,7 +271,7 @@ function parseSuggestionsJson(text: string): SuggestionItem[] {
       kind !== "none"
     )
       continue;
-    const label = typeof action.label === "string" ? action.label : "Открыть";
+    const label = typeof action.label === "string" ? action.label : "Open";
     items.push({
       title,
       why,

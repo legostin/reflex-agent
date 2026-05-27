@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { useTranslations } from "next-intl";
 import type { WidgetKind } from "@/lib/server/widgets/types";
 import { MarkdownWidget } from "./kinds/markdown-widget";
 import { NewsListWidget } from "./kinds/news-list-widget";
@@ -62,11 +63,7 @@ export function renderWidget(
 ): React.ReactElement {
   const Component = REGISTRY[kind as WidgetKind];
   if (!Component) {
-    return (
-      <p className="text-xs text-destructive">
-        Неизвестный вид виджета: <code className="font-mono">{kind}</code>
-      </p>
-    );
+    return <UnknownKind kind={kind} />;
   }
   return (
     <Component
@@ -75,6 +72,18 @@ export function renderWidget(
       readonly={opts?.readonly ?? false}
       onPatch={opts?.onPatch}
     />
+  );
+}
+
+function UnknownKind({ kind }: { kind: string }) {
+  const t = useTranslations("roots");
+  return (
+    <p className="text-xs text-destructive">
+      {t.rich("widgetsCommon.unknownKind", {
+        kind,
+        code: (chunks) => <code className="font-mono">{chunks}</code>,
+      })}
+    </p>
   );
 }
 

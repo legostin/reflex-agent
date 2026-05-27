@@ -30,7 +30,7 @@ export interface TopicFrontmatter {
   /**
    * Marks the topic as a helper conversation bound to a utility — the
    * compact chat sidebar inside the utility opens THIS topic. Topics
-   * with this flag are hidden from the regular "Разговоры" list so
+   * with this flag are hidden from the regular "Conversations" list so
    * helper-chats don't pollute the project sidebar.
    */
   helperFor?: string;

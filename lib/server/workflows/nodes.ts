@@ -202,7 +202,7 @@ export const NODE_HANDLERS: Record<WorkflowStepKind, NodeHandler> = {
 
 function mustString(v: unknown, field: string): string {
   if (typeof v !== "string" || !v.trim()) {
-    throw new Error(`Param "${field}" обязателен (string)`);
+    throw new Error(`Param "${field}" is required (string)`);
   }
   return v;
 }

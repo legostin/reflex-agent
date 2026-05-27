@@ -17,49 +17,49 @@ export async function buildRefreshPromptForWidget(
     : null;
   const lines: string[] = [];
   lines.push(
-    `[Reflex auto-refresh] Виджет «${widget.title}» (id: \`${widget.id}\`, kind: \`${widget.kind}\`) пришло время обновить.`,
+    `[Reflex auto-refresh] Widget "${widget.title}" (id: \`${widget.id}\`, kind: \`${widget.kind}\`) is due for an update.`,
   );
   lines.push("");
-  lines.push("Текущие данные виджета:");
+  lines.push("Current widget data:");
   lines.push("```json");
   lines.push(JSON.stringify(widget.data, null, 2));
   lines.push("```");
   lines.push("");
   if (widget.memory && widget.memory.trim()) {
-    lines.push("Текущая inline-memory:");
+    lines.push("Current inline memory:");
     lines.push("```");
     lines.push(widget.memory);
     lines.push("```");
     lines.push("");
   }
   if (widget.memoryFile) {
-    lines.push(`Memory-файл: \`${widget.memoryFile}\``);
+    lines.push(`Memory file: \`${widget.memoryFile}\``);
     if (memoryFileBody && memoryFileBody.trim()) {
       lines.push("```markdown");
       lines.push(memoryFileBody.slice(0, 4000));
       lines.push("```");
     } else {
-      lines.push("_(файл пуст или не существует — создашь при первом апдейте)_");
+      lines.push("_(file is empty or does not exist — create it on the first update)_");
     }
     lines.push("");
   }
-  lines.push("Что сделать:");
+  lines.push("What to do:");
   lines.push(
-    `- Эмитни \`<<reflex:widget-update>>\` с id="${widget.id}" и свежими данными.`,
+    `- Emit \`<<reflex:widget-update>>\` with id="${widget.id}" and fresh data.`,
   );
   lines.push(
-    "- Если есть `memory` — обнови её содержимое (дедуп ссылок, история значений и т.п.). Не сбрасывай в ноль.",
+    "- If `memory` exists, update its contents (dedup links, value history, etc.). Do not reset it to empty.",
   );
   if (widget.memoryFile) {
     lines.push(
-      `- Если есть смысл — допиши в memoryFile (\`${widget.memoryFile}\`) через \`<<reflex:kb>>\` (kind="widget-memory", title="<заголовок>"). Не дублируй там содержимое самого виджета.`,
+      `- If it makes sense, append to memoryFile (\`${widget.memoryFile}\`) via \`<<reflex:kb>>\` (kind="widget-memory", title="<title>"). Do not duplicate the widget's own data there.`,
     );
   }
   lines.push(
-    "- В чат отвечай коротко (одна строка) — это автоматический рефреш, развёрнутый комментарий не нужен.",
+    "- Keep the chat reply short (one line) — this is an automatic refresh, no extended commentary needed.",
   );
   lines.push(
-    `- Cadence: \`${widget.refresh ?? "manual"}\`. Не меняй её без явной просьбы.`,
+    `- Cadence: \`${widget.refresh ?? "manual"}\`. Do not change it without an explicit request.`,
   );
   return lines.join("\n");
 }

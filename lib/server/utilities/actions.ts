@@ -309,7 +309,7 @@ export async function applyUtilityUpdateAction(
     const msg = err instanceof Error ? err.message : String(err);
     return {
       ok: false,
-      error: `Обновление откатано — старая версия восстановлена. Ошибка: ${truncate(msg, 600)}`,
+      error: `Update rolled back — previous version restored. Error: ${truncate(msg, 600)}`,
     };
   }
 }
@@ -602,25 +602,25 @@ function buildEditGoalMessage(
     )
     .join("\n\n");
   return [
-    `/goal Доработай Reflex-утилиту "${manifest.name}" (id: ${manifest.id}).`,
+    `/goal Improve the Reflex utility "${manifest.name}" (id: ${manifest.id}).`,
     "",
-    `Текущая директория утилиты на диске: \`${dir}\`.`,
-    `Scope: ${manifest.source?.type ?? "agent"} → manifest.id=${manifest.id}.`,
+    `Current utility directory on disk: \`${dir}\`.`,
+    `Scope: ${manifest.source?.type ?? "agent"} -> manifest.id=${manifest.id}.`,
     "",
-    "## Что просит пользователь",
+    "## What the user is asking",
     instruction.trim(),
     "",
-    "## Текущие файлы утилиты",
-    fileBlocks || "(нет читаемых файлов)",
+    "## Current utility files",
+    fileBlocks || "(no readable files)",
     "",
-    "## Что от тебя требуется",
-    "1. Прочитай файлы выше и пойми текущее поведение.",
-    "2. Внеси изменения по запросу пользователя.",
-    "3. Эмить обновлённую утилиту через маркер `<<reflex:utility>>` с тем же `id` и (увеличенной) `version`. Reflex переустановит её поверх существующей и сразу перебилдит bundle.",
-    "4. Проверь, что новый бандл собирается без ошибок и UI отражает запрошенное изменение.",
-    "5. По завершении эмить `<<reflex:kb>>{\"kind\":\"goal-completion\",...}` и фразу `GOAL ACHIEVED` на отдельной строке.",
+    "## What is required of you",
+    "1. Read the files above and understand the current behaviour.",
+    "2. Make the changes the user requested.",
+    "3. Emit the updated utility via the `<<reflex:utility>>` marker with the same `id` and an incremented `version`. Reflex will reinstall it on top of the existing one and rebuild the bundle immediately.",
+    "4. Verify the new bundle builds without errors and the UI reflects the requested change.",
+    "5. When done, emit `<<reflex:kb>>{\"kind\":\"goal-completion\",...}` and the phrase `GOAL ACHIEVED` on a separate line.",
     "",
-    "Не выдумывай новых импортов вне whitelist (`react`, `react-dom/client`, `react/jsx-runtime`, `@host/api`, `@host/ui`). Если запрос требует чего-то невозможного — спроси через `<<reflex:question>>`.",
+    "Do not invent imports outside the whitelist (`react`, `react-dom/client`, `react/jsx-runtime`, `@host/api`, `@host/ui`). If the request requires something impossible — ask via `<<reflex:question>>`.",
   ].join("\n");
 }
 

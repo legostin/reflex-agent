@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -22,24 +23,21 @@ export function DeleteTopicButton({
   topicId: string;
   topicTitle: string;
 }) {
+  const t = useTranslations("roots");
   const [pending, start] = useTransition();
   const router = useRouter();
 
   const onClick = () => {
-    if (
-      !confirm(
-        `Удалить топик «${topicTitle}»? Это действие необратимо — диалог и все его события будут удалены.`,
-      )
-    ) {
+    if (!confirm(t("deleteTopic.confirm", { title: topicTitle }))) {
       return;
     }
     start(async () => {
       const res = await deleteTopicAction(rootId, topicId);
       if (!res.ok) {
-        toast.error(res.error ?? "Не удалось удалить");
+        toast.error(res.error ?? t("deleteTopic.deleteFailed"));
         return;
       }
-      toast.success("Топик удалён");
+      toast.success(t("deleteTopic.deleted"));
       dispatchReflex(REFLEX_EVENTS.topicsChanged(rootId));
       router.push(`/roots/${rootId}`);
     });
@@ -53,14 +51,14 @@ export function DeleteTopicButton({
       onClick={onClick}
       disabled={pending}
       className="gap-1 h-8 text-muted-foreground hover:text-destructive"
-      title="Удалить топик"
+      title={t("deleteTopic.title")}
     >
       {pending ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
       ) : (
         <Trash2 className="h-3.5 w-3.5" />
       )}
-      <span className="text-xs">Удалить</span>
+      <span className="text-xs">{t("deleteTopic.label")}</span>
     </Button>
   );
 }

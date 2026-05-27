@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -56,10 +57,11 @@ export function OnboardingWizard({
   initialLanguage,
   initialName,
 }: Props) {
+  const t = useTranslations("onboarding");
   const router = useRouter();
   const [step, setStep] = useState<Step>(0);
   const [name, setName] = useState(initialName);
-  const [language, setLanguage] = useState(initialLanguage || "русский");
+  const [language, setLanguage] = useState(initialLanguage || "russian");
   const [timezone, setTimezone] = useState("");
   const [engine, setEngine] = useState<"claude" | "codex" | "ollama">("claude");
   const [engineState, setEngineState] = useState<EngineState>({
@@ -122,21 +124,24 @@ export function OnboardingWizard({
         templates: [...selected],
       });
       if (!r.ok) {
-        toast.error(r.error ?? "Что-то пошло не так");
+        toast.error(r.error ?? t("errors.generic"));
         return;
       }
       toast.success(
-        `Создано: ${r.spacesCreated} пространств, ${r.widgetsCreated} карточек.`,
+        t("success.created", {
+          spaces: r.spacesCreated,
+          widgets: r.widgetsCreated,
+        }),
       );
       router.push("/");
     });
   };
 
   const stepTitles = [
-    "Здравствуй",
-    "AI-движок",
-    "Что важно для тебя",
-    "Готово",
+    t("stepTitles.0"),
+    t("stepTitles.1"),
+    t("stepTitles.2"),
+    t("stepTitles.3"),
   ];
 
   return (
@@ -144,36 +149,39 @@ export function OnboardingWizard({
       <div className="w-full max-w-2xl space-y-4">
         <header className="flex items-center gap-2 text-sm text-muted-foreground">
           <Sparkles className="h-4 w-4 text-violet-600" />
-          <span className="font-medium">Добро пожаловать в Reflex</span>
+          <span className="font-medium">{t("header.welcome")}</span>
           <span className="ml-auto text-xs">
-            Шаг {step + 1} из 4 · {stepTitles[step]}
+            {t("header.stepCounter", {
+              current: step + 1,
+              total: 4,
+              title: stepTitles[step],
+            })}
           </span>
         </header>
         <Progress current={step} />
 
         {step === 0 && (
           <Card>
-            <h1 className="text-2xl font-semibold">Как тебя зовут?</h1>
+            <h1 className="text-2xl font-semibold">{t("step0.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Reflex будет звать тебя по имени — на дашборде, в утренних
-              приветствиях, в напоминаниях.
+              {t("step0.description")}
             </p>
             <div className="space-y-2">
               <label className="text-xs font-medium" htmlFor="name">
-                Имя
+                {t("step0.nameLabel")}
               </label>
               <input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 autoFocus
-                placeholder="Например, Люда"
+                placeholder={t("step0.namePlaceholder")}
                 className="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-violet-400"
               />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-medium" htmlFor="lang">
-                Язык общения
+                {t("step0.languageLabel")}
               </label>
               <select
                 id="lang"
@@ -181,16 +189,16 @@ export function OnboardingWizard({
                 onChange={(e) => setLanguage(e.target.value)}
                 className="w-full rounded border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-violet-400"
               >
-                <option value="русский">Русский</option>
-                <option value="english">English</option>
-                <option value="español">Español</option>
-                <option value="deutsch">Deutsch</option>
-                <option value="français">Français</option>
+                <option value="russian">{t("step0.languageRu")}</option>
+                <option value="english">{t("step0.languageEn")}</option>
+                <option value="español">{t("step0.languageEs")}</option>
+                <option value="deutsch">{t("step0.languageDe")}</option>
+                <option value="français">{t("step0.languageFr")}</option>
               </select>
             </div>
             {timezone && (
               <p className="text-[11px] text-muted-foreground">
-                Часовой пояс определён: <code className="font-mono">{timezone}</code>
+                {t("step0.timezoneDetected")} <code className="font-mono">{timezone}</code>
               </p>
             )}
           </Card>
@@ -198,15 +206,14 @@ export function OnboardingWizard({
 
         {step === 1 && (
           <Card>
-            <h1 className="text-2xl font-semibold">На каком движке работаем</h1>
+            <h1 className="text-2xl font-semibold">{t("step1.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Reflex использует одну из двух нейросетей. Выбери ту, что тебе
-              ближе — потом можно поменять в настройках.
+              {t("step1.description")}
             </p>
             {engineState.loading ? (
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Проверяю что у тебя установлено…
+                {t("step1.checking")}
               </p>
             ) : (
               <div className="grid gap-2">
@@ -214,14 +221,15 @@ export function OnboardingWizard({
                   selected={engine === "claude"}
                   onSelect={() => setEngine("claude")}
                   icon={<Cloud className="h-5 w-5" />}
-                  title="Claude (умный)"
-                  description="Лучше всех понимает контекст и пишет тексты. Работает через Claude Code CLI."
+                  title={t("step1.claudeTitle")}
+                  description={t("step1.claudeDescription")}
+                  installLinkLabel={t("step1.installLink")}
                   status={
                     engineState.claudeAvailable
-                      ? { ok: true, hint: engineState.claudeVersion ?? "готов" }
+                      ? { ok: true, hint: engineState.claudeVersion ?? t("step1.claudeReady") }
                       : {
                           ok: false,
-                          hint: "Не найден — установи Claude Code CLI и авторизуйся",
+                          hint: t("step1.claudeMissing"),
                           link: "https://docs.anthropic.com/claude/docs/claude-code",
                         }
                   }
@@ -230,14 +238,15 @@ export function OnboardingWizard({
                   selected={engine === "codex"}
                   onSelect={() => setEngine("codex")}
                   icon={<Zap className="h-5 w-5" />}
-                  title="Codex (быстрый GPT)"
-                  description="OpenAI Codex CLI с GPT-5. Быстрее Claude, требует подписку OpenAI."
+                  title={t("step1.codexTitle")}
+                  description={t("step1.codexDescription")}
+                  installLinkLabel={t("step1.installLink")}
                   status={
                     engineState.codexAvailable
-                      ? { ok: true, hint: engineState.codexVersion ?? "готов" }
+                      ? { ok: true, hint: engineState.codexVersion ?? t("step1.codexReady") }
                       : {
                           ok: false,
-                          hint: "Не найден — установи Codex CLI и логин через OpenAI",
+                          hint: t("step1.codexMissing"),
                           link: "https://github.com/openai/codex",
                         }
                   }
@@ -246,17 +255,20 @@ export function OnboardingWizard({
                   selected={engine === "ollama"}
                   onSelect={() => setEngine("ollama")}
                   icon={<HardDrive className="h-5 w-5" />}
-                  title="Ollama (локальная, бесплатно)"
-                  description="Полностью локальная модель. Бесплатно, приватно, медленнее."
+                  title={t("step1.ollamaTitle")}
+                  description={t("step1.ollamaDescription")}
+                  installLinkLabel={t("step1.installLink")}
                   status={
                     engineState.ollamaAvailable
                       ? {
                           ok: true,
-                          hint: `${engineState.ollamaModels ?? "?"} моделей доступно`,
+                          hint: t("step1.ollamaModels", {
+                            count: engineState.ollamaModels ?? "?",
+                          }),
                         }
                       : {
                           ok: false,
-                          hint: "Не отвечает на localhost:11434 — запусти Ollama",
+                          hint: t("step1.ollamaMissing"),
                           link: "https://ollama.com/download",
                         }
                   }
@@ -268,23 +280,21 @@ export function OnboardingWizard({
 
         {step === 2 && (
           <Card>
-            <h1 className="text-2xl font-semibold">Что важно для тебя сейчас</h1>
+            <h1 className="text-2xl font-semibold">{t("step2.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Выбери области жизни, с которыми Reflex поможет. На каждую он
-              создаст отдельное пространство с готовыми карточками и
-              разговорами. Можно добавить ещё в любой момент.
+              {t("step2.description")}
             </p>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {templates.map((t) => {
-                const on = selected.has(t.id);
+              {templates.map((tpl) => {
+                const on = selected.has(tpl.id);
                 return (
-                  <li key={t.id}>
+                  <li key={tpl.id}>
                     <button
                       type="button"
                       onClick={() => {
                         const next = new Set(selected);
-                        if (next.has(t.id)) next.delete(t.id);
-                        else next.add(t.id);
+                        if (next.has(tpl.id)) next.delete(tpl.id);
+                        else next.add(tpl.id);
                         setSelected(next);
                       }}
                       className={
@@ -295,16 +305,16 @@ export function OnboardingWizard({
                       }
                     >
                       <div className="flex items-start gap-2">
-                        <span className="text-2xl leading-none">{t.emoji}</span>
+                        <span className="text-2xl leading-none">{tpl.emoji}</span>
                         <div className="min-w-0 flex-1">
                           <div className="font-medium flex items-center gap-1">
-                            {t.label}
+                            {tpl.label}
                             {on && (
                               <CheckCircle2 className="h-3.5 w-3.5 text-violet-600" />
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-                            {t.description}
+                            {tpl.description}
                           </p>
                         </div>
                       </div>
@@ -314,45 +324,43 @@ export function OnboardingWizard({
               })}
             </ul>
             <p className="text-[11px] text-muted-foreground">
-              Пространства создаются в папке <code className="font-mono">~/Reflex/</code>{" "}
-              — можно перенести позже.
+              {t("step2.folderHint")}
             </p>
           </Card>
         )}
 
         {step === 3 && (
           <Card>
-            <h1 className="text-2xl font-semibold">Готовы начать?</h1>
+            <h1 className="text-2xl font-semibold">{t("step3.title")}</h1>
             <p className="text-sm text-muted-foreground">
-              Reflex создаст для тебя:
+              {t("step3.description")}
             </p>
             <ul className="text-sm space-y-1">
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Профиль: <strong>{name}</strong> · {language} · {timezone || "—"}
+                {t("step3.profileLabel")} <strong>{name}</strong> · {language} · {timezone || t("step3.empty")}
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Движок:{" "}
+                {t("step3.engineLabel")}{" "}
                 <strong>
                   {engine === "claude"
-                    ? "Claude"
+                    ? t("step3.engineClaude")
                     : engine === "codex"
-                      ? "Codex (GPT-5)"
-                      : "Ollama"}
+                      ? t("step3.engineCodex")
+                      : t("step3.engineOllama")}
                 </strong>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Пространства: {[...selected]
-                  .map((id) => templates.find((t) => t.id === id)?.label)
+                {t("step3.spacesLabel")} {[...selected]
+                  .map((id) => templates.find((tpl) => tpl.id === id)?.label)
                   .filter(Boolean)
-                  .join(" · ") || "—"}
+                  .join(" · ") || t("step3.empty")}
               </li>
             </ul>
             <p className="text-xs text-muted-foreground">
-              После клика «Начать» откроется главный экран. Все настройки можно
-              поменять позже.
+              {t("step3.footer")}
             </p>
           </Card>
         )}
@@ -365,7 +373,7 @@ export function OnboardingWizard({
               className="inline-flex items-center gap-1 rounded border px-3 py-2 text-sm hover:bg-accent"
             >
               <ArrowLeft className="h-4 w-4" />
-              Назад
+              {t("nav.back")}
             </button>
           )}
           <div className="ml-auto" />
@@ -376,7 +384,7 @@ export function OnboardingWizard({
               disabled={!canNext}
               className="inline-flex items-center gap-1 rounded bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50"
             >
-              Дальше
+              {t("nav.next")}
               <ArrowRight className="h-4 w-4" />
             </button>
           ) : (
@@ -391,7 +399,7 @@ export function OnboardingWizard({
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              Начать
+              {t("nav.start")}
             </button>
           )}
         </div>
@@ -431,6 +439,7 @@ function EngineOption({
   title,
   description,
   status,
+  installLinkLabel,
 }: {
   selected: boolean;
   onSelect: () => void;
@@ -438,6 +447,7 @@ function EngineOption({
   title: string;
   description: string;
   status: { ok: boolean; hint: string; link?: string };
+  installLinkLabel: string;
 }) {
   return (
     <button
@@ -479,7 +489,7 @@ function EngineOption({
               onClick={(e) => e.stopPropagation()}
               className="underline ml-1"
             >
-              как установить →
+              {installLinkLabel}
             </a>
           )}
         </div>

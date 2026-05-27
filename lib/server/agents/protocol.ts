@@ -232,8 +232,8 @@ export function extractDispatches(text: string): DispatchDirective[] {
 /**
  * "Run Gemini's native YouTube summarization on this URL." The orchestrator
  * decides — based on the user's request — whether the video's content is
- * needed at all (e.g. "о чём ролик / что говорят / опиши" → yes;
- * "какой плеер лучше / поправь ссылку" → no). Reflex auto-executes (no
+ * needed at all (e.g. "what's the video about / what do they say / describe it" -> yes;
+ * "which player is better / fix the link" -> no). Reflex auto-executes (no
  * approval card), since the Gemini key is already user-authorized in
  * Settings, then re-invokes the agent with the summary as user context.
  */

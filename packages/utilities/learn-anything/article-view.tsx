@@ -74,7 +74,7 @@ export function ArticleView({
           node.style.fontFamily = "inherit";
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          node.innerHTML = `<div class="text-xs text-red-600 not-italic">⚠ Не удалось отрисовать схему: ${escapeHtml(msg)}</div><pre class="mt-2 text-[11px] text-slate-700 whitespace-pre-wrap">${escapeHtml(src)}</pre>`;
+          node.innerHTML = `<div class="text-xs text-red-600 not-italic">⚠ Failed to render diagram: ${escapeHtml(msg)}</div><pre class="mt-2 text-[11px] text-slate-700 whitespace-pre-wrap">${escapeHtml(src)}</pre>`;
           node.classList.add("reflex-mermaid-done");
         }
       }
@@ -100,7 +100,7 @@ export function ArticleView({
           <img
             src={url}
             alt={safeAlt}
-            title={safeAlt || "Открыть на весь экран"}
+            title={safeAlt || "Open fullscreen"}
             loading="lazy"
             onClick={() => setZoom({ src: url, alt: safeAlt })}
             className="my-5 rounded-lg border bg-white max-w-full h-auto cursor-zoom-in transition hover:opacity-90"
@@ -164,7 +164,7 @@ export function ArticleImageLightbox({
     <div
       onClick={onClose}
       role="dialog"
-      aria-label={alt || "Просмотр изображения"}
+      aria-label={alt || "Image preview"}
       style={{
         position: "fixed",
         inset: 0,
@@ -184,7 +184,7 @@ export function ArticleImageLightbox({
           e.stopPropagation();
           onClose();
         }}
-        aria-label="Закрыть"
+        aria-label="Close"
         style={{
           position: "absolute",
           top: 16,

@@ -76,7 +76,7 @@ export async function runImageGen(rt: Runtime): Promise<void> {
     const alt = parsed.alt || parsed.prompt;
     const text =
       `![${escapeAlt(alt)}](${result.urlPath})\n\n` +
-      `_сгенерировано: ${result.provider} · ${formatBytes(result.size)}_\n`;
+      `_generated: ${result.provider} · ${formatBytes(result.size)}_\n`;
     await rt.manager.emit({
       type: "assistant-delta",
       text,
@@ -88,7 +88,7 @@ export async function runImageGen(rt: Runtime): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     await rt.manager.emit({
       type: "assistant-delta",
-      text: `Не удалось сгенерировать картинку: ${msg}\n`,
+      text: `Failed to generate image: ${msg}\n`,
       agentId: rt.meta.id,
       ts: new Date().toISOString(),
       seq: 0,

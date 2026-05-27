@@ -106,7 +106,7 @@ export type StartMcpSetupResult =
   | { ok: false; error: string };
 
 /**
- * Wizard entry point: user types something like "Добавь MCP Google Calendar",
+ * Wizard entry point: user types something like "Add MCP Google Calendar",
  * we spin up a topic in the first registered project root and prime the
  * orchestrator with an MCP-installer brief. The orchestrator then researches
  * the right command/package, optionally asks clarifying questions, and emits
@@ -138,12 +138,12 @@ export async function startMcpSetupAction(
       language: settings.language,
     });
     // The visible user message is just the user's request. Detailed
-    // instructions live in the chat system prompt's "Регистрация MCP-сервера"
+    // instructions live in the chat system prompt's "MCP server registration"
     // section + a compact addendum below — keeps the topic readable.
     const message = [
       `[MCP setup wizard] ${text}`,
       "",
-      "Подбери нужный MCP-сервер (популярные npm-пакеты: `@modelcontextprotocol/server-<name>` или сторонние; HTTP-endpoint вендора если есть). Реши какие токены/credentials нужны и где их взять (Google → OAuth Playground, GitHub → PAT, Slack/Notion → internal token). Эмить `<<reflex:mcp-add>>` с полной конфигурацией; всё, что должен ввести пользователь — в `secrets[]` с понятной инструкцией. Если не уверен в выборе пакета — спроси через `<<reflex:question>>`.",
+      "Pick the right MCP server (popular npm packages: `@modelcontextprotocol/server-<name>` or third-party; vendor HTTP endpoint if available). Decide which tokens/credentials are needed and where to get them (Google -> OAuth Playground, GitHub -> PAT, Slack/Notion -> internal token). Emit `<<reflex:mcp-add>>` with the full configuration; anything the user needs to provide goes into `secrets[]` with a clear instruction. If you are unsure which package to pick, ask via `<<reflex:question>>`.",
     ].join("\n");
     const result = await startOrchestratorTurn({
       rootId: root.id,

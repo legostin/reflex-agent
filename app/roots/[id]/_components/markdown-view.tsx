@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -41,7 +42,7 @@ export function MarkdownView({
 }: {
   source: string;
   /**
-   * Called when the user clicks "Отправить в чат" on a generated summary.
+   * Called when the user clicks "Send to chat" on a generated summary.
    * Hosts can wire this to send the text as a user message in the current
    * topic, or start a new topic with the summary as context.
    */
@@ -130,12 +131,13 @@ function ZoomableImage({
   title?: string;
   onZoom: (payload: { src: string; alt: string }) => void;
 }) {
+  const t = useTranslations("roots");
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}
-      title={title ?? alt ?? "Открыть на весь экран"}
+      title={title ?? alt ?? t("markdown.openFullscreen")}
       onClick={() => onZoom({ src, alt })}
       className="cursor-zoom-in rounded-md border bg-muted/40 transition hover:opacity-90"
       loading="lazy"
@@ -157,6 +159,7 @@ function ImageLightbox({
   alt: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("roots");
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -179,7 +182,7 @@ function ImageLightbox({
       className="fixed inset-0 z-[80] flex items-center justify-center p-6 bg-background/85 backdrop-blur-sm cursor-zoom-out"
       onClick={onClose}
       role="dialog"
-      aria-label={alt || "Просмотр изображения"}
+      aria-label={alt || t("markdown.imagePreview")}
     >
       <Button
         type="button"
@@ -190,7 +193,7 @@ function ImageLightbox({
           e.stopPropagation();
           onClose();
         }}
-        aria-label="Закрыть"
+        aria-label={t("markdown.closeAria")}
       >
         <X className="h-5 w-5" />
       </Button>
@@ -221,6 +224,7 @@ function YouTubeEmbed({
   onSendToChat?: (text: string, url: string) => void;
   autoSummarize?: boolean;
 }) {
+  const t = useTranslations("roots");
   const [busy, start] = useTransition();
   const [summary, setSummary] = useState<string | null>(null);
   const [needsKey, setNeedsKey] = useState(false);
@@ -246,7 +250,7 @@ function YouTubeEmbed({
   };
 
   // Auto-fire when the host marks this embed as "intent detected" (e.g.
-  // the user wrote "суммаризируй …" together with the link). Guarded by a
+  // the user wrote "summarize …" together with the link). Guarded by a
   // ref so React strict-mode / re-renders don't double-fire.
   useEffect(() => {
     if (!autoSummarize) return;
@@ -258,7 +262,7 @@ function YouTubeEmbed({
 
   const saveKey = async () => {
     if (!keyDraft.trim()) {
-      toast.error("Введи ключ");
+      toast.error(t("markdown.enterKey"));
       return;
     }
     setSavingKey(true);
@@ -268,7 +272,7 @@ function YouTubeEmbed({
         toast.error(res.error);
         return;
       }
-      toast.success("Gemini key сохранён");
+      toast.success(t("markdown.geminiKeySaved"));
       setKeyDraft("");
       setNeedsKey(false);
       summarize();
@@ -312,7 +316,7 @@ function YouTubeEmbed({
           ) : (
             <Sparkles className="h-3 w-3" />
           )}
-          Суммаризировать
+          {t("markdown.summarize")}
         </Button>
       </span>
 
@@ -320,23 +324,25 @@ function YouTubeEmbed({
         <span className="block border-t bg-amber-50/60 p-3 space-y-2">
           <span className="flex items-center gap-2 text-xs text-amber-900">
             <KeyRound className="h-3.5 w-3.5" />
-            <span className="font-medium">Нужен Gemini API key</span>
+            <span className="font-medium">{t("markdown.needsGeminiKey")}</span>
           </span>
           <span className="block text-[11px] text-amber-900/80">
-            Возьми ключ в{" "}
-            <a
-              href="https://aistudio.google.com/apikey"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              aistudio.google.com/apikey
-            </a>
-            {" "}— бесплатный tier (15 RPM / 1500 RPD). Сохранится в{" "}
-            <code className="font-mono">~/.reflex/api-keys/gemini.json</code>{" "}
-            (0600), агентам не передаётся. Модель подтянется автоматически из{" "}
-            <code className="font-mono">models.list</code> (по умолчанию — самая быстрая flash);
-            сменить можно в Settings → Gemini.
+            {t.rich("markdown.geminiKeyHelp", {
+              link: () => (
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  aistudio.google.com/apikey
+                </a>
+              ),
+              path: () => (
+                <code className="font-mono">~/.reflex/api-keys/gemini.json</code>
+              ),
+              modelsList: () => <code className="font-mono">models.list</code>,
+            })}
           </span>
           <span className="flex items-center gap-2">
             <Input
@@ -359,7 +365,7 @@ function YouTubeEmbed({
               ) : (
                 <Save className="h-3 w-3" />
               )}
-              Сохранить и продолжить
+              {t("markdown.saveAndContinue")}
             </Button>
             <Button
               type="button"
@@ -392,7 +398,7 @@ function YouTubeEmbed({
               ) : (
                 <Sparkles className="h-3 w-3" />
               )}
-              Переделать
+              {t("markdown.redo")}
             </Button>
             {onSendToChat && (
               <Button
@@ -403,7 +409,7 @@ function YouTubeEmbed({
                 className="h-6 text-[10px] gap-1"
               >
                 <Send className="h-3 w-3" />
-                В чат
+                {t("markdown.toChat")}
               </Button>
             )}
           </span>

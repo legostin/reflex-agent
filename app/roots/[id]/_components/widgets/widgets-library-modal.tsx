@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Eye, EyeOff, LibraryBig, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function WidgetsLibraryModal({
   layout,
   onChanged,
 }: Props) {
+  const t = useTranslations("roots");
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -70,7 +72,7 @@ export function WidgetsLibraryModal({
       <div className="relative bg-card border rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b">
           <LibraryBig className="h-4 w-4 text-violet-600" />
-          <h2 className="text-sm font-medium flex-1">Библиотека виджетов</h2>
+          <h2 className="text-sm font-medium flex-1">{t("widgetsCommon.libraryTitle")}</h2>
           <Button
             type="button"
             size="icon"
@@ -85,7 +87,7 @@ export function WidgetsLibraryModal({
           <div className="p-4 space-y-4">
             <section className="space-y-2">
               <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Системные виджеты
+                {t("widgetsCommon.systemWidgetsHeading")}
               </h3>
               {SYSTEM_WIDGETS.map((sw) => (
                 <LibraryRow
@@ -105,11 +107,11 @@ export function WidgetsLibraryModal({
 
             <section className="space-y-2">
               <h3 className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Виджеты пользователя ({widgets.length})
+                {t("widgetsCommon.userWidgetsHeading", { count: widgets.length })}
               </h3>
               {widgets.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Пока нет ни одного — попроси агента в чате что-то создать.
+                  {t("widgetsCommon.noUserWidgets")}
                 </p>
               )}
               {widgets.map((w) => (
@@ -155,6 +157,7 @@ function LibraryRow({
   canDelete: boolean;
   onChanged: () => void;
 }) {
+  const t = useTranslations("roots");
   const [pending, start] = useTransition();
 
   const toggle = () => {
@@ -171,7 +174,7 @@ function LibraryRow({
   };
 
   const onDelete = () => {
-    if (!confirm(`Удалить виджет «${title}»? Восстановить будет нельзя.`)) {
+    if (!confirm(t("widgetsCommon.deleteWidgetConfirm", { title }))) {
       return;
     }
     start(async () => {
@@ -194,7 +197,7 @@ function LibraryRow({
           </Badge>
           {hidden && (
             <Badge variant="secondary" className="text-[10px]">
-              скрыт
+              {t("widgetsCommon.hidden")}
             </Badge>
           )}
         </div>
@@ -214,12 +217,12 @@ function LibraryRow({
           {hidden ? (
             <>
               <Eye className="h-3 w-3" />
-              Показать
+              {t("widgetsCommon.show")}
             </>
           ) : (
             <>
               <EyeOff className="h-3 w-3" />
-              Скрыть
+              {t("widgetsCommon.hide")}
             </>
           )}
         </Button>
@@ -231,7 +234,7 @@ function LibraryRow({
             onClick={onDelete}
             disabled={pending}
             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            title="Удалить навсегда"
+            title={t("widgetsCommon.deleteForever")}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>

@@ -91,77 +91,77 @@ export default async function buildModule(
   // the LLM tells us WHAT to look for / draw; Reflex resolves it via
   // reflex.images.search (Brave when available) + reflex.images.generate.
   const prompt = [
-    `Курс: «${args.topic}». Модуль: «${args.moduleTitle}» — ${args.moduleObjective}.`,
-    "Подготовь учебный материал. Структура JSON-ответа:",
+    `Course: "${args.topic}". Module: "${args.moduleTitle}" — ${args.moduleObjective}.`,
+    "Produce the learning material. JSON reply shape:",
     "{",
-    `  "article": "длинный markdown 800-2000 слов; используй # ## ### и плейсхолдеры [[IMG:<id>]] для inline-картинок",`,
+    `  "article": "long markdown 800-2000 words; use # ## ### and [[IMG:<id>]] placeholders for inline images",`,
     `  "videos": [{"title":"...","url":"https://youtube.com/...","note":"..."}],`,
     `  "links": [{"title":"...","url":"...","snippet":"..."}],`,
-    `  "imageQueries": [{"id":"i1","alt":"...","query":"короткий английский поисковый запрос"}],`,
-    `  "generatedFigures": [{"id":"f1","alt":"...","prompt":"подробное описание для AI-генератора, английский"}],`,
+    `  "imageQueries": [{"id":"i1","alt":"...","query":"short English search query"}],`,
+    `  "generatedFigures": [{"id":"f1","alt":"...","prompt":"detailed English description for the AI generator"}],`,
     `  "diagrams": [{"title":"...","mermaid":"graph TD; A-->B;"}],`,
     `  "homework": ["...","..."]`,
     "}",
     "",
-    "## ВИЗУАЛЬНОЕ СОПРОВОЖДЕНИЕ — ОБЯЗАТЕЛЬНО + INLINE-РАЗМЕЩЕНИЕ",
+    "## VISUAL CONTENT — MANDATORY + INLINE PLACEMENT",
     "",
-    "Любой учебный модуль ОБЯЗАН быть визуально насыщенным. Каждая картинка ставится **inline** в нужном месте текста через плейсхолдер.",
+    "Every learning module MUST be visually rich. Each image is placed **inline** at the right spot in the text via a placeholder.",
     "",
-    "### Как это работает",
-    "  1. Каждому элементу в `imageQueries` и `generatedFigures` присваиваешь ШОРТ-ID (`i1`, `i2`, `f1`, `f2`, ...). i = image-search (real photo), f = figure (AI-generated). Уникальный в пределах модуля.",
-    "  2. В `article` markdown вставляешь плейсхолдер `[[IMG:i1]]` на ОТДЕЛЬНОЙ СТРОКЕ ровно там где должна стоять эта картинка (например, после абзаца который её обсуждает).",
-    "  3. Reflex автоматически:",
-    "     – ищет реальные фото/схемы через Brave Image Search (по `imageQueries`),",
-    "     – ВИЗУАЛЬНО ОЦЕНИВАЕТ кандидатов (твой chat-агент смотрит на thumbnails через Read tool) — клипарт/off-topic отклоняются по содержимому,",
-    "     – генерирует уникальные иллюстрации через Gemini Nano Banana (по `generatedFigures`),",
-    "     – заменяет `[[IMG:<id>]]` на `![alt](локальный-url)` с атрибуцией,",
-    "     – неотрезолвленные id (картинка не найдена / отклонена) удаляются из текста чисто.",
+    "### How it works",
+    "  1. Each entry in `imageQueries` and `generatedFigures` gets a SHORT ID (`i1`, `i2`, `f1`, `f2`, ...). i = image-search (real photo), f = figure (AI-generated). Unique within the module.",
+    "  2. In the `article` markdown insert the placeholder `[[IMG:i1]]` on its OWN LINE exactly where the image should appear (e.g. after the paragraph that discusses it).",
+    "  3. Reflex automatically:",
+    "     – searches for real photos/diagrams via Brave Image Search (using `imageQueries`),",
+    "     – VISUALLY EVALUATES candidates (your chat agent inspects thumbnails via the Read tool) — clipart / off-topic items are rejected based on content,",
+    "     – generates unique illustrations via Gemini Nano Banana (using `generatedFigures`),",
+    "     – replaces `[[IMG:<id>]]` with `![alt](local-url)` plus attribution,",
+    "     – unresolved ids (image not found / rejected) are cleanly stripped from the text.",
     "",
-    "### Пример",
+    "### Example",
     "```markdown",
-    "## Зрительная кора",
-    "Зрительная кора V1 — первая зона обработки информации от сетчатки.",
+    "## Visual cortex",
+    "The primary visual cortex V1 is the first area that processes information from the retina.",
     "",
     "[[IMG:i1]]",
     "",
-    "Колончатая организация V1 была описана Хьюбелом и Визелом в 1962 году...",
+    "The columnar organisation of V1 was described by Hubel and Wiesel in 1962...",
     "",
     "[[IMG:f1]]",
     "```",
-    "...где `imageQueries: [{id:\"i1\", alt:\"Срез зрительной коры V1\", query:\"primary visual cortex V1 histology\"}]` и `generatedFigures: [{id:\"f1\", alt:\"Схема рецептивного поля\", prompt:\"educational diagram: receptive field of simple cells in V1, ON-OFF regions, labeled in English\"}]`.",
+    "...where `imageQueries: [{id:\"i1\", alt:\"Section of the primary visual cortex V1\", query:\"primary visual cortex V1 histology\"}]` and `generatedFigures: [{id:\"f1\", alt:\"Receptive field diagram\", prompt:\"educational diagram: receptive field of simple cells in V1, ON-OFF regions, labeled in English\"}]`.",
     "",
-    "Твоя задача — заполнить два массива И расставить плейсхолдеры в article:",
+    "Your job is to fill both arrays AND place the placeholders in `article`:",
     "",
-    "### `imageQueries` (поиск реальных материалов) — МИНИМУМ 2-3 шт.",
-    "  • Для тем где есть реальные референсы (Эйфелева башня, клетка, Гражданская война, лабораторная установка, известная картина, ландшафт, исторический документ) — ВСЕГДА добавляй 2-4 query.",
-    "  • Каждый query — короткий АНГЛИЙСКИЙ поисковый запрос (Brave работает лучше на английском): \"Eiffel Tower iron lattice closeup\", \"mitochondria electron microscope\", \"American Civil War Gettysburg battlefield\".",
-    "  • `id` — короткий уникальный идентификатор: `i1`, `i2`, `i3`...",
-    "  • `alt` — короткое описание по-русски, что зритель увидит.",
-    "  • Каждому `id` соответствует ровно один плейсхолдер `[[IMG:i1]]` в `article` — ставь его в тематически подходящем месте.",
+    "### `imageQueries` (real-image search) — AT LEAST 2-3 items.",
+    "  • For topics with real-world references (Eiffel Tower, a cell, the Civil War, lab equipment, a famous painting, a landscape, a historical document) — ALWAYS add 2-4 queries.",
+    "  • Each `query` is a short ENGLISH search string (Brave works best in English): \"Eiffel Tower iron lattice closeup\", \"mitochondria electron microscope\", \"American Civil War Gettysburg battlefield\".",
+    "  • `id` — short unique identifier: `i1`, `i2`, `i3`...",
+    "  • `alt` — short description of what the viewer will see.",
+    "  • Each `id` corresponds to exactly one `[[IMG:i1]]` placeholder in `article` — put it in a thematically appropriate spot.",
     "",
-    "### `generatedFigures` (AI-генерация уникальных схем) — 1-2 шт когда уместно.",
-    "  • Используй для уникальных схем/иллюстраций, которых нет в сети: \"процесс N в виде наглядной схемы\", \"анатомия Х в стиле учебника\", \"таймлайн событий\", \"абстрактная визуализация концепции\".",
-    "  • `id` — короткий уникальный идентификатор: `f1`, `f2`...",
-    "  • `prompt` — подробный АНГЛИЙСКИЙ описательный prompt со стилем (\"minimalist educational diagram, white background, labeled parts in blue, isometric view\" / \"watercolor illustration, soft palette\" / \"photorealistic, studio lighting\").",
-    "  • НЕ дублируй generatedFigures с imageQueries — generate только то, что не найти готовым.",
-    "  • `alt` — короткое описание по-русски.",
-    "  • Поставь плейсхолдер `[[IMG:f1]]` в article ровно где эта схема нужна.",
+    "### `generatedFigures` (AI-generated unique figures) — 1-2 items when appropriate.",
+    "  • Use for unique schemes/illustrations that aren't available online: \"process N as a clear schematic\", \"anatomy of X in textbook style\", \"event timeline\", \"abstract visualisation of a concept\".",
+    "  • `id` — short unique identifier: `f1`, `f2`...",
+    "  • `prompt` — detailed ENGLISH descriptive prompt including style (\"minimalist educational diagram, white background, labeled parts in blue, isometric view\" / \"watercolor illustration, soft palette\" / \"photorealistic, studio lighting\").",
+    "  • DO NOT duplicate generatedFigures with imageQueries — only generate what cannot be found ready-made.",
+    "  • `alt` — short description.",
+    "  • Place the `[[IMG:f1]]` placeholder in `article` exactly where the figure is needed.",
     "",
-    "### Правила для прочих полей",
-    "  • article — основной текст, 800-2000 слов. Заголовки # ## ###, плотный материал.",
-    "  • Картинки размещаются ТОЛЬКО через `[[IMG:<id>]]` на отдельной строке. Не пиши `[[ИЛЛЮСТРАЦИЯ: ...]]`, `[[СХЕМА: ...]]` — они не работают.",
-    "  • НЕ ВЫДУМЫВАЙ URL картинок. Любые bare URL в article игнорируются.",
-    "  • Каждый id, объявленный в imageQueries/generatedFigures, должен встретиться в article ровно один раз. Каждый `[[IMG:<id>]]` в тексте должен иметь соответствие в одном из массивов.",
-    "  • videos: 1-3 ссылки на youtube/youtu.be — URL юзер сам проверит.",
-    "  • links: 2-5 авторитетных статей.",
-    "  • diagrams (mermaid): только flowchart/sequence/class — где mermaid реально удобнее картинки. Для visual schemes используй generatedFigures.",
-    "  • homework: 3-5 практических заданий с проверяемым результатом.",
+    "### Rules for the other fields",
+    "  • article — main text, 800-2000 words. Headings # ## ###, dense content.",
+    "  • Images are placed ONLY via `[[IMG:<id>]]` on its own line. Do not write `[[ILLUSTRATION: ...]]`, `[[DIAGRAM: ...]]` — they don't work.",
+    "  • DO NOT MAKE UP image URLs. Any bare URL in `article` is ignored.",
+    "  • Every id declared in imageQueries/generatedFigures must appear in `article` exactly once. Every `[[IMG:<id>]]` in the text must have a matching entry in one of the arrays.",
+    "  • videos: 1-3 youtube/youtu.be links — the user verifies URLs themselves.",
+    "  • links: 2-5 authoritative articles.",
+    "  • diagrams (mermaid): only flowchart/sequence/class — where mermaid is genuinely more convenient than an image. For visual schemes use generatedFigures.",
+    "  • homework: 3-5 practical exercises with a verifiable result.",
     "",
-    "Верни ТОЛЬКО JSON одной строкой, без markdown-фенс.",
+    "Reply with JSON ONLY on a single line, no markdown fences.",
     "",
     webContext
-      ? `## Web-источники для опоры\n${webContext}`
-      : "## Web-источники недоступны — опирайся на свои знания.",
+      ? `## Web sources to ground on\n${webContext}`
+      : "## Web sources unavailable — rely on your own knowledge.",
   ].join("\n");
 
   const result = await callJsonAgent<LlmDraft>({
@@ -170,7 +170,7 @@ export default async function buildModule(
     maxAttempts: 4,
     shapeHint:
       `{"article":"...","videos":[],"links":[],"imageQueries":[],"generatedFigures":[],"diagrams":[],"homework":[]}\n` +
-      `article — markdown 800-2000 слов. Все массивы — обязательно массивы (можно пустые).`,
+      `article — markdown 800-2000 words. Every list field must be an array (empty is OK).`,
     validate: (p) => {
       const v = p as LlmDraft;
       return typeof v?.article === "string" && v.article.trim().length > 40
@@ -180,8 +180,8 @@ export default async function buildModule(
   });
   if (!result.ok) {
     throw new Error(
-      `Не удалось собрать модуль за ${result.attempts} попыток (${result.reason}). ` +
-        `Последний ответ: «${snippet(result.lastText, 200)}».`,
+      `Failed to build the module in ${result.attempts} attempts (${result.reason}). ` +
+        `Last reply: "${snippet(result.lastText, 200)}".`,
     );
   }
   const draft = result.value;
@@ -196,8 +196,9 @@ export default async function buildModule(
 
   // Inline-place images by substituting [[IMG:<id>]] placeholders in the
   // article body. Any image whose id wasn't referenced (LLM forgot)
-  // falls back into the trailing Иллюстрации section so nothing gets
-  // dropped silently. Residual unknown [[...]] markers are stripped.
+  // falls back into the trailing "Additional illustrations" section so
+  // nothing gets dropped silently. Residual unknown [[...]] markers are
+  // stripped.
   const allImages = [...searchedImages, ...generatedImages];
   const { article: articleWithImages, placedIds } = substituteImagePlaceholders(
     typeof draft.article === "string" ? draft.article : "",
@@ -226,13 +227,13 @@ export default async function buildModule(
   const body = [
     content.article,
     unplaced.length > 0
-      ? "\n\n## Дополнительные иллюстрации\n" +
+      ? "\n\n## Additional illustrations\n" +
         unplaced
           .map((im) => `${renderInlineImage(im)}`)
           .join("\n\n")
       : "",
     content.diagrams.length > 0
-      ? "\n\n## Схемы\n" +
+      ? "\n\n## Diagrams\n" +
         content.diagrams
           .map(
             (d) =>
@@ -395,24 +396,24 @@ function renderInlineImage(im: ModuleContent["images"][number]): string {
   const safeAlt = im.alt.replace(/[\[\]\n]/g, " ").slice(0, 200);
   const credit =
     im.source === "search" && im.attribution?.name
-      ? `\n\n_Источник: [${im.attribution.name}](${im.attribution.link || im.url})_`
+      ? `\n\n_Source: [${im.attribution.name}](${im.attribution.link || im.url})_`
       : im.source === "generated"
-        ? `\n\n_Сгенерировано AI_`
+        ? `\n\n_Generated by AI_`
         : "";
   return `![${safeAlt}](${im.url})${credit}`;
 }
 
 /**
- * Strip residual `[[ИЛЛЮСТРАЦИЯ: ...]]` / `[[СХЕМА: ...]]` / orphan
+ * Strip residual `[[ILLUSTRATION: ...]]` / `[[DIAGRAM: ...]]` / orphan
  * `[[IMG:<unknown-id>]]` placeholders the LLM might emit despite the
  * prompt forbidding them OR after `substituteImagePlaceholders` failed
  * to find the id. Drops the marker, collapses surrounding whitespace.
  *
- * Matches Russian variants + Latin spellings for safety. Case-insensitive.
+ * Matches several spelling variants for safety. Case-insensitive.
  */
 function stripPlaceholderMarkers(text: string): string {
   const re =
-    /\[\[?\s*(?:ИЛЛЮСТРАЦИЯ|СХЕМА|ILLUSTRATION|SCHEME|IMAGE|IMG|DIAGRAM)\b[^\]]*?\]\]?/giu;
+    /\[\[?\s*(?:ILLUSTRATION|SCHEME|IMAGE|IMG|DIAGRAM)\b[^\]]*?\]\]?/giu;
   let out = text.replace(re, "");
   // Clean up double blank lines + trailing whitespace the removal may
   // have left behind.

@@ -39,24 +39,24 @@ export async function runUtilityChatAction(
       args.scope === "project" ? args.rootId : undefined,
     );
     if (!util) {
-      return { ok: false, error: "Утилита не найдена." };
+      return { ok: false, error: "Utility not found." };
     }
     const snapshotBlock =
       args.snapshot !== undefined
         ? formatSnapshot(args.snapshot)
         : "";
     const prompt = [
-      `Ты помогаешь пользователю прямо внутри мини-приложения "${util.manifest.name}" (id=${util.manifest.id}).`,
+      `You are helping the user inside the mini-app "${util.manifest.name}" (id=${util.manifest.id}).`,
       util.manifest.description
-        ? `Описание: ${util.manifest.description}`
+        ? `Description: ${util.manifest.description}`
         : "",
       snapshotBlock
-        ? `\n## Текущее состояние мини-приложения\n${snapshotBlock}`
+        ? `\n## Current mini-app state\n${snapshotBlock}`
         : "",
       "",
-      `## Вопрос пользователя\n${args.prompt}`,
+      `## User question\n${args.prompt}`,
       "",
-      "Отвечай коротко и по делу. Если для ответа нужны данные, которых нет в снимке — скажи об этом и предложи как их получить.",
+      "Answer briefly and to the point. If you need data not in the snapshot, say so and suggest how to obtain it.",
     ]
       .filter(Boolean)
       .join("\n");

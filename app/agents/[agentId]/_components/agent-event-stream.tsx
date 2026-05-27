@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import type { AgentEvent } from "@/lib/server/agents/types";
 
 interface Props {
@@ -16,6 +17,7 @@ export function AgentEventStream({
   topicId,
   initialEvents,
 }: Props) {
+  const t = useTranslations("app");
   const [events, setEvents] = useState<AgentEvent[]>(initialEvents);
   const lastSeq = useRef<number>(
     initialEvents.length > 0
@@ -66,7 +68,7 @@ export function AgentEventStream({
       <div className="mx-auto max-w-3xl px-6 py-6 space-y-2">
         {events.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">
-            Событий нет.
+            {t("agents.noEvents")}
           </p>
         ) : (
           events.map((e) => <EventRow key={e.seq} event={e} />)
