@@ -40,6 +40,8 @@ export const MEMORY_OPEN = "<<reflex:memory>>";
 export const MEMORY_CLOSE = "<</reflex:memory>>";
 export const SUGGESTION_OPEN = "<<reflex:suggestion>>";
 export const SUGGESTION_CLOSE = "<</reflex:suggestion>>";
+export const ONBOARDING_DONE_OPEN = "<<reflex:onboarding-done>>";
+export const ONBOARDING_DONE_CLOSE = "<</reflex:onboarding-done>>";
 
 export interface PermissionDirective {
   id?: string;
@@ -184,6 +186,19 @@ export function extractSuggestions(text: string): SuggestionDirective[] {
       typeof e.title === "string" &&
       typeof e.description === "string" &&
       typeof e.prompt === "string",
+  );
+}
+
+/**
+ * Empty marker the onboarding skill emits at the end of its final turn to
+ * signal "dashboard is ready, the wizard is done." The chat-view renders
+ * a CTA card so the user can jump to the dashboard.
+ */
+export function hasOnboardingDone(text: string): boolean {
+  // Lenient — accept `<reflex:...>` and `<<reflex:...>>`, with or without
+  // a payload between open/close.
+  return /<{1,2}reflex:onboarding-done>{1,2}[\s\S]*?<{1,2}\/reflex:onboarding-done>{1,2}/i.test(
+    text,
   );
 }
 

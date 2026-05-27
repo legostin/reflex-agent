@@ -138,7 +138,7 @@ const BUILTIN: Skill[] = [
       "   - 0-1 goal (only if the folder name implies a clear outcome — \"run a half-marathon\", \"finish PhD\")",
       "   - 0-1 skill recommendation (e.g. `/skill deep-research` for study/research Spaces)",
       "",
-      "5. **Stop.** Tell the user \"Suggestions are on the dashboard. Approve what you want, dismiss the rest, or tell me what I'm missing.\" Do not execute anything yourself.",
+      "5. **Stop.** Tell the user \"Suggestions are on the dashboard. Approve what you want, dismiss the rest, or tell me what I'm missing.\" Then emit `<<reflex:onboarding-done>>finished<</reflex:onboarding-done>>` on its own line — Reflex renders a CTA card so the user can jump straight to the dashboard. Do not execute anything yourself.",
       "",
       "### Follow-up turns (user replied with more context)",
       "",

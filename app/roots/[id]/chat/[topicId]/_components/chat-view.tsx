@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Loader2, Send, Sparkles, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MarkdownView } from "@/app/roots/[id]/_components/markdown-view";
 import { CommandBarFrame } from "@/app/roots/[id]/_components/command-bar-frame";
 import {
@@ -85,7 +87,7 @@ type Segment =
     };
 
 interface Turn {
-  kind: "user" | "assistant" | "system";
+  kind: "user" | "assistant" | "system" | "onboarding-done";
   agentId?: string;
   agentLabel?: string;
   agentRole?: string;
@@ -343,6 +345,9 @@ function TurnView({
   };
   if (turn.kind === "system") {
     return <SystemEventTurn body={turn.body ?? ""} subtype={turn.systemSubtype} />;
+  }
+  if (turn.kind === "onboarding-done") {
+    return <OnboardingDoneCard rootId={rootId} />;
   }
   if (turn.kind === "user") {
     // Briefs dispatched to sub-agents are emitted as user-messages on the
@@ -744,6 +749,10 @@ function projectEvents(events: AgentEvent[]): Turn[] {
       }
       continue;
     }
+    if (ev.type === "onboarding-done") {
+      turns.push({ kind: "onboarding-done" });
+      continue;
+    }
     if (ev.type === "kb-write") {
       const target =
         (currentAssistant as Turn | null) ?? openAssistant(ev.agentId);
@@ -936,6 +945,40 @@ function classifySystemUserMessage(
 }
 
 /**
+ * Onboarding complete CTA — the wizard skill emitted
+ * `<<reflex:onboarding-done>>` to signal the dashboard is ready. Renders a
+ * call-to-action so the user can jump out of the wizard chat into the
+ * dashboard view where the suggestion cards live.
+ */
+function OnboardingDoneCard({ rootId }: { rootId: string }) {
+  const router = useRouter();
+  return (
+    <div className="rounded-lg border border-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/30 p-4">
+      <div className="flex items-start gap-3">
+        <div className="rounded-full bg-emerald-500/10 p-2 mt-0.5">
+          <Sparkles className="h-4 w-4 text-emerald-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm">Dashboard is ready</div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Suggestions are waiting on the dashboard. Approve the ones that
+            feel right; dismiss the rest. Come back here anytime to add
+            context.
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => router.push(`/roots/${rootId}`)}
+        >
+          Go to dashboard
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Standalone `system` event emitted by the server (e.g. preflight progress
  * messages from start-turn). Rendered as a slim inline status row — visible
  * by default, not collapsed, since these are usually short progress pings
@@ -1002,6 +1045,7 @@ function stripProtocolMarkers(text: string): string {
     "image-gen",
     "memory",
     "suggestion",
+    "onboarding-done",
   ];
   let out = text;
   for (const t of tags) {

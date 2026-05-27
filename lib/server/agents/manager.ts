@@ -23,6 +23,7 @@ import {
   extractPermissions,
   extractQuestions,
   extractSuggestions,
+  hasOnboardingDone,
   extractUtilityDirectives,
   extractWidgetCreates,
   extractWidgetUpdates,
@@ -1028,6 +1029,14 @@ class AgentManager {
         state.rootPath,
         state.meta.topicId,
       );
+      if (hasOnboardingDone(buf)) {
+        await this.emit({
+          type: "onboarding-done",
+          agentId,
+          ts: now(),
+          seq: 0,
+        });
+      }
       const utilityDirs = extractUtilityDirectives(buf);
       for (const u of utilityDirs) {
         try {

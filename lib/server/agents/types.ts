@@ -153,6 +153,12 @@ export type AgentEvent = AgentEventBase &
         title: string;
       }
     /**
+     * Agent emitted `<<reflex:onboarding-done>>` — wizard is finished and
+     * the dashboard is ready. Chat-view renders a CTA card so the user
+     * can jump to the dashboard view.
+     */
+    | { type: "onboarding-done" }
+    /**
      * The agent generated and installed a new utility via the
      * `<<reflex:utility>>{...}<</reflex:utility>>` marker.
      */
