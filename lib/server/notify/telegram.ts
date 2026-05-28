@@ -48,31 +48,74 @@ export async function sendTelegram(
   await sendMessage(cfg.botToken, cfg.chatId, parts.join("\n\n"));
 }
 
+const TG_MAX = 4000;
+
+async function tgCall(
+  token: string,
+  method: string,
+  payload: Record<string, unknown>,
+): Promise<{ ok: boolean; result?: { message_id?: number } }> {
+  try {
+    const res = await fetch(api(token, method), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15_000),
+    });
+    return (await res.json()) as {
+      ok: boolean;
+      result?: { message_id?: number };
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
 async function sendMessage(
   token: string,
   chatId: string,
   text: string,
 ): Promise<void> {
-  const res = await fetch(api(token, "sendMessage"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: text.slice(0, 4000),
-      parse_mode: "Markdown",
-      disable_web_page_preview: true,
-    }),
-    signal: AbortSignal.timeout(15_000),
+  const body = text.slice(0, TG_MAX);
+  const r = await tgCall(token, "sendMessage", {
+    chat_id: chatId,
+    text: body,
+    parse_mode: "Markdown",
+    disable_web_page_preview: true,
   });
-  if (!res.ok) {
-    // Retry once without Markdown — a stray `*`/`_` can 400 the parse.
-    await fetch(api(token, "sendMessage"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: text.slice(0, 4000) }),
-      signal: AbortSignal.timeout(15_000),
-    }).catch(() => {});
+  // Retry once as plain text — a stray `*`/`_` can 400 the Markdown parse.
+  if (!r.ok) {
+    await tgCall(token, "sendMessage", { chat_id: chatId, text: body });
   }
+}
+
+/** Send a plain-text message and return its message_id (for later edits). */
+async function sendPlain(
+  token: string,
+  chatId: string,
+  text: string,
+): Promise<number | null> {
+  const r = await tgCall(token, "sendMessage", {
+    chat_id: chatId,
+    text: text.slice(0, TG_MAX),
+    disable_web_page_preview: true,
+  });
+  return r.ok && r.result?.message_id ? r.result.message_id : null;
+}
+
+/** Edit a previously-sent message's plain text. Best-effort. */
+async function editPlain(
+  token: string,
+  chatId: string,
+  messageId: number,
+  text: string,
+): Promise<void> {
+  await tgCall(token, "editMessageText", {
+    chat_id: chatId,
+    message_id: messageId,
+    text: text.slice(0, TG_MAX),
+    disable_web_page_preview: true,
+  });
 }
 
 /** Markdown-v1 escape for the few chars that break Telegram parsing. */
@@ -126,14 +169,18 @@ async function loop(handle: PollerHandle): Promise<void> {
     try {
       const updates = await getUpdates(cfg.botToken, offset);
       for (const u of updates) {
-        offset = u.update_id + 1;
-        await writeOffset(offset);
+        // Process FIRST, then advance the offset. If the process dies
+        // mid-turn (restart/crash), the message stays unacked and gets
+        // redelivered — otherwise it'd be silently lost. The catch still
+        // advances on a handler error so a poison message can't loop.
         await handleUpdate(cfg, u).catch((err) => {
           console.error(
             "[telegram] handleUpdate:",
             err instanceof Error ? err.message : err,
           );
         });
+        offset = u.update_id + 1;
+        await writeOffset(offset);
       }
     } catch (err) {
       console.error(
@@ -201,48 +248,88 @@ async function handleUpdate(cfg: TelegramConfig, u: TgUpdate): Promise<void> {
   // to the central dispatcher thread in the synthetic home Space.
   const { getDispatcherTopic } = await import("@/lib/server/home/dispatcher");
   const d = await getDispatcherTopic();
-  const reply = await runTurnAndAwaitReply(d.rootId, d.rootPath, d.topicId, text);
-  await sendMessage(cfg.botToken, allowedChatId, reply || "(no reply)");
+  await streamTurnToTelegram(cfg.botToken, allowedChatId, d.rootId, d.rootPath, d.topicId, text);
 }
 
+const EDIT_THROTTLE_MS = 1500;
+
 /**
- * Start a turn on the persistent topic and wait for it to finish, then
- * return the assistant text produced THIS turn (markers stripped). Same
- * poll-until-idle pattern as runHeadlessAgent, but against a persistent
- * topic so we keep continuity.
+ * Run a turn and stream the assistant text into Telegram by editing a
+ * single placeholder message as the reply grows — Telegram's stand-in
+ * for token streaming. Throttled to one edit per ~1.5s (API limits), and
+ * only when the text actually changed. On completion the message is
+ * finalized; overflow past Telegram's 4k cap spills into extra messages.
  */
-async function runTurnAndAwaitReply(
+async function streamTurnToTelegram(
+  token: string,
+  chatId: string,
   rootId: string,
   rootPath: string,
   topicId: string,
   message: string,
-): Promise<string> {
+): Promise<void> {
   const before = (await readEvents(rootPath, topicId)).length;
   const res = await startOrchestratorTurn({ rootId, topicId, message, attachments: [] });
-  if ("error" in res) return `⚠️ ${res.error}`;
+  if ("error" in res) {
+    await sendMessage(token, chatId, `⚠️ ${res.error}`);
+    return;
+  }
+
+  const messageId = await sendPlain(token, chatId, "💭…");
+  const collect = async (): Promise<string> => {
+    const events = await readEvents(rootPath, topicId);
+    const text = events
+      .slice(before)
+      .filter(
+        (e): e is Extract<(typeof events)[number], { type: "assistant-delta" }> =>
+          e.type === "assistant-delta",
+      )
+      .map((e) => e.text)
+      .join("");
+    return stripMarkers(text);
+  };
+
   const deadline = Date.now() + TURN_TIMEOUT_MS;
+  let lastShown = "";
+  let lastEditAt = 0;
   await sleep(400);
   while (Date.now() < deadline) {
-    if (!agentManager.isActive(topicId)) break;
-    await sleep(500);
+    const active = agentManager.isActive(topicId);
+    const cur = await collect();
+    const head = cur.slice(0, TG_MAX);
+    if (
+      messageId &&
+      head &&
+      head !== lastShown &&
+      Date.now() - lastEditAt >= EDIT_THROTTLE_MS
+    ) {
+      await editPlain(token, chatId, messageId, head);
+      lastShown = head;
+      lastEditAt = Date.now();
+    }
+    if (!active) break;
+    await sleep(600);
   }
-  await sleep(400); // flush window for trailing deltas
-  const events = await readEvents(rootPath, topicId);
-  const fresh = events.slice(before);
-  const text = fresh
-    .filter(
-      (e): e is Extract<(typeof fresh)[number], { type: "assistant-delta" }> =>
-        e.type === "assistant-delta",
-    )
-    .map((e) => e.text)
-    .join("")
-    .trim();
-  return stripMarkers(text);
+  await sleep(400); // flush trailing deltas
+
+  const finalText = (await collect()) || "(no reply)";
+  const head = finalText.slice(0, TG_MAX);
+  if (messageId) {
+    if (head !== lastShown) await editPlain(token, chatId, messageId, head);
+  } else {
+    await sendMessage(token, chatId, head);
+  }
+  // Overflow beyond the 4k cap → continuation messages.
+  for (let i = TG_MAX; i < finalText.length; i += TG_MAX) {
+    await sendMessage(token, chatId, finalText.slice(i, i + TG_MAX));
+  }
 }
 
 function stripMarkers(text: string): string {
   return text
     .replace(/<{1,2}reflex:[a-z-]+>{1,2}[\s\S]*?<{1,2}\/reflex:[a-z-]+>{1,2}/g, "")
+    // Drop a trailing, not-yet-closed marker so half-streamed JSON doesn't flash.
+    .replace(/<{1,2}reflex:[a-z-]+>{1,2}[\s\S]*$/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
