@@ -178,138 +178,68 @@ export async function clearTopicGoalAction(
   }
 }
 
-export interface HelperTranscriptMessage {
-  role: "user" | "assistant" | "system";
-  text: string;
-  ts: string;
-}
-
 /**
- * Lightweight transcript loader for the utility helper sidebar. Reads
- * the topic's `events.jsonl` and projects to a flat list of user +
- * assistant messages (no tool-use cards, no permission cards — those
- * make sense in the full chat view but clutter a compact sidebar).
- * Strips `<<reflex:…>>` protocol markers before returning.
- */
-export async function loadHelperTranscriptAction(
-  rootId: string,
-  topicId: string,
-): Promise<{
-  ok: true;
-  messages: HelperTranscriptMessage[];
-} | { ok: false; error: string }> {
-  try {
-    const entry = await getRoot(rootId);
-    if (!entry) return { ok: false, error: "Root not found" };
-    const { readEvents } = await import("./agents/events-log");
-    const events = await readEvents(entry.path, topicId);
-    const messages: HelperTranscriptMessage[] = [];
-    // Group assistant deltas by agent — adjacent deltas concatenate into
-    // a single bubble.
-    let currentAssistant: { text: string; ts: string } | null = null;
-    const flush = () => {
-      if (currentAssistant && currentAssistant.text.trim()) {
-        messages.push({
-          role: "assistant",
-          text: stripReflexMarkers(currentAssistant.text).trim(),
-          ts: currentAssistant.ts,
-        });
-      }
-      currentAssistant = null;
-    };
-    for (const e of events) {
-      if (e.type === "user-message") {
-        flush();
-        if (
-          typeof e.text === "string" &&
-          e.text.trim() &&
-          // Skip the synthetic seed firstMessage we wrote when creating the topic.
-          !e.text.startsWith("[Helper ·")
-        ) {
-          messages.push({ role: "user", text: e.text, ts: e.ts });
-        }
-      } else if (e.type === "assistant-delta") {
-        if (!currentAssistant) {
-          currentAssistant = { text: "", ts: e.ts };
-        }
-        currentAssistant.text += e.text;
-      } else if (e.type === "turn-end" || e.type === "agent-end") {
-        flush();
-      }
-    }
-    flush();
-    return { ok: true, messages };
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
-  }
-}
-
-function stripReflexMarkers(text: string): string {
-  const tags = [
-    "permission",
-    "question",
-    "kb",
-    "utility",
-    "dispatch",
-    "mcp-add",
-    "youtube-summary",
-    "widget-create",
-    "widget-update",
-    "workflow-create",
-    "image-gen",
-  ];
-  let out = text;
-  for (const t of tags) {
-    out = out.replace(
-      new RegExp(
-        `<{1,2}reflex:${t}>{1,2}[\\s\\S]*?<{1,2}\\/reflex:${t}>{1,2}`,
-        "g",
-      ),
-      "",
-    );
-  }
-  return out;
-}
-
-/**
- * Find (or create) a dedicated helper topic for a utility. Search keys
- * on `meta.helperFor === utilityId`. Caller passes utility name for the
- * topic title (so the topic looks recognizable if it ever leaks into
- * the regular Topics list).
+ * Start a fresh chat seeded with a utility's context + the user's
+ * question, fire the first orchestrator turn, and return the new topic
+ * id so the caller can open it in a new tab.
  *
- * No first turn is fired here — the sidebar drives turns via the
- * standard /send endpoint once the user types something.
+ * The topic is flagged `helperFor: <utilityId>` so it groups under that
+ * utility in the sidebar tree (and stays out of the user-facing
+ * Conversations list). Each ask is its own topic — the title is the
+ * question, so the utility's thread list reads like a Q&A history.
+ *
+ * `context` is the iframe snapshot the launcher captured (optional).
+ * We fence it ahead of the question so the agent sees the mini-app
+ * state. It's visible in the full chat too — acceptable, and honest
+ * about what the agent was given.
  */
-export async function getOrCreateUtilityHelperTopicAction(args: {
+const MAX_CONTEXT_CHARS = 4000;
+
+export async function startUtilityHelperChatAction(args: {
   rootId: string;
   utilityId: string;
   utilityName: string;
-}): Promise<
-  | { ok: true; topicId: string; created: boolean }
-  | { ok: false; error: string }
-> {
+  question: string;
+  context?: string;
+}): Promise<{ ok: true; topicId: string } | { ok: false; error: string }> {
   try {
     const entry = await getRoot(args.rootId);
     if (!entry) return { ok: false, error: "Root not found" };
-    const all = await listTopics(entry.path);
-    const existing = all.find((t) => t.meta.helperFor === args.utilityId);
-    if (existing) {
-      return { ok: true, topicId: existing.meta.id, created: false };
-    }
+    const question = args.question.trim();
+    if (!question) return { ok: false, error: "Empty question" };
     const settings = await loadSettings();
     const assignment = settings.assignments.chat;
     const topic = await createTopic({
       root: entry.path,
-      firstMessage: `[Helper · ${args.utilityName}]`,
+      // Title derives from the question — readable in the thread list.
+      firstMessage: question,
       harness: assignment.harness,
       model: assignment.model,
       language: settings.language,
       helperFor: args.utilityId,
     });
-    return { ok: true, topicId: topic.meta.id, created: true };
+    const ctx = (args.context ?? "").trim();
+    const message = ctx
+      ? [
+          `[${args.utilityName} context]`,
+          ctx.length > MAX_CONTEXT_CHARS
+            ? ctx.slice(0, MAX_CONTEXT_CHARS) + "\n…[truncated]"
+            : ctx,
+          "[/context]",
+          "",
+          question,
+        ].join("\n")
+      : question;
+    const result = await startOrchestratorTurn({
+      rootId: args.rootId,
+      topicId: topic.meta.id,
+      message,
+      attachments: [],
+    });
+    if ("error" in result) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true, topicId: topic.meta.id };
   } catch (err) {
     return {
       ok: false,

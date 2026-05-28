@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { MessageSquare } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { UtilityChatSidebar } from "./utility-chat-sidebar";
+import { useEffect, useRef } from "react";
+import { UtilityAskLauncher } from "./utility-ask-launcher";
 
 interface Props {
   scope: "global" | "project";
@@ -47,13 +45,11 @@ export function UtilityIframe({
   agentChat,
   utilityName,
 }: Props) {
-  const t = useTranslations("app");
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const snapshotPending = useRef<{
     resolve: (value: unknown) => void;
     timer: ReturnType<typeof setTimeout>;
   } | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const qs = rootId ? `?rootId=${encodeURIComponent(rootId)}` : "";
   const src = `/api/utilities/${scope}/${id}/iframe${qs}`;
   const hostUrl = `/api/utilities/${scope}/${id}/host${qs}`;
@@ -156,34 +152,17 @@ export function UtilityIframe({
     return iframe;
   }
 
+  // Iframe fills the space; the ask-launcher floats over its bottom-right
+  // corner. No more horizontal real-estate lost to an embedded chat.
   return (
-    <div className="flex h-full w-full">
-      <div className="flex-1 min-w-0 relative">
-        {iframe}
-        {!sidebarOpen && (
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-violet-600 px-3 py-1.5 text-xs text-white shadow-lg hover:bg-violet-700"
-            title={t("utilities.iframe.openHelper")}
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            {t("utilities.iframe.helper")}
-          </button>
-        )}
-      </div>
-      {sidebarOpen && (
-        <div className="w-80 shrink-0">
-          <UtilityChatSidebar
-            scope={scope}
-            utilityId={id}
-            {...(utilityName ? { utilityName } : {})}
-            {...(rootId ? { rootId } : {})}
-            requestSnapshot={requestSnapshot}
-            onClose={() => setSidebarOpen(false)}
-          />
-        </div>
-      )}
+    <div className="relative h-full w-full">
+      {iframe}
+      <UtilityAskLauncher
+        utilityId={id}
+        {...(utilityName ? { utilityName } : {})}
+        {...(rootId ? { rootId } : {})}
+        requestSnapshot={requestSnapshot}
+      />
     </div>
   );
 }

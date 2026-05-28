@@ -184,9 +184,15 @@
       "contextClose": "[/context]",
       "projectOnly": "Chat is only available in project-scope utilities."
     },
+    "ask": {
+      "title": "Ask about {name}",
+      "close": "Close",
+      "placeholder": "Ask about this mini-app… (↵ to send)",
+      "hint": "Opens a new chat tab with this app's context."
+    },
     "iframe": {
-      "openHelper": "Open assistant",
-      "helper": "Assistant"
+      "openHelper": "Ask the agent",
+      "helper": "Ask"
     }
   },
   "share": {
