@@ -196,12 +196,34 @@ default — no extra install step from the user.
 
 ## Cards (dashboard widgets)
 
-A utility can declare ONE `card` in its manifest. The dashboard widget
-loop calls the utility's `refresh` server action (or relies on the
-utility's own `reflex.cards.update({snapshot})` calls) to keep the
-card data fresh. Supported `card.kind` values include `markdown`,
-`news-list`, `link-list`, `kpi`, `checklist`, `quote`, `kb-pinned`,
-`progress`, `image`, `stat-table`.
+A utility can declare ONE `card` in its manifest:
+
+```json
+"card": {
+  "kind": "kpi",
+  "title": "Tasks",
+  "action": "refreshCard",     // server action returning a fresh snapshot
+  "refresh": "hourly",          // background cadence (manual = view-only)
+  "data": { "items": [ ... ] }  // placeholder until first live refresh
+}
+```
+
+Two ways the card stays fresh:
+
+1. **Live action (recommended).** Declare `card.action` — a server
+   action that returns a snapshot `{kind, data, title?, description?}`.
+   Reflex calls it in a worker (with the utility's host API, so it can
+   read `reflex.kb.list` / `reflex.tasks.list` / etc.) on dashboard
+   view AND on the `card.refresh` cadence. The card reflects reality
+   without the user opening the mini-app. Requires
+   `permissions.workers.enabled`.
+2. **Push.** From its own iframe / a workflow, the utility calls
+   `reflex.cards.update({snapshot})`. Good for "update right after a
+   write" but stale otherwise.
+
+Supported `card.kind`: `markdown`, `news-list`, `link-list`, `kpi`,
+`checklist`, `quote`, `kb-pinned`, `progress`, `image`, `stat-table`.
+(`map` and `utility-card` are not valid card kinds.)
 
 ## Why iframe + worker, not in-process?
 
