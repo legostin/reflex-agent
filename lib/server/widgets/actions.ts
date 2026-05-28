@@ -293,6 +293,59 @@ export async function refreshUtilityCardAction(
 }
 
 /**
+ * Invoke one of a utility's server actions from its dashboard card (an
+ * `action-list` button — e.g. "Send to agent"), then refresh the card so
+ * the list reflects the change. Same trust level as the iframe's
+ * `actions.invoke`: only actions declared in the manifest, only when the
+ * utility was granted `workers.enabled`.
+ */
+export async function invokeCardActionAction(
+  rootId: string,
+  args: {
+    utilityId: string;
+    utilityScope: "global" | "project";
+    widgetId: string;
+    actionName: string;
+    args?: Record<string, unknown>;
+  },
+): Promise<{ ok: boolean; inner?: unknown; error?: string }> {
+  try {
+    const { getUtility } = await import("../utilities/store");
+    const util = await getUtility(
+      args.utilityScope,
+      args.utilityId,
+      args.utilityScope === "project" ? rootId : undefined,
+    );
+    if (!util) return { ok: false, error: "Utility not installed" };
+    if (!util.manifest.permissions.workers?.enabled) {
+      return { ok: false, error: "Utility lacks permissions.workers.enabled" };
+    }
+    const action = util.manifest.serverActions.find(
+      (a) => a.name === args.actionName,
+    );
+    if (!action) {
+      return { ok: false, error: `Unknown server action: ${args.actionName}` };
+    }
+    const { runServerAction } = await import("../utilities/worker-pool");
+    await runServerAction({ utility: util, action, args: args.args ?? {} });
+
+    // Reflect the action's effect immediately by pulling fresh card data.
+    const { refreshUtilityCard } = await import("./utility-card");
+    const refreshed = await refreshUtilityCard(rootId, args.widgetId);
+    if (rootId) revalidatePath(`/roots/${rootId}`);
+    return {
+      ok: true,
+      ...(refreshed.inner !== undefined ? { inner: refreshed.inner } : {}),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+/**
  * Permanently delete a user widget from disk. Library entries for it
  * disappear — there's no restore. System widgets cannot be deleted (only
  * hidden via `hideWidgetAction`).

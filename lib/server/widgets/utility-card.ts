@@ -38,6 +38,7 @@ const SnapshotSchema = z.object({
     "image",
     "stat-table",
     "map",
+    "action-list",
   ]),
   title: z.string().optional(),
   description: z.string().optional(),

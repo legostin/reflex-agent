@@ -97,7 +97,11 @@ export function UtilityCardWidget({
       )}
       <div>
         {renderWidget(rootId, inner.kind, inner.data, {
-          readonly: true,
+          // Inner display kinds stay read-only, but action-list needs to
+          // be live so its buttons can invoke the utility's actions.
+          readonly: inner.kind === "action-list" ? !!readonly : true,
+          ...(widgetId ? { widgetId } : {}),
+          utility: { id: data.utilityId, scope: data.utilityScope },
         })}
       </div>
     </div>

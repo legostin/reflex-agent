@@ -240,6 +240,7 @@ export const ManifestSchema = z.object({
         "image",
         "stat-table",
         "map",
+        "action-list",
       ]),
       title: z.string().min(1).max(120).optional(),
       description: z.string().max(280).optional(),

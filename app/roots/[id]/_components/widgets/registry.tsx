@@ -14,6 +14,7 @@ import { ProgressWidget } from "./kinds/progress-widget";
 import { ImageWidget } from "./kinds/image-widget";
 import { StatTableWidget } from "./kinds/stat-table-widget";
 import { MapWidget } from "./kinds/map-widget";
+import { ActionListWidget } from "./kinds/action-list-widget";
 import { UtilityCardWidget } from "./kinds/utility-card-widget";
 
 /**
@@ -44,6 +45,7 @@ const REGISTRY: Record<WidgetKind, ComponentType<any>> = {
   image: ImageWidget,
   "stat-table": StatTableWidget,
   map: MapWidget,
+  "action-list": ActionListWidget,
   "utility-card": UtilityCardWidget,
 };
 
@@ -59,8 +61,11 @@ export function renderWidget(
   opts?: {
     readonly?: boolean;
     onPatch?: (newData: unknown) => void | Promise<void>;
-    /** Widget record id — needed by utility-card for live refresh. */
+    /** Widget record id — needed by utility-card + action-list. */
     widgetId?: string;
+    /** Utility context — set when rendering the inner of a utility-card.
+     *  Lets action-list invoke that utility's server actions. */
+    utility?: { id: string; scope: "global" | "project" };
   },
 ): React.ReactElement {
   const Component = REGISTRY[kind as WidgetKind];
@@ -74,6 +79,7 @@ export function renderWidget(
       readonly={opts?.readonly ?? false}
       onPatch={opts?.onPatch}
       widgetId={opts?.widgetId}
+      utility={opts?.utility}
     />
   );
 }

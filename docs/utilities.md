@@ -222,8 +222,41 @@ Two ways the card stays fresh:
    write" but stale otherwise.
 
 Supported `card.kind`: `markdown`, `news-list`, `link-list`, `kpi`,
-`checklist`, `quote`, `kb-pinned`, `progress`, `image`, `stat-table`.
-(`map` and `utility-card` are not valid card kinds.)
+`checklist`, `quote`, `kb-pinned`, `progress`, `image`, `stat-table`,
+`map`, `action-list`. (`utility-card` is the wrapper, not a card kind.)
+
+### `action-list` — interactive cards
+
+`action-list` renders grouped items, each optionally carrying ONE action
+button that invokes a server action of the same utility. The snapshot:
+
+```json
+{
+  "kind": "action-list",
+  "title": "Tasks",
+  "data": {
+    "groups": [
+      {
+        "label": "Backlog",
+        "emptyText": "clear",
+        "items": [
+          {
+            "id": "t-123",
+            "title": "Add OAuth rotation",
+            "badge": "feature",
+            "action": { "label": "Send to agent", "actionName": "dispatchFromCard" }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+When the button is clicked, Reflex runs `actionName` (a declared
+serverAction, needs `workers.enabled`) with `{ id, ...action.args }`,
+then re-runs `card.action` and swaps in the fresh snapshot. This is how
+the task-board card dispatches a task without opening the board.
 
 ## Why iframe + worker, not in-process?
 

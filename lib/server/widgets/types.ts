@@ -25,6 +25,7 @@ export type WidgetKind =
   | "image"
   | "stat-table"
   | "map"
+  | "action-list"
   | "utility-card";
 
 export interface MarkdownData {
@@ -103,6 +104,43 @@ export interface StatTableData {
   rows: Array<string[]>;
 }
 
+/**
+ * A grouped, optionally-interactive list. Each item can carry ONE action
+ * that invokes a server action of the utility this widget belongs to —
+ * the renderer wires the button to the host so e.g. a task card can
+ * "Send to agent" without opening the mini-app. Action buttons only
+ * appear when the widget has a utility context (i.e. it's the inner of a
+ * `utility-card`) and the dashboard isn't in readonly/share mode.
+ */
+export interface ActionListItem {
+  /** Stable id — passed back in the action args by convention. */
+  id: string;
+  title: string;
+  subtitle?: string;
+  /** Small leading tag — task type, emoji, status, etc. */
+  badge?: string;
+  action?: {
+    label: string;
+    /** Name of a server action declared in the utility's manifest. */
+    actionName: string;
+    /** Extra args merged into the action call (e.g. {id}). */
+    args?: Record<string, unknown>;
+    /** When set, the UI confirms with this text before invoking. */
+    confirm?: string;
+  };
+}
+
+export interface ActionListGroup {
+  label: string;
+  /** Shown when the group has no items. */
+  emptyText?: string;
+  items: ActionListItem[];
+}
+
+export interface ActionListData {
+  groups: ActionListGroup[];
+}
+
 export interface MapPoint {
   lat: number;
   lng: number;
@@ -163,6 +201,7 @@ export type WidgetData =
   | { kind: "image"; data: ImageData }
   | { kind: "stat-table"; data: StatTableData }
   | { kind: "map"; data: MapData }
+  | { kind: "action-list"; data: ActionListData }
   | { kind: "utility-card"; data: UtilityCardData };
 
 /**
@@ -316,5 +355,6 @@ export const WIDGET_KINDS: WidgetKind[] = [
   "image",
   "stat-table",
   "map",
+  "action-list",
   "utility-card",
 ];
