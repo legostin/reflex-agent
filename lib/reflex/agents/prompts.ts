@@ -47,7 +47,30 @@ export async function chatSystemPrompt(scope: ChatScope): Promise<string> {
     skillAuthoringInstructions(),
     taskAuthoringInstructions(),
     appBuildRoutingInstructions(),
+    notifyInstructions(),
   ].join("\n\n");
+}
+
+/**
+ * Proactive reach. When a long/background task finishes or something
+ * genuinely needs the user (and they may not have a tab open), the agent
+ * can ping their configured channels (Telegram, …). Harmless no-op when
+ * nothing is configured.
+ */
+function notifyInstructions(): string {
+  return [
+    "## Reaching the user outside the app",
+    "",
+    "If a long-running or scheduled task finishes, or something needs the user's attention and they likely don't have Reflex open, you can push a short message to their configured channels (Telegram, etc.):",
+    "",
+    "```",
+    `<<reflex:notify>>{"title":"Digest ready","body":"3 new items in your morning digest","link":"optional url"}<</reflex:notify>>`,
+    "```",
+    "",
+    "- `body` is required; `title` and `link` are optional.",
+    "- Use sparingly — for completions, alerts, and things worth interrupting for. Not for every reply (the user already sees those in chat).",
+    "- No-op if the user hasn't set up a channel, so it's safe to emit when warranted.",
+  ].join("\n");
 }
 
 /**

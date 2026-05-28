@@ -197,6 +197,27 @@ export const SettingsSchema = z.object({
       domain: "",
       port: 3210,
     }),
+  /**
+   * Proactive reach — deliver scheduler / workflow / agent output to the
+   * user where they already are, and let them chat back. Channel-agnostic
+   * by design (`lib/server/notify`); Telegram is the first adapter.
+   */
+  notify: z
+    .object({
+      telegram: z
+        .object({
+          /** Master switch — also gates the inbound long-poll loop. */
+          enabled: z.boolean().default(false),
+          /** Bot token from @BotFather. Stored verbatim (like ngrok). */
+          botToken: z.string().default(""),
+          /** Chat id messages are sent to / accepted from. */
+          chatId: z.string().default(""),
+          /** Space (registry root id) inbound messages run an agent in. */
+          rootId: z.string().default(""),
+        })
+        .default({ enabled: false, botToken: "", chatId: "", rootId: "" }),
+    })
+    .default({ telegram: { enabled: false, botToken: "", chatId: "", rootId: "" } }),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

@@ -67,6 +67,13 @@ const ImageSearchSchema = z.object({
   count: z.union([z.string(), z.number()]).optional(),
 });
 
+const NotifySchema = z.object({
+  body: z.string().default(""),
+  text: z.string().optional(),
+  title: z.string().optional(),
+  link: z.string().optional(),
+});
+
 export const STEP_INPUT_SCHEMAS: Record<WorkflowStepKind, z.ZodTypeAny> = {
   "text-template": TextTemplateSchema,
   "http-request": HttpRequestSchema,
@@ -76,6 +83,7 @@ export const STEP_INPUT_SCHEMAS: Record<WorkflowStepKind, z.ZodTypeAny> = {
   "utility-call": UtilityCallSchema,
   "image-generate": ImageGenerateSchema,
   "image-search": ImageSearchSchema,
+  notify: NotifySchema,
 };
 
 export function validateStepInput(

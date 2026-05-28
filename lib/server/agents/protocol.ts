@@ -44,6 +44,8 @@ export const ONBOARDING_DONE_OPEN = "<<reflex:onboarding-done>>";
 export const ONBOARDING_DONE_CLOSE = "<</reflex:onboarding-done>>";
 export const SKILL_CREATE_OPEN = "<<reflex:skill-create>>";
 export const SKILL_CREATE_CLOSE = "<</reflex:skill-create>>";
+export const NOTIFY_OPEN = "<<reflex:notify>>";
+export const NOTIFY_CLOSE = "<</reflex:notify>>";
 export const TASK_CREATE_OPEN = "<<reflex:task-create>>";
 export const TASK_CREATE_CLOSE = "<</reflex:task-create>>";
 export const TASK_UPDATE_OPEN = "<<reflex:task-update>>";
@@ -178,6 +180,24 @@ export interface SuggestionDirective {
   description: string;
   /** Slash-command or chat message the approve-action will send. */
   prompt: string;
+}
+
+/**
+ * "Ping the user where they are" — deliver a short message through the
+ * configured notification channels (Telegram, …). Use sparingly: when a
+ * background/long task finishes, or something needs the user's attention
+ * and they may not have a tab open.
+ */
+export interface NotifyDirective {
+  title?: string;
+  body: string;
+  link?: string;
+}
+
+export function extractNotifies(text: string): NotifyDirective[] {
+  return extractAll<NotifyDirective>(text, NOTIFY_OPEN, NOTIFY_CLOSE).filter(
+    (e): e is NotifyDirective => !!e && typeof e.body === "string" && !!e.body,
+  );
 }
 
 export function extractSuggestions(text: string): SuggestionDirective[] {

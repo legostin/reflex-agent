@@ -198,6 +198,25 @@ export const NODE_HANDLERS: Record<WorkflowStepKind, NodeHandler> = {
       parentCorrelationId: `workflow:${ctx.workflow.id}`,
     });
   },
+
+  notify: async (params) => {
+    // Deliver to the user's configured channels (Telegram, …). Body
+    // defaults to the previous step's output so "summarise X → notify"
+    // needs no glue step.
+    const body = stringOr(params.body, stringOr(params.text, "")).trim();
+    if (!body) throw new Error("notify: body is empty");
+    const { notify } = await import("@/lib/server/notify");
+    const res = await notify({
+      body,
+      ...(typeof params.title === "string" && params.title
+        ? { title: params.title }
+        : {}),
+      ...(typeof params.link === "string" && params.link
+        ? { link: params.link }
+        : {}),
+    });
+    return { delivered: res.delivered, errors: res.errors };
+  },
 };
 
 function mustString(v: unknown, field: string): string {

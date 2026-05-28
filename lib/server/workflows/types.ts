@@ -21,7 +21,8 @@ export type WorkflowStepKind =
   | "kb-write"
   | "utility-call"
   | "image-generate"
-  | "image-search";
+  | "image-search"
+  | "notify";
 
 export interface WorkflowStep {
   /** Stable id within the workflow — referenced by templates and run logs. */
@@ -289,6 +290,33 @@ export const WORKFLOW_KINDS: WorkflowKindMeta[] = [
         label: "Result count",
         type: "string",
         placeholder: "6",
+      },
+    ],
+  },
+  {
+    kind: "notify",
+    label: "Notify me",
+    description:
+      "Delivers a message to your configured channels (Telegram). Body defaults to the previous step's output — chain it after a summary to get a daily ping.",
+    defaultParams: { title: "", body: "{{prev}}" },
+    fields: [
+      {
+        key: "title",
+        label: "Title (optional)",
+        type: "string",
+        placeholder: "Morning digest",
+      },
+      {
+        key: "body",
+        label: "Body",
+        type: "text",
+        placeholder: "{{prev}}",
+      },
+      {
+        key: "link",
+        label: "Link (optional)",
+        type: "string",
+        placeholder: "https://…",
       },
     ],
   },

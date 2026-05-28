@@ -49,6 +49,7 @@ import { GeminiSection } from "./gemini-section";
 import { ImageSearchSection } from "./image-search-section";
 import { MapServicesSection } from "./map-services-section";
 import { NgrokSection } from "./ngrok-section";
+import { TelegramSection } from "./telegram-section";
 import type { ModelInfo, ProbeResult } from "@/lib/harnesses/types";
 import {
   listModelsAction,
@@ -634,6 +635,18 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
           {t("mapServices.description")}
         </p>
         <MapServicesSection
+          settings={settings}
+          onChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}
+        />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Notifications</h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          Reach you outside the app — scheduler, workflow, and agent output
+          delivered to Telegram, where you can also chat back.
+        </p>
+        <TelegramSection
           settings={settings}
           onChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}
         />

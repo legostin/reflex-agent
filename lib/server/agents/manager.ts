@@ -20,6 +20,7 @@ import {
   extractKbEntries,
   extractMcpAdds,
   extractMemoryWrites,
+  extractNotifies,
   extractPermissions,
   extractQuestions,
   extractSkillCreates,
@@ -1095,6 +1096,7 @@ class AgentManager {
       }
       await this.processSkillCreates(buf, agentId, state.rootPath);
       await this.processTaskMarkers(buf, agentId, state.rootPath);
+      await this.processNotifies(buf, agentId);
       const utilityDirs = extractUtilityDirectives(buf);
       for (const u of utilityDirs) {
         try {
@@ -1474,6 +1476,34 @@ class AgentManager {
           message:
             "skill-create failed: " +
             (err instanceof Error ? err.message : String(err)),
+          agentId,
+          ts: now(),
+          seq: 0,
+        });
+      }
+    }
+  }
+
+  /**
+   * `<<reflex:notify>>` — deliver a short message to the user's
+   * configured channels (Telegram, …). Fire-and-forget; a failed channel
+   * surfaces as an error event but never blocks the turn.
+   */
+  private async processNotifies(buf: string, agentId: string): Promise<void> {
+    const items = extractNotifies(buf);
+    if (items.length === 0) return;
+    const { notify } = await import("@/lib/server/notify");
+    for (const n of items) {
+      try {
+        await notify({
+          body: n.body,
+          ...(n.title ? { title: n.title } : {}),
+          ...(n.link ? { link: n.link } : {}),
+        });
+      } catch (err) {
+        await this.emit({
+          type: "error",
+          message: `notify failed: ${err instanceof Error ? err.message : String(err)}`,
           agentId,
           ts: now(),
           seq: 0,

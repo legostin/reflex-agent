@@ -10,11 +10,16 @@ import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "./_components/app-sidebar";
 import { listRoots } from "@/lib/registry";
 import { startScheduler } from "@/lib/server/workflows/scheduler";
+import { startTelegramPoller } from "@/lib/server/notify/telegram";
 
 // Boot the background workflow scheduler the first time any page is
 // rendered. `startScheduler` is idempotent — guarded by a global, so
 // it's safe to call on every request.
 startScheduler();
+// Telegram inbound poller — same idempotent-singleton pattern. No-ops
+// until the user enables Telegram in settings (the loop idle-polls the
+// config), so it's safe to always start.
+startTelegramPoller();
 
 export const metadata: Metadata = {
   title: "Reflex",
