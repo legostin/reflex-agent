@@ -98,6 +98,39 @@ export function researchInstructions(payload: string, language: string): string 
 }
 
 /**
+ * "/new-utility" — build a Reflex utility from scratch. Removes all the
+ * ambiguity that makes the orchestrator ask "which language?": a utility
+ * is always a TypeScript mini-app running inside Reflex, so the brief
+ * pins the conventions and forbids the stack/deploy questions.
+ */
+export function newUtilityInstructions(
+  payload: string,
+  language: string,
+): string {
+  return [
+    "## /new-utility — build a Reflex utility (mini-app)",
+    "",
+    `Reply in ${language}.`,
+    payload ? `User's idea: ${payload}` : "",
+    "",
+    "The user is building a **Reflex utility**, not a standalone app. Non-negotiable conventions:",
+    "  - It runs INSIDE Reflex in a sandboxed iframe. There is NO separate backend to host and NO deploy step — emitting `<<reflex:utility>>` installs it.",
+    "  - UI is a single React functional component (default export) in `ui.tsx`, **TypeScript**. So do NOT ask which language/framework/hosting — those questions don't apply.",
+    "  - The only imports allowed are `react`, `react-dom`, `@host/api`, `@host/ui`. All I/O goes through the Host API (`reflex.*`) — `web.fetch` (whitelisted domains), `kb.*`, `fs` (sandbox), `llm.complete`, `secrets.get`, `mcp.call`, etc. — each gated by a manifest permission.",
+    "  - Server-side work goes in `actions/<name>.ts` (declared in `manifest.serverActions`, run in a worker with the Host API).",
+    "  - For a dashboard card, declare `manifest.card` (use `action` + `refresh` for live data).",
+    "",
+    "Process:",
+    "  1. From the idea, settle the essentials: a kebab-case `id`, name, what it does, which Host-API permissions + secrets it needs, whether it talks to an external service (via `web.fetch` domains or an MCP server).",
+    "  2. Ask via `<<reflex:question>>` ONLY for genuinely blocking unknowns (e.g. which external API, auth model) — never about language or deployment.",
+    "  3. Build it, then emit ONE `<<reflex:utility>>{scope, manifest, files}<</reflex:utility>>` marker. Default `scope: \"project\"` unless the user wants it available everywhere (`\"global\"`).",
+    "  4. If it integrates an external service (GitHub, etc.): prefer an existing MCP server when one is registered; otherwise `reflex.web.fetch` with the domain whitelisted in `permissions.web.fetch.domains`, and declare any token under `secrets`.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
  * "/widget" — focus the agent on creating or refreshing a dashboard widget.
  */
 export function widgetInstructionsForCommand(

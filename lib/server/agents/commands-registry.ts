@@ -92,6 +92,16 @@ export const COMMANDS: CommandDef[] = [
     icon: "Workflow",
   },
   {
+    id: "new-utility",
+    trigger: "new-utility",
+    label: "/new-utility",
+    description:
+      "Build a Reflex mini-app (utility) — TypeScript, runs inside Reflex.",
+    kind: "agent-mode",
+    usage: "/new-utility <name — what it does>",
+    icon: "PackagePlus",
+  },
+  {
     id: "distill",
     trigger: "distill",
     label: "/distill",

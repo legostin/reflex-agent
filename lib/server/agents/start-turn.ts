@@ -17,6 +17,7 @@ import {
   planInstructions,
   researchInstructions,
   widgetInstructionsForCommand,
+  newUtilityInstructions,
 } from "./slash-commands";
 import { detectCommand, type CommandDef } from "./commands-registry";
 import { getTopic, setTopicGoal } from "@/lib/server/topics";
@@ -173,6 +174,9 @@ export async function startOrchestratorTurn(args: {
       : "",
     richCommand?.def.id === "widget"
       ? widgetInstructionsForCommand(richCommand.payload, language)
+      : "",
+    richCommand?.def.id === "new-utility"
+      ? newUtilityInstructions(richCommand.payload, language)
       : "",
     richCommand?.def.id === "mcp"
       ? mcpInstructionsForCommand(richCommand.payload, language)

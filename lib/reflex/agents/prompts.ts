@@ -46,7 +46,33 @@ export async function chatSystemPrompt(scope: ChatScope): Promise<string> {
     memoryInstructions(),
     skillAuthoringInstructions(),
     taskAuthoringInstructions(),
+    appBuildRoutingInstructions(),
   ].join("\n\n");
+}
+
+/**
+ * Disambiguation guard for "build me an app / tool / bot / integration"
+ * requests. Reflex's flagship output is a *utility* (a mini-app that
+ * runs INSIDE Reflex — iframe + Host API, TypeScript, no separate
+ * hosting), not a standalone service. The orchestrator otherwise treats
+ * such a request as a greenfield project and asks about language /
+ * deploy, which is wrong when the user means a utility. This is a
+ * runtime block (not the editable chat.md) so the routing stays correct
+ * regardless of local prompt edits.
+ */
+function appBuildRoutingInstructions(): string {
+  return [
+    "## Building an app / tool / integration — utility first",
+    "",
+    "When the user asks to build, make, or release an app, tool, bot, integration, dashboard, form, or service, FIRST decide what KIND of thing it is — before asking about language, framework, or hosting:",
+    "",
+    "- **Reflex utility** (the default for anything that extends Reflex or lives in this ecosystem) — a mini-app that runs INSIDE Reflex: a React/TypeScript `ui.tsx` in an iframe, talking to the world only through the Host API (`reflex.*`) with manifest permissions. There is NO separate backend to host and NO deploy step — installing the utility IS the deploy. Utilities are ALWAYS TypeScript, so never ask \"which language?\".",
+    "- **Standalone project** — a normal codebase the user will run/host themselves (a server, a CLI, a website). Only here do language/framework/deploy questions make sense.",
+    "",
+    "Routing signals that mean **utility**: the project name starts with `rflx-`/`reflex-`, it lives under a `reflex-*` parent, the user says \"utility\"/\"mini-app\"/\"плагин\"/\"виджет\", or the thing is meant to surface inside Reflex (a panel, a card, a GitHub/Calendar/etc. integration the user will open in the Mini-apps screen).",
+    "",
+    "If those signals are present, proceed as a utility — gather the missing essentials (what it does, which data/permissions, any secrets) and emit `<<reflex:utility>>`. Do NOT ask about stack or deployment. If it's genuinely unclear which kind it is, ask THAT question first via `<<reflex:question>>` (\"Reflex utility that runs inside Reflex, or a standalone app you'll host yourself?\") — don't jump to language selection.",
+  ].join("\n");
 }
 
 /**
