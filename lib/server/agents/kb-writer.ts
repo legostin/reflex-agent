@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { reflexRoot } from "@/lib/reflex/paths";
+import { slugifyUnicode as slugify } from "@/lib/reflex/ids";
 import type { KbDirective } from "./protocol";
 
 export interface KbWriteResult {
@@ -68,15 +69,6 @@ export async function writeKbEntry(args: {
     .split(path.sep)
     .join("/");
   return { kind, title: d.title, relPath: rel, absPath: abs };
-}
-
-function slugify(s: string): string {
-  return s
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
 }
 
 function sanitizeDate(d?: string): string | null {

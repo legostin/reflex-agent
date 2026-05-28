@@ -2,6 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexRoot } from "@/lib/reflex/paths";
+import { sanitizeIdDash } from "@/lib/reflex/ids";
 import type {
   DashboardLayout,
   WidgetData,
@@ -35,7 +36,7 @@ function layoutFile(rootPath: string): string {
 }
 
 export function sanitizeId(id: string): string {
-  return id.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 80);
+  return sanitizeIdDash(id);
 }
 
 export async function listWidgets(rootPath: string): Promise<WidgetRecord[]> {

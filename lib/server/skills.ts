@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { reflexHome } from "@/lib/reflex/home";
+import { slugifyHandle as sanitizeId } from "@/lib/reflex/ids";
 
 /**
  * "Skills" = reusable instruction packs the user (or agent) can apply to
@@ -455,13 +456,4 @@ export async function writeSkill(input: WriteSkillInput): Promise<string> {
   const file = path.join(dir, `${slug}.md`);
   await fs.writeFile(file, body, "utf8");
   return file;
-}
-
-function sanitizeId(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64);
 }

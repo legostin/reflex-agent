@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
 import { reflexRoot } from "@/lib/reflex/paths";
+import { sanitizeIdStrip as sanitizeId } from "@/lib/reflex/ids";
 
 /**
  * Chat transcripts. Each chat is a Markdown file in `<root>/.reflex/topics/`
@@ -74,11 +75,6 @@ function topicsDir(root: string): string {
 
 function topicFile(root: string, id: string): string {
   return path.join(topicsDir(root), `${sanitizeId(id)}.md`);
-}
-
-function sanitizeId(id: string): string {
-  // Allow alnum, dash, underscore — nothing fancy.
-  return id.replace(/[^A-Za-z0-9_-]/g, "");
 }
 
 function newTopicId(): string {

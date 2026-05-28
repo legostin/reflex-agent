@@ -2,6 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexRoot } from "@/lib/reflex/paths";
+import { sanitizeIdDash } from "@/lib/reflex/ids";
 import type { WorkflowDef, WorkflowRun } from "./types";
 
 const WORKFLOWS_DIR = "workflows";
@@ -25,7 +26,7 @@ function runFile(rootPath: string, wfId: string, runId: string): string {
 }
 
 export function sanitizeId(id: string): string {
-  return id.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 80);
+  return sanitizeIdDash(id);
 }
 
 export async function listWorkflows(rootPath: string): Promise<WorkflowDef[]> {

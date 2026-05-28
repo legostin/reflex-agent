@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
 import { reflexRoot } from "@/lib/reflex/paths";
+import { slugify } from "@/lib/reflex/ids";
 import { listKbFiles } from "@/lib/server/kb";
 import {
   TASK_TYPES,
@@ -237,15 +238,6 @@ async function exists(p: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function slugify(s: string): string {
-  return s
-    .normalize("NFKD")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
 }
 
 function pickEnum<T extends readonly string[]>(
