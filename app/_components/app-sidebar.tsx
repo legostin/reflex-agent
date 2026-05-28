@@ -352,7 +352,11 @@ function ProjectItem({
               )}
             </button>
             {memoryExpanded && memory !== null && (
-              <MemoryList memory={memory} />
+              <MemoryList
+                rootId={root.id}
+                memory={memory}
+                pathname={pathname}
+              />
             )}
           </li>
           <li>
@@ -761,9 +765,19 @@ function TopicRow({
   );
 }
 
-function MemoryList({ memory }: { memory: SidebarMemoryFile[] }) {
+function MemoryList({
+  rootId,
+  memory,
+  pathname,
+}: {
+  rootId: string;
+  memory: SidebarMemoryFile[];
+  pathname: string | null;
+}) {
   const t = useTranslations("app");
   const nonEmpty = memory.filter((m) => !m.empty);
+  const href = `/roots/${rootId}/memory`;
+  const active = pathname === href;
   if (nonEmpty.length === 0) {
     return (
       <div className="ml-4 px-3 py-1 text-[11px] italic text-muted-foreground">
@@ -776,9 +790,11 @@ function MemoryList({ memory }: { memory: SidebarMemoryFile[] }) {
       {nonEmpty.map((m) => (
         <li key={m.file}>
           <Link
-            href="/settings"
+            href={href}
             title={m.description}
-            className="flex items-center gap-1 px-2 py-1 text-[12px] rounded hover:bg-accent"
+            className={`flex items-center gap-1 px-2 py-1 text-[12px] rounded hover:bg-accent ${
+              active ? "bg-accent" : ""
+            }`}
           >
             <Brain className="h-3 w-3 text-muted-foreground shrink-0" />
             <span className="truncate flex-1 min-w-0">{m.file}</span>
