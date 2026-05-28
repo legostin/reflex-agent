@@ -63,7 +63,15 @@ any call whose required permission isn't granted.
   workers: { enabled: true, maxConcurrent: 2 },
   agent: { invoke: true },        // ephemeral orchestrator
   workflow: { read: true, run: true },
-  images: { generate: true, search: true, attach: true },
+  images: {
+    generate: true,
+    search: true,
+    attach: true,
+    // External image hosts the iframe may render via <img src>. Each is
+    // appended to the iframe CSP's img-src as https://<host>. The browser
+    // loads them directly — no proxy. Bare hostnames, optional `*.`.
+    domains: ["cdn.legost.in", "*.imgix.net"],
+  },
   sessions: { search: true },     // FTS5 recall
 }
 ```

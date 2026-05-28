@@ -24,11 +24,27 @@ export async function GET(
 
   const base = `/api/utilities/${scope}/${id}`;
   const qs = rootId ? `?rootId=${encodeURIComponent(rootId)}` : "";
+  // User-approved external image hosts (manifest.permissions.images.domains)
+  // are appended to img-src so the iframe can render them directly. We
+  // re-validate each host here — never trust the manifest blindly into a
+  // CSP string, or a crafted entry could break out of the directive.
+  const imgHosts = (util.manifest.permissions.images?.domains ?? [])
+    .filter(isSafeCspHost)
+    .map((h) => `https://${h}`);
+  const imgSrc = ["'self'", "data:", "blob:", ...imgHosts].join(" ");
+  const csp = [
+    "default-src 'self'",
+    "connect-src 'none'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    `img-src ${imgSrc}`,
+    "font-src 'self' data:",
+  ].join("; ");
   const html = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:" />
+  <meta http-equiv="Content-Security-Policy" content="${escapeHtml(csp)}" />
   <title>${escapeHtml(util.manifest.name)}</title>
   <link rel="stylesheet" href="${base}/style.css${qs}" />
   <script type="importmap">
@@ -62,4 +78,17 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/**
+ * Defence-in-depth: the manifest schema already constrains the host
+ * shape, but a CSP directive is a space/semicolon-delimited grammar, so
+ * we reject any host containing a character that could terminate the
+ * `img-src` directive and inject another (spaces, ';', quotes, etc.).
+ * Allows bare hostnames with an optional leading `*.` wildcard.
+ */
+function isSafeCspHost(host: string): boolean {
+  return /^(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(
+    host,
+  );
 }

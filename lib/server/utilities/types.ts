@@ -102,6 +102,27 @@ export const PermissionsSchema = z
          * utility's `web.fetch.domains` whitelist.
          */
         attach: z.boolean().optional(),
+        /**
+         * External image hosts the utility's iframe may DISPLAY via
+         * `<img src>`. Each entry is appended to the iframe CSP's
+         * `img-src` (as `https://<host>`), so the browser loads them
+         * directly — no proxy, no server fetch. Plain hostnames only,
+         * optional leading `*.` wildcard. This is a display grant, not
+         * a network-fetch grant (that's `web.fetch.domains`): the user
+         * vouches for the host the same way, but the request goes
+         * browser → host, not through Reflex.
+         */
+        domains: z
+          .array(
+            z
+              .string()
+              .regex(
+                /^(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i,
+                "must be a bare hostname, optional leading '*.'",
+              ),
+          )
+          .max(20)
+          .optional(),
       })
       .optional(),
     /**

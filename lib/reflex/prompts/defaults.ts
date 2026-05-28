@@ -226,7 +226,7 @@ To create a utility, emit a marker:
    - \`"@host/api"\` — gives the \`{ reflex }\` object (see below).
    - \`"@host/ui"\` — gives primitives: Button, Input, Textarea, Label, Card, CardContent, CardHeader, CardTitle, Badge, ScrollArea.
    - No other packages / node_modules / node:* modules. esbuild rejects any other import.
-3. **No fetch/XHR/WebSocket/localStorage** inside the utility. Only \`reflex.web.fetch({url})\` with an explicitly whitelisted domain in the manifest.
+3. **No fetch/XHR/WebSocket/localStorage** inside the utility. Only \`reflex.web.fetch({url})\` with an explicitly whitelisted domain in the manifest. To DISPLAY external images via \`<img src>\`, list their hosts in \`permissions.images.domains\` — the CSP blocks any host not on that list.
 4. **State** is persisted via \`reflex.fs.write({path, content})\` (in \`<utility>/data/\`) or \`reflex.kb.add({...})\`.
 5. **Manifest** must list every required permission — the user sees this list at install time and can refuse.
 
@@ -244,6 +244,7 @@ To create a utility, emit a marker:
     "kb":   {"read": true, "write": true, "kinds": ["3d-model"]},
     "fs":   {"sandbox": true},
     "web":  {"fetch": {"domains": ["api.example.com"]}, "search": false},
+    "images": {"domains": ["cdn.example.com"]},
     "audit": {"write": true},
     "workers": {"enabled": true}
   },
