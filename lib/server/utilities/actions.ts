@@ -270,35 +270,49 @@ export async function applyUtilityUpdateAction(
 ): Promise<{ ok: true; newVersion: string } | { ok: false; error: string }> {
   try {
     const { withUpdateSnapshot } = await import("./transactional-update");
+
+    // Resolve WHAT to install before the snapshot runs — it renames the
+    // utility dir to `.bak` first, after which any lookup of the current
+    // install (checkGithubUpdate → getUtility) would fail with "utility
+    // not found". The github preview must be fetched while the dir still
+    // exists.
+    let applyFn: () => Promise<string>;
+    if (args.source === "builtin") {
+      applyFn = async () => {
+        const { installFromBuiltin } = await import("./builtin-installer");
+        const out = await installFromBuiltin({
+          builtin: args.ref,
+          scope: args.scope,
+          ...(args.rootId ? { rootId: args.rootId } : {}),
+        });
+        return out.origin.split("@")[1] ?? args.latestVersion;
+      };
+    } else if (args.source === "github") {
+      const { checkGithubUpdate, installFromGithubConfirmed } = await import(
+        "./github"
+      );
+      const r = await checkGithubUpdate(args.scope, args.id, args.rootId);
+      if (r.upToDate || !r.preview) {
+        return { ok: true, newVersion: args.currentVersion };
+      }
+      const preview = r.preview;
+      applyFn = async () => {
+        await installFromGithubConfirmed({
+          preview,
+          scope: args.scope,
+          ...(args.rootId ? { rootId: args.rootId } : {}),
+        });
+        return preview.manifest.version;
+      };
+    } else {
+      throw new Error(`Unknown update source: ${args.source}`);
+    }
+
     const newVersion = await withUpdateSnapshot(
       args.scope,
       args.id,
       args.rootId,
-      async () => {
-        if (args.source === "builtin") {
-          const { installFromBuiltin } = await import("./builtin-installer");
-          const out = await installFromBuiltin({
-            builtin: args.ref,
-            scope: args.scope,
-            ...(args.rootId ? { rootId: args.rootId } : {}),
-          });
-          return out.origin.split("@")[1] ?? args.latestVersion;
-        }
-        if (args.source === "github") {
-          const { checkGithubUpdate, installFromGithubConfirmed } = await import(
-            "./github"
-          );
-          const r = await checkGithubUpdate(args.scope, args.id, args.rootId);
-          if (r.upToDate || !r.preview) return args.currentVersion;
-          const out = await installFromGithubConfirmed({
-            preview: r.preview,
-            scope: args.scope,
-            ...(args.rootId ? { rootId: args.rootId } : {}),
-          });
-          return r.preview.manifest.version;
-        }
-        throw new Error(`Unknown update source: ${args.source}`);
-      },
+      applyFn,
     );
     revalidatePath("/utilities");
     if (args.rootId) revalidatePath(`/roots/${args.rootId}`);
