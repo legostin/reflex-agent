@@ -272,6 +272,27 @@ export async function refreshWidgetNowAction(
 }
 
 /**
+ * Pull live data into a `utility-card` widget by running the utility's
+ * declared card action. Used by the dashboard card on mount (so the user
+ * sees fresh numbers without opening the mini-app) and by an explicit
+ * Refresh. Returns the new inner snapshot for an immediate re-render.
+ */
+export async function refreshUtilityCardAction(
+  rootId: string,
+  widgetId: string,
+): Promise<{ ok: boolean; inner?: unknown; noop?: boolean; error?: string }> {
+  const { refreshUtilityCard } = await import("./utility-card");
+  const res = await refreshUtilityCard(rootId, widgetId);
+  return res.ok
+    ? {
+        ok: true,
+        ...(res.inner !== undefined ? { inner: res.inner } : {}),
+        ...(res.noop ? { noop: true } : {}),
+      }
+    : { ok: false, ...(res.error ? { error: res.error } : {}) };
+}
+
+/**
  * Permanently delete a user widget from disk. Library entries for it
  * disappear — there's no restore. System widgets cannot be deleted (only
  * hidden via `hideWidgetAction`).

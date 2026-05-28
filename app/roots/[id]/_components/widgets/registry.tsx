@@ -59,6 +59,8 @@ export function renderWidget(
   opts?: {
     readonly?: boolean;
     onPatch?: (newData: unknown) => void | Promise<void>;
+    /** Widget record id — needed by utility-card for live refresh. */
+    widgetId?: string;
   },
 ): React.ReactElement {
   const Component = REGISTRY[kind as WidgetKind];
@@ -71,6 +73,7 @@ export function renderWidget(
       data={data}
       readonly={opts?.readonly ?? false}
       onPatch={opts?.onPatch}
+      widgetId={opts?.widgetId}
     />
   );
 }

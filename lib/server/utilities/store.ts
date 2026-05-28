@@ -273,6 +273,12 @@ async function seedUtilityCardWidget(
     ...(manifest.card.description
       ? { description: manifest.card.description }
       : {}),
+    // When the card declares a live `action`, carry its cadence onto the
+    // widget so the background scheduler refreshes it. `isDue` reads
+    // `refresh`; without it the card only updates on dashboard view.
+    ...(manifest.card.action && manifest.card.refresh
+      ? { refresh: manifest.card.refresh }
+      : {}),
     payload: {
       kind: "utility-card",
       data: {

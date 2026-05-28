@@ -243,7 +243,27 @@ export const ManifestSchema = z.object({
       ]),
       title: z.string().min(1).max(120).optional(),
       description: z.string().max(280).optional(),
+      /** Initial / fallback data shown before the first live refresh. */
       data: z.record(z.string(), z.unknown()).default({}),
+      /**
+       * Name of a server action (from `serverActions`) that returns a
+       * FRESH card snapshot — `{kind, data, title?, description?}`. When
+       * set, Reflex calls it to pull live data: on dashboard view and on
+       * the `refresh` cadence below. The action runs in a worker with the
+       * utility's host API, so it can read `reflex.kb.list`,
+       * `reflex.tasks.list`, etc. Without it, the card only updates when
+       * the utility pushes via `reflex.cards.update` from its own iframe.
+       */
+      action: z
+        .string()
+        .regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/, "action must be a serverActions name")
+        .optional(),
+      /**
+       * Background refresh cadence for the card action. "manual" (default)
+       * = only refresh on dashboard view + explicit Refresh. Ignored when
+       * `action` is absent.
+       */
+      refresh: z.enum(["manual", "hourly", "daily", "weekly"]).optional(),
     })
     .optional(),
   /**

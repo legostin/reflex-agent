@@ -104,6 +104,16 @@ async function processRoot(rootId: string, rootPath: string): Promise<void> {
   const widgets = await listWidgets(rootPath);
   for (const w of widgets) {
     if (!isDue(w)) continue;
+    // Utility cards refresh by running the utility's card action, not by
+    // re-running an orchestrator on a source topic.
+    if (w.kind === "utility-card") {
+      const { refreshUtilityCard } = await import("./utility-card");
+      const res = await refreshUtilityCard(rootId, w.id);
+      if (!res.ok) {
+        console.error(`[widget-scheduler] ${w.id} card refresh: ${res.error}`);
+      }
+      continue;
+    }
     if (!w.sourceTopicId) continue;
     // Don't stomp a live conversation.
     if (agentManager.isActive(w.sourceTopicId)) continue;

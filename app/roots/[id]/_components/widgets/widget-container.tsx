@@ -157,6 +157,7 @@ export function WidgetContainer({
       </CardHeader>
       <CardContent className="space-y-3">
         {renderWidget(rootId, widget.kind, widget.data, {
+          widgetId: widget.id,
           onPatch: async (newData) => {
             const r = await patchWidgetDataAction(
               rootId,
