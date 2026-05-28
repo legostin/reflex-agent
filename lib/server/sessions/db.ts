@@ -1,8 +1,14 @@
 import "server-only";
 import path from "node:path";
 import { promises as fs } from "node:fs";
-import { DatabaseSync } from "node:sqlite";
 import { reflexHome } from "@/lib/reflex/home";
+
+// Type-only — erased at compile, emits no runtime require. The actual
+// module is imported lazily in getDb() so that (a) `next build` never
+// evaluates node:sqlite while collecting page data and (b) runtimes that
+// predate the built-in (Node < 22.5) degrade gracefully instead of
+// crashing the whole app at import time.
+type DatabaseSync = import("node:sqlite").DatabaseSync;
 
 /**
  * SQLite FTS5 index over the user's journal + topic transcripts, across
@@ -35,15 +41,39 @@ export interface SessionDb {
   raw: DatabaseSync;
 }
 
-/** Lazily open the DB. Idempotent — repeated calls return the same handle. */
-export async function getDb(): Promise<SessionDb> {
+// Cache the availability check so we don't re-attempt the import on every
+// call once we've learned node:sqlite is missing.
+let _sqliteUnavailable = false;
+
+type SqliteModule = typeof import("node:sqlite");
+
+async function loadSqlite(): Promise<SqliteModule | null> {
+  if (_sqliteUnavailable) return null;
+  try {
+    // Dynamic so the static module graph (and `next build`) never forces
+    // node:sqlite to resolve.
+    return (await import("node:sqlite")) as SqliteModule;
+  } catch {
+    _sqliteUnavailable = true;
+    return null;
+  }
+}
+
+/**
+ * Lazily open the DB. Idempotent — repeated calls return the same handle.
+ * Returns `null` when node:sqlite isn't available (Node < 22.5 / build
+ * time); callers treat that as "session search disabled" and no-op.
+ */
+export async function getDb(): Promise<SessionDb | null> {
   if (_db && _initialized) return { raw: _db };
+  const sqlite = await loadSqlite();
+  if (!sqlite) return null;
   const home = reflexHome();
   await fs.mkdir(home, { recursive: true });
   const file = path.join(home, "sessions.db");
   // Stays open until the process exits — DatabaseSync has no .close
   // requirement on tear-down and Node will release the file handle.
-  const db = new DatabaseSync(file);
+  const db = new sqlite.DatabaseSync(file);
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA synchronous = NORMAL");
   db.exec("PRAGMA temp_store = MEMORY");

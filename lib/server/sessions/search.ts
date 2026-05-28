@@ -57,7 +57,9 @@ export async function searchSessions(
   const ftsQuery = normaliseQuery(query);
   if (!ftsQuery) return [];
 
-  const { raw: db } = await getDb();
+  const handle = await getDb();
+  if (!handle) return []; // node:sqlite unavailable — search disabled
+  const db = handle.raw;
   const limit = clamp(opts.limit ?? DEFAULT_LIMIT, 1, MAX_LIMIT);
   const filters: string[] = ["documents_fts MATCH ?"];
   const params: unknown[] = [ftsQuery];
@@ -173,7 +175,9 @@ export interface IndexStats {
 }
 
 export async function getIndexStats(): Promise<IndexStats> {
-  const { raw: db } = await getDb();
+  const handle = await getDb();
+  if (!handle) return { documents: 0, journals: 0, topics: 0 };
+  const db = handle.raw;
   const total = (
     db.prepare("SELECT COUNT(*) AS n FROM documents").get() as { n: number }
   ).n;

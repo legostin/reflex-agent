@@ -96,7 +96,9 @@ async function maybeIndexFile(args: IndexFileArgs): Promise<boolean> {
   if (!stat) return false;
   const mtimeMs = Math.floor(stat.mtimeMs);
 
-  const { raw: db } = await getDb();
+  const handle = await getDb();
+  if (!handle) return false;
+  const db = handle.raw;
   const existing = db
     .prepare(
       "SELECT id, mtime_ms FROM documents WHERE file_path = ? LIMIT 1",
@@ -176,13 +178,17 @@ async function maybeIndexFile(args: IndexFileArgs): Promise<boolean> {
 }
 
 async function deleteRow(id: number): Promise<void> {
-  const { raw: db } = await getDb();
+  const handle = await getDb();
+  if (!handle) return;
+  const db = handle.raw;
   db.prepare("DELETE FROM documents_fts WHERE rowid = ?").run(id);
   db.prepare("DELETE FROM documents WHERE id = ?").run(id);
 }
 
 async function pruneMissing(seen: Set<string>): Promise<number> {
-  const { raw: db } = await getDb();
+  const handle = await getDb();
+  if (!handle) return 0;
+  const db = handle.raw;
   const rows = db.prepare("SELECT id, file_path FROM documents").all() as {
     id: number;
     file_path: string;

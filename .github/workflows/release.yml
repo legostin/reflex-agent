@@ -20,7 +20,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Node 24 ships node:sqlite (used by the session-search index).
+          # Building on 20 fails with ERR_UNKNOWN_BUILTIN_MODULE.
+          node-version: "24"
           cache: pnpm
           registry-url: "https://registry.npmjs.org"
 
