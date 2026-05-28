@@ -168,15 +168,41 @@ async function handleUpdate(cfg: TelegramConfig, u: TgUpdate): Promise<void> {
   const text = u.message?.text?.trim();
   const chatId = u.message?.chat?.id;
   if (!text || chatId === undefined) return;
-  // Only accept messages from the configured chat.
-  if (String(chatId) !== String(cfg.chatId)) return;
+
+  let allowedChatId = cfg.chatId;
+  // First-message auto-bind: if no chat id is configured yet, adopt the
+  // sender's — the user just texts the bot once and it's connected, no
+  // copy-pasting an id. Persisted so later messages match normally.
+  if (!allowedChatId) {
+    allowedChatId = String(chatId);
+    try {
+      const { loadSettings, saveSettings } = await import("@/lib/settings/store");
+      const s = await loadSettings();
+      await saveSettings({
+        ...s,
+        notify: {
+          ...s.notify,
+          telegram: { ...s.notify.telegram, chatId: allowedChatId },
+        },
+      });
+    } catch {
+      /* best-effort — still proceed with this message */
+    }
+    await sendMessage(
+      cfg.botToken,
+      allowedChatId,
+      "Connected ✅ — I'll answer here from now on.",
+    );
+  }
+  // Only accept messages from the (now) configured chat.
+  if (String(chatId) !== String(allowedChatId)) return;
 
   // Telegram and the web home page are the SAME conversation — both talk
   // to the central dispatcher thread in the synthetic home Space.
   const { getDispatcherTopic } = await import("@/lib/server/home/dispatcher");
   const d = await getDispatcherTopic();
   const reply = await runTurnAndAwaitReply(d.rootId, d.rootPath, d.topicId, text);
-  await sendMessage(cfg.botToken, cfg.chatId, reply || "(no reply)");
+  await sendMessage(cfg.botToken, allowedChatId, reply || "(no reply)");
 }
 
 /**
