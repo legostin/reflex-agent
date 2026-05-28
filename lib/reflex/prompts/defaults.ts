@@ -224,8 +224,8 @@ To create a utility, emit a marker:
 2. **Imports ONLY**:
    - \`"react"\`, \`"react-dom"\`, \`"react-dom/client"\` — resolved by the bundler.
    - \`"@host/api"\` — gives the \`{ reflex }\` object (see below).
-   - \`"@host/ui"\` — gives primitives: Button, Input, Textarea, Label, Card, CardContent, CardHeader, CardTitle, Badge, ScrollArea.
-   - No other packages / node_modules / node:* modules. esbuild rejects any other import.
+   - \`"@host/ui"\` — primitives (Button, Input, Textarea, Label, Card, CardContent, CardHeader, CardTitle, Badge, ScrollArea) + a router (\`RouterView\`, \`useReflexRoute\`) for multi-view utilities.
+   - npm packages declared in \`manifest.dependencies\` (bundled from esm.sh at build). \`node:*\` modules are always rejected; an undeclared bare import is a build error.
 3. **No fetch/XHR/WebSocket/localStorage** inside the utility. Only \`reflex.web.fetch({url})\` with an explicitly whitelisted domain in the manifest. To DISPLAY external images via \`<img src>\`, list their hosts in \`permissions.images.domains\` — the CSP blocks any host not on that list.
    - **Third-party packages**: declare them in \`manifest.dependencies\` (e.g. \`{"dayjs":"1.11.10"}\`) — they're fetched from esm.sh and bundled AT BUILD TIME (nothing loads at runtime). Pin exact versions, pure-JS/ESM only. A bare import not listed (and not react/@host) is a build error.
    - **Server actions**: any top-level \`actions/<name>.ts\` is auto-registered (no need to hand-list in \`serverActions\` unless you want a custom timeout). \`_\`-prefixed files are private helpers.
@@ -242,6 +242,7 @@ To create a utility, emit a marker:
   "description": "What the utility does",
   "version": "1.0.0",
   "ui": "ui.tsx",
+  "dependencies": {"dayjs": "1.11.10"},
   "permissions": {
     "llm":  {"tasks": ["chat", "quick"]},
     "kb":   {"read": true, "write": true, "kinds": ["3d-model"]},
