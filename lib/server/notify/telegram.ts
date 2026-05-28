@@ -3,7 +3,10 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexHome } from "@/lib/reflex/home";
 import { loadSettings } from "@/lib/settings/store";
-import { startOrchestratorTurn } from "@/lib/server/agents/start-turn";
+import {
+  startOrchestratorTurn,
+  type Attachment,
+} from "@/lib/server/agents/start-turn";
 import { agentManager } from "@/lib/server/agents/manager";
 import { readEvents } from "@/lib/server/agents/events-log";
 import type { NotifyPayload } from "./index";
@@ -197,6 +200,8 @@ interface TgUpdate {
   update_id: number;
   message?: {
     text?: string;
+    caption?: string;
+    photo?: Array<{ file_id: string; file_size?: number }>;
     chat?: { id: number };
   };
 }
@@ -212,9 +217,14 @@ async function getUpdates(token: string, offset: number): Promise<TgUpdate[]> {
 }
 
 async function handleUpdate(cfg: TelegramConfig, u: TgUpdate): Promise<void> {
-  const text = u.message?.text?.trim();
   const chatId = u.message?.chat?.id;
-  if (!text || chatId === undefined) return;
+  if (chatId === undefined) return;
+  const photos = u.message?.photo ?? [];
+  // Caption rides with photos; plain text otherwise. A bare photo gets a
+  // default prompt so the agent has something to answer.
+  let text = (u.message?.text ?? u.message?.caption ?? "").trim();
+  if (!text && photos.length === 0) return;
+  if (!text && photos.length > 0) text = "What's in this image?";
 
   let allowedChatId = cfg.chatId;
   // First-message auto-bind: if no chat id is configured yet, adopt the
@@ -248,7 +258,57 @@ async function handleUpdate(cfg: TelegramConfig, u: TgUpdate): Promise<void> {
   // to the central dispatcher thread in the synthetic home Space.
   const { getDispatcherTopic } = await import("@/lib/server/home/dispatcher");
   const d = await getDispatcherTopic();
-  await streamTurnToTelegram(cfg.botToken, allowedChatId, d.rootId, d.rootPath, d.topicId, text);
+
+  // Download the largest photo (last in the array) so the agent can see
+  // it via its Read tool (native vision on both Claude Code and Codex).
+  const attachments: Attachment[] = [];
+  if (photos.length > 0) {
+    const largest = photos[photos.length - 1]!;
+    const att = await downloadTelegramPhoto(
+      cfg.botToken,
+      largest.file_id,
+      d.rootPath,
+    ).catch(() => null);
+    if (att) attachments.push(att);
+  }
+
+  await streamTurnToTelegram(
+    cfg.botToken,
+    allowedChatId,
+    d.rootId,
+    d.rootPath,
+    d.topicId,
+    text,
+    attachments,
+  );
+}
+
+async function downloadTelegramPhoto(
+  token: string,
+  fileId: string,
+  rootPath: string,
+): Promise<Attachment | null> {
+  const meta = await tgCall(token, "getFile", { file_id: fileId });
+  const filePath = (meta as { result?: { file_path?: string } }).result
+    ?.file_path;
+  if (!meta.ok || !filePath) return null;
+  const res = await fetch(
+    `https://api.telegram.org/file/bot${token}/${filePath}`,
+    { signal: AbortSignal.timeout(30_000) },
+  );
+  if (!res.ok) return null;
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const dir = path.join(rootPath, ".reflex", "attachments");
+  await fs.mkdir(dir, { recursive: true });
+  const name = `tg-${Date.now().toString(36)}-${path.basename(filePath)}`;
+  const abs = path.join(dir, name);
+  await fs.writeFile(abs, bytes);
+  return {
+    name,
+    absPath: abs,
+    size: bytes.length,
+    mime: filePath.endsWith(".png") ? "image/png" : "image/jpeg",
+  };
 }
 
 const EDIT_THROTTLE_MS = 1500;
@@ -267,9 +327,10 @@ async function streamTurnToTelegram(
   rootPath: string,
   topicId: string,
   message: string,
+  attachments: Attachment[] = [],
 ): Promise<void> {
   const before = (await readEvents(rootPath, topicId)).length;
-  const res = await startOrchestratorTurn({ rootId, topicId, message, attachments: [] });
+  const res = await startOrchestratorTurn({ rootId, topicId, message, attachments });
   if ("error" in res) {
     await sendMessage(token, chatId, `⚠️ ${res.error}`);
     return;

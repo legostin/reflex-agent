@@ -40,6 +40,11 @@ export async function runStart(opts: StartOptions): Promise<void> {
       process.stdout.write(`Reflex running at ${url}\n`);
       process.stdout.write(`Data dir: ${reflexHome()}\n`);
       if (opts.open) openBrowser(url);
+      // Self-ping so the root layout renders once on boot — that's what
+      // starts the background workers (scheduler + Telegram poller).
+      // Without it a Telegram-only user who never opens the web UI would
+      // get a server with no poller. Fire-and-forget, retried briefly.
+      void warmup(`http://127.0.0.1:${opts.port}/`);
     });
     const shutdown = (signal: NodeJS.Signals) => {
       process.stdout.write(`\n[reflex] ${signal} received, stopping…\n`);
@@ -49,6 +54,23 @@ export async function runStart(opts: StartOptions): Promise<void> {
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
   });
+}
+
+/**
+ * Hit the home URL a few times until it answers, so the root layout
+ * renders and boots the background workers. Tolerant of the brief window
+ * before Next is fully ready.
+ */
+async function warmup(url: string): Promise<void> {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      if (res.ok) return;
+    } catch {
+      /* not ready yet */
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
 }
 
 async function findPackageRoot(): Promise<string> {
