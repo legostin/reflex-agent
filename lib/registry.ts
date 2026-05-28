@@ -29,6 +29,28 @@ interface RegistryFile {
 
 const EMPTY: RegistryFile = { version: 1, entries: [] };
 
+/**
+ * The "home" Space — a synthetic, always-present root that hosts the
+ * global dispatcher chat (the central, never-ending thread shared with
+ * Telegram). It lives at `<REFLEX_HOME>/home` but is NEVER added to the
+ * registry file, so it stays out of `listRoots()` (and the sidebar
+ * Spaces list). `getRoot(HOME_ROOT_ID)` resolves it directly.
+ */
+export const HOME_ROOT_ID = "home";
+
+export function homeRootEntry(): RegistryEntry {
+  return {
+    id: HOME_ROOT_ID,
+    path: path.join(reflexHome(), "home"),
+    // Stable sentinel — never displayed, only used to satisfy the type.
+    addedAt: "1970-01-01T00:00:00.000Z",
+  };
+}
+
+export function isHomeRoot(id: string): boolean {
+  return id === HOME_ROOT_ID;
+}
+
 export function rootId(absPath: string): string {
   return crypto
     .createHash("sha1")
@@ -80,6 +102,7 @@ export async function listRoots(): Promise<RegistryEntry[]> {
 }
 
 export async function getRoot(id: string): Promise<RegistryEntry | null> {
+  if (id === HOME_ROOT_ID) return homeRootEntry();
   const file = await readFile();
   return file.entries.find((e) => e.id === id) ?? null;
 }

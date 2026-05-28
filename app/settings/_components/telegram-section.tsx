@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useRef, useTransition } from "react";
 import { Loader2, Send, Bot } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Settings } from "@/lib/settings";
-import type { RegistryEntry } from "@/lib/registry";
-import { listRootsAction } from "@/lib/server/registry-actions";
 import {
   patchTelegramSettingsAction,
   testTelegramAction,
@@ -28,15 +26,8 @@ interface Props {
 
 export function TelegramSection({ settings, onChange }: Props) {
   const tg = settings.notify.telegram;
-  const [roots, setRoots] = useState<RegistryEntry[]>([]);
   const [testing, startTest] = useTransition();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    void listRootsAction().then((r) => {
-      if (r.ok) setRoots(r.entries);
-    });
-  }, []);
 
   const patch = (partial: Partial<Settings["notify"]["telegram"]>) => {
     const nextTg = { ...tg, ...partial };
@@ -103,7 +94,8 @@ export function TelegramSection({ settings, onChange }: Props) {
           >
             @userinfobot
           </a>
-          ). Reflex pushes notifications here and answers your replies.
+          ). Reflex pushes notifications here, and your replies go to the
+          dispatcher — the same central chat as the web home page.
         </p>
 
         <div className="grid gap-2">
@@ -133,29 +125,6 @@ export function TelegramSection({ settings, onChange }: Props) {
             placeholder="123456789"
             className="rounded border bg-background px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-violet-400"
           />
-        </div>
-
-        <div className="grid gap-2">
-          <label className="text-xs font-medium" htmlFor="tg-root">
-            Space for inbound chat
-          </label>
-          <select
-            id="tg-root"
-            value={tg.rootId}
-            onChange={(e) => patch({ rootId: e.target.value })}
-            className="rounded border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-violet-400"
-          >
-            <option value="">First Space (default)</option>
-            {roots.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.path.split("/").filter(Boolean).pop() ?? r.path}
-              </option>
-            ))}
-          </select>
-          <p className="text-[10px] text-muted-foreground">
-            Replies you send in Telegram run an agent turn in this Space (its
-            memory + KB + tools).
-          </p>
         </div>
 
         <button

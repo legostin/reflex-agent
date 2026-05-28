@@ -2,8 +2,6 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexHome } from "@/lib/reflex/home";
-import { getRoot, listRoots } from "@/lib/registry";
-import { createTopic, getTopic } from "@/lib/server/topics";
 import { loadSettings } from "@/lib/settings/store";
 import { startOrchestratorTurn } from "@/lib/server/agents/start-turn";
 import { agentManager } from "@/lib/server/agents/manager";
@@ -173,53 +171,12 @@ async function handleUpdate(cfg: TelegramConfig, u: TgUpdate): Promise<void> {
   // Only accept messages from the configured chat.
   if (String(chatId) !== String(cfg.chatId)) return;
 
-  const root = await resolveRoot(cfg.rootId);
-  if (!root) {
-    await sendMessage(
-      cfg.botToken,
-      cfg.chatId,
-      "No Space configured for Telegram. Set one in Settings → Telegram.",
-    );
-    return;
-  }
-
-  const topicId = await getOrCreateTelegramTopic(root.id, root.path);
-  const reply = await runTurnAndAwaitReply(root.id, root.path, topicId, text);
+  // Telegram and the web home page are the SAME conversation — both talk
+  // to the central dispatcher thread in the synthetic home Space.
+  const { getDispatcherTopic } = await import("@/lib/server/home/dispatcher");
+  const d = await getDispatcherTopic();
+  const reply = await runTurnAndAwaitReply(d.rootId, d.rootPath, d.topicId, text);
   await sendMessage(cfg.botToken, cfg.chatId, reply || "(no reply)");
-}
-
-async function resolveRoot(
-  rootId: string,
-): Promise<{ id: string; path: string } | null> {
-  if (rootId) {
-    const r = await getRoot(rootId).catch(() => null);
-    if (r) return { id: r.id, path: r.path };
-  }
-  const roots = await listRoots().catch(() => []);
-  return roots[0] ? { id: roots[0].id, path: roots[0].path } : null;
-}
-
-/** One persistent topic per install so the Telegram conversation has history. */
-async function getOrCreateTelegramTopic(
-  rootId: string,
-  rootPath: string,
-): Promise<string> {
-  const state = await readState();
-  if (state.topicId) {
-    const existing = await getTopic(rootPath, state.topicId).catch(() => null);
-    if (existing) return state.topicId;
-  }
-  const settings = await loadSettings();
-  const a = settings.assignments.chat;
-  const topic = await createTopic({
-    root: rootPath,
-    firstMessage: "Telegram",
-    harness: a.harness,
-    model: a.model,
-    language: settings.language,
-  });
-  await writeState({ ...state, topicId: topic.meta.id, rootId });
-  return topic.meta.id;
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   FileText,
   FolderPlus,
   Loader2,
+  MessagesSquare,
   Settings,
   Sparkles,
   Target,
@@ -61,6 +62,12 @@ export default async function HomePage() {
                 <Button asChild variant="outline" size="sm">
                   <Link href="/settings">
                     <Settings className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/dispatcher">
+                    <MessagesSquare className="mr-1 h-3.5 w-3.5" />
+                    {t("home.dispatcher")}
                   </Link>
                 </Button>
                 <Button asChild variant="default" size="sm">

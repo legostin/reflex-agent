@@ -23,6 +23,7 @@
   },
   "home": {
     "spaceCta": "Space",
+    "dispatcher": "Dispatcher",
     "pendingTitle": "Awaiting reaction",
     "pendingEmptySubtitle": "No hanging cards — everything is sorted.",
     "pendingSubtitle": "{count} cards need a response",

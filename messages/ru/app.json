@@ -23,6 +23,7 @@
   },
   "home": {
     "spaceCta": "Пространство",
+    "dispatcher": "Диспетчер",
     "pendingTitle": "Ждут реакции",
     "pendingEmptySubtitle": "Никаких висящих карточек — всё разобрано.",
     "pendingSubtitle": "{count} карточек требуют ответа",
