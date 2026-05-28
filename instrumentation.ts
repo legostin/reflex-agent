@@ -13,9 +13,17 @@
  * the edge build entirely. An early `!== "nodejs"` return does NOT get DCE'd
  * and pulls node builtins into the edge bundle (build failure).
  *
- * Phase 0: additive + idempotent. Until this hook is proven to fire under
- * `reflex start`'s programmatic `createServer` + `next()` AND soaked, the
- * layout.tsx boot and the `warmup` self-ping in commands/start.ts stay.
+ * This is the SOLE boot path (the app/layout.tsx side-effect was removed).
+ * `register()` runs exactly once per server, in the single API-serving Node
+ * process — including under `reflex start`'s programmatic `createServer` (the
+ * GO/NO-GO spike confirmed it fires at startup, before listen). That is what
+ * lets us drop the layout.tsx boot, which `next dev` was evaluating in several
+ * render-worker processes (separate globalThis each) → one Telegram poller per
+ * worker → 409 + duplicate processing. One hook, one process, one poller.
+ *
+ * The positive `=== "nodejs"` guard (not an early `!== "nodejs"` return) lets
+ * webpack constant-fold and dead-code-eliminate the node-only boot graph
+ * (execa → cross-spawn → child_process) out of the edge-runtime build.
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === "nodejs") {

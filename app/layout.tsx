@@ -9,17 +9,14 @@ export const dynamic = "force-dynamic";
 import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "./_components/app-sidebar";
 import { listRoots } from "@/lib/registry";
-import { startScheduler } from "@/lib/server/workflows/scheduler";
-import { startTelegramPoller } from "@/lib/server/notify/telegram";
 
-// Boot the background workflow scheduler the first time any page is
-// rendered. `startScheduler` is idempotent — guarded by a global, so
-// it's safe to call on every request.
-startScheduler();
-// Telegram inbound poller — same idempotent-singleton pattern. No-ops
-// until the user enables Telegram in settings (the loop idle-polls the
-// config), so it's safe to always start.
-startTelegramPoller();
+// Background workers (scheduler + Telegram poller) are booted from the
+// root `instrumentation.ts` register() hook, NOT here. `next dev` renders
+// this layout in MULTIPLE worker processes (each with its own globalThis),
+// so a top-level boot here started one Telegram poller per worker → several
+// pollers on the same bot → Telegram 409 ("terminated by other getUpdates")
+// + duplicate processing. The instrumentation hook runs once, in the single
+// API-serving server process, in both dev and prod.
 
 export const metadata: Metadata = {
   title: "Reflex",
