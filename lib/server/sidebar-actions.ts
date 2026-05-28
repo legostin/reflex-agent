@@ -147,8 +147,9 @@ export async function loadSidebarUtilitiesAction(
   try {
     const entry = await getRoot(rootId);
     if (!entry) return { ok: false, error: "Root not found" };
-    // Global utilities + this project's local ones.
-    const utils = await listUtilities({ rootId });
+    // Only utilities installed INTO this project — global ones belong to
+    // the top-level Mini-apps screen, not a Space's tree node.
+    const utils = await listUtilities({ rootId, scope: "project" });
     // All topics once; bucket helper threads by utilityId.
     const topics = await listTopics(entry.path);
     const helpersByUtility = new Map<string, TopicSummary[]>();
