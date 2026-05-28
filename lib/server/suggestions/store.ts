@@ -2,6 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { suggestionsFile } from "@/lib/reflex/paths";
 
 /**
  * Per-project list of agent-proposed actions awaiting user decision.
@@ -51,7 +52,7 @@ interface SuggestionsFile {
 }
 
 function suggestionsPath(rootPath: string): string {
-  return path.join(rootPath, ".reflex", "suggestions.json");
+  return suggestionsFile(rootPath);
 }
 
 async function readFileSafe(rootPath: string): Promise<SuggestionsFile> {

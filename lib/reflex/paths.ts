@@ -38,3 +38,32 @@ export function mirrorInReflex(root: string, relDir: string): string {
 export function subdirIndexPath(root: string, relDir: string): string {
   return path.join(mirrorInReflex(root, relDir), INDEX_MD);
 }
+
+// ---------------------------------------------------------------------------
+// Per-Space (project) .reflex sub-locations. `reflexRoot()` is the SOLE place
+// the literal ".reflex" appears — every store resolves its directory through
+// these helpers, never by hand-joining ".reflex". (north-star SpaceStore)
+
+/** Join segments under `<root>/.reflex/`. */
+export function reflexSubpath(root: string, ...segs: string[]): string {
+  return path.join(reflexRoot(root), ...segs);
+}
+
+export function topicsDir(root: string): string {
+  return reflexSubpath(root, "topics");
+}
+export function widgetsDir(root: string): string {
+  return reflexSubpath(root, "widgets");
+}
+export function workflowsDir(root: string): string {
+  return reflexSubpath(root, "workflows");
+}
+export function memoryDir(root: string): string {
+  return reflexSubpath(root, "memory");
+}
+export function projectSkillsDir(root: string): string {
+  return reflexSubpath(root, "skills");
+}
+export function suggestionsFile(root: string): string {
+  return reflexSubpath(root, "suggestions.json");
+}

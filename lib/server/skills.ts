@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import { reflexHome } from "@/lib/reflex/home";
+import { reflexSubpath } from "@/lib/reflex/paths";
 import { slugifyHandle as sanitizeId } from "@/lib/reflex/ids";
 
 /**
@@ -61,7 +62,7 @@ export interface Skill extends SkillMeta {
 const GLOBAL_USER_DIR = path.join(reflexHome(), "skills");
 
 function projectSkillsDir(rootPath: string): string {
-  return path.join(rootPath, ".reflex", "skills");
+  return reflexSubpath(rootPath, "skills");
 }
 
 const BUILTIN: Skill[] = [

@@ -2,6 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexHome } from "@/lib/reflex/home";
+import { memoryDir as projectMemoryDir } from "@/lib/reflex/paths";
 import { loadSettings } from "@/lib/settings/store";
 import { quickComplete } from "@/lib/server/quick";
 import {
@@ -52,7 +53,7 @@ function memoryDir(ctx: ScopeContext): string {
   if (!ctx.rootPath) {
     throw new Error("project memory requires rootPath");
   }
-  return path.join(ctx.rootPath, ".reflex", "memory");
+  return projectMemoryDir(ctx.rootPath);
 }
 
 function filePath(ctx: ScopeContext, file: MemoryFile): string {
