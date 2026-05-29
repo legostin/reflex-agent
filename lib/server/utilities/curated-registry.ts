@@ -51,10 +51,19 @@ const INLINE_BASELINE: CuratedUtility[] = [
     suggestedScope: "project",
     author: "reflex-agent",
   },
-  // recall-engine intentionally NOT shipped yet: as a GLOBAL utility its morning
-  // workflow runs once PER registered root (a digest flood), and a cross-Space
-  // "recall" should produce ONE digest, not one per Space. Re-list after it's
-  // redesigned as a single cross-Space run. Repo: reflex-agent/rflx-recall.
+  {
+    id: "recall-engine",
+    name: "Recall Engine",
+    emoji: "🧠",
+    category: "productivity",
+    description:
+      "Ask your entire past from chat, and get abandoned threads surfaced every morning — built on Reflex's cross-conversation search.",
+    github: "github:reflex-agent/rflx-recall@v0.1.1",
+    // project scope keeps the morning digest to ONE Space; installing globally
+    // runs it per registered root (one digest each).
+    suggestedScope: "project",
+    author: "reflex-agent",
+  },
 ];
 
 const CACHE_PATH = path.join(reflexHome(), "curated-registry.json");
