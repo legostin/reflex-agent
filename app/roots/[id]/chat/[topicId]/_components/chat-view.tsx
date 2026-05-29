@@ -1039,18 +1039,25 @@ function SystemUserTurn({ system }: { system: SystemUserMessage }) {
 function stripProtocolMarkers(text: string): string {
   // Accept both `<<reflex:X>>` and a typo'd `<reflex:X>` on either end —
   // mirrors the lenient extractor in lib/server/agents/protocol.ts.
-  return (
-    text
-      // Any <<reflex:NAME>>…<</reflex:NAME>> marker (open/close matched via the
-      // backreference) — was a hand-maintained tag list that silently leaked
-      // newer markers like `route` / `report` / `notify`.
-      .replace(
-        /<{1,2}reflex:([a-z][a-z0-9-]*)>{1,2}[\s\S]*?<{1,2}\/reflex:\1>{1,2}/g,
-        "",
-      )
-      // A trailing, not-yet-closed marker (mid-stream) so it doesn't flash.
-      .replace(/<{1,2}reflex:[a-z][a-z0-9-]*>{1,2}[\s\S]*$/g, "")
+  const stripped = text
+    // Any <<reflex:NAME>>…<</reflex:NAME>> marker (open/close matched via the
+    // backreference) — was a hand-maintained tag list that silently leaked
+    // newer markers like `route` / `report` / `notify`.
+    .replace(
+      /<{1,2}reflex:([a-z][a-z0-9-]*)>{1,2}[\s\S]*?<{1,2}\/reflex:\1>{1,2}/g,
+      "",
+    )
+    // A trailing, not-yet-closed marker (mid-stream) so it doesn't flash.
+    .replace(/<{1,2}reflex:[a-z][a-z0-9-]*>{1,2}[\s\S]*$/g, "");
+  // The orchestrator's prompt is a flattened transcript (### user / ###
+  // assistant / ### sub-agent). Some models echo it PAST their own reply,
+  // dumping fabricated turns (and prior conversation) into one bubble. Cut at
+  // the first such turn-separator so only the model's real reply renders.
+  // (Root fix is a stop-sequence / structured prompt; this guards the view.)
+  const echo = stripped.search(
+    /(^|\n)#{2,3}[ \t]+(?:user|assistant|sub[- ]agent)\b/i,
   );
+  return (echo >= 0 ? stripped.slice(0, echo) : stripped).trimEnd();
 }
 
 interface SSEEvent {
