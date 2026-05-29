@@ -135,6 +135,37 @@ export const PermissionsSchema = z
         search: z.boolean().optional(),
       })
       .optional(),
+    /**
+     * Cross-utility sharing (the Share Plane — see docs/sharing.md). Coarse
+     * master switch enabling the `consume.*` path at all: scoped reads of
+     * another utility's data (`kb.scoped*`) and brokered capability calls
+     * (`capabilities.invoke`). Per-(provider,selector) authorization is a
+     * GRANT consented at install / just-in-time — NOT this boolean.
+     */
+    shares: z
+      .object({
+        consume: z.boolean().optional(),
+      })
+      .optional(),
+    /**
+     * Sensitive task primitives — `tasks.dispatch` spawns a subprocess agent,
+     * `tasks.*` mutate the task store. Replaces the temporary task-board-only
+     * id-gate: any utility that legitimately needs these REQUESTS the slot and
+     * the user consents at install. See docs/sharing.md (fix B).
+     */
+    tasks: z
+      .object({
+        read: z.boolean().optional(),
+        write: z.boolean().optional(),
+        dispatch: z.boolean().optional(),
+      })
+      .optional(),
+    /**
+     * Git worktree management (`git.worktree.create/merge/remove/list`) —
+     * mutates the user's real repo, so requested explicitly. Replaces the
+     * id-gate. Read-only `git.isRepo/hasRemote/hasGhCli` need no slot.
+     */
+    worktree: z.literal(true).optional(),
   })
   .default({});
 
@@ -236,6 +267,80 @@ export const ManifestSchema = z.object({
    * during install so the user can review.
    */
   mcpServers: z.array(z.string().min(1).max(64)).default([]),
+  /**
+   * Cross-utility sharing publication (the Share Plane — see docs/sharing.md).
+   * `data` CLAIMS KB kinds this utility owns (first-claim-wins; the host
+   * records ownership and enforces it on scoped reads via the unspoofable
+   * `createdBy` stamp). `capabilities` EXPORTS verbs other utilities may call
+   * through `capabilities.invoke` — each `action` names a serverAction in this
+   * manifest, run under THIS utility's identity. Publication is the producer's
+   * opt-in; it never grants access — the user consents per consumer.
+   */
+  provides: z
+    .object({
+      data: z
+        .array(
+          z.object({
+            kind: z.string().min(1).max(64),
+            doc: z.string().max(280).optional(),
+            read: z.boolean().default(true),
+          }),
+        )
+        .default([]),
+      capabilities: z
+        .array(
+          z.object({
+            verb: z
+              .string()
+              .min(1)
+              .max(64)
+              .regex(/^[a-z][a-zA-Z0-9]*$/, "verb must be camelCase"),
+            action: z
+              .string()
+              .min(1)
+              .max(64)
+              .regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/, "action must be a serverActions name"),
+            doc: z.string().max(280).optional(),
+            sideEffects: z.boolean().default(false),
+            confirm: z.boolean().default(false),
+            /** Shape maps (field -> type string) the host compiles to a validator. */
+            input: z.record(z.string(), z.string()).default({}),
+            output: z.record(z.string(), z.string()).default({}),
+          }),
+        )
+        .default([]),
+    })
+    .default({ data: [], capabilities: [] }),
+  /**
+   * Cross-utility sharing INTENT. Declaring `consumes` grants nothing and
+   * never fails install if the provider is absent (dynamic / late-bound) — it
+   * pre-seeds the consent dialog and documents what the utility may later ask
+   * for. Omitting `provider` binds to ANY provider of that kind/verb resolved
+   * at runtime.
+   */
+  consumes: z
+    .object({
+      data: z
+        .array(
+          z.object({
+            provider: z.string().min(1).max(80).optional(),
+            kind: z.string().min(1).max(64),
+            reason: z.string().max(280).default(""),
+          }),
+        )
+        .default([]),
+      capabilities: z
+        .array(
+          z.object({
+            provider: z.string().min(1).max(80).optional(),
+            verb: z.string().min(1).max(64),
+            reason: z.string().max(280).default(""),
+            minVersion: z.string().optional(),
+          }),
+        )
+        .default([]),
+    })
+    .default({ data: [], capabilities: [] }),
   permissions: PermissionsSchema,
   source: UtilitySourceSchema.optional(),
   /**
