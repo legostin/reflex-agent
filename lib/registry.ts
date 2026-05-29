@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { reflexHome } from "./reflex/home.js";
+import { writeJsonFile } from "./reflex/store/json-store.js";
 
 /**
  * Registry of Reflex-managed roots. Stored at `<REFLEX_HOME>/registry.json` so
@@ -86,12 +87,7 @@ async function readFile(): Promise<RegistryFile> {
 }
 
 async function writeFile(file: RegistryFile): Promise<void> {
-  await fs.mkdir(REGISTRY_DIR, { recursive: true });
-  await fs.writeFile(
-    REGISTRY_FILE,
-    JSON.stringify(file, null, 2) + "\n",
-    "utf8",
-  );
+  await writeJsonFile(REGISTRY_FILE, file);
 }
 
 export async function listRoots(): Promise<RegistryEntry[]> {

@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { reflexHome } from "@/lib/reflex/home";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 import type { Share, ShareFile, ShareKind } from "./types";
 
 /**
@@ -24,10 +25,7 @@ async function readFile(): Promise<ShareFile> {
 }
 
 async function writeFile(file: ShareFile): Promise<void> {
-  await fs.mkdir(path.dirname(SHARES_FILE), { recursive: true });
-  await fs.writeFile(SHARES_FILE, JSON.stringify(file, null, 2) + "\n", {
-    mode: 0o600,
-  });
+  await writeJsonFile(SHARES_FILE, file, { mode: 0o600 });
 }
 
 export async function listShares(): Promise<Share[]> {
