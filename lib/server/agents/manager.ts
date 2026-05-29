@@ -1054,12 +1054,17 @@ class AgentManager {
     }
     if (state) {
       const kbEntries = extractKbEntries(buf);
+      const kbReg = await ensureKbCapability();
       for (const entry of kbEntries) {
         try {
-          const written = await writeKbEntry({
-            rootPath: state.rootPath,
-            directive: entry,
-          });
+          // Phase 4: route through the unified `kb.write` capability.
+          const written = await kbReg.invoke<
+            Awaited<ReturnType<typeof writeKbEntry>>
+          >(
+            "kb.write",
+            { rootPath: state.rootPath, directive: entry },
+            { caller: "agent", rootPath: state.rootPath },
+          );
           writtenViaKb.add(written.absPath);
           await this.emit({
             type: "kb-write",
@@ -2350,6 +2355,29 @@ async function ensureTaskCapabilities() {
         };
         return updateTask(i.rootPath, i.id, i.patch);
       },
+    });
+  }
+  return reg;
+}
+
+/**
+ * Register `kb.write` (Phase 4 marker convergence). The agent's KB marker uses
+ * writeKbEntry (a full-entry write from a directive) — a distinct path from
+ * host-api's `kb.add` (utility append), hence a distinct id, no collision.
+ * Wraps the same writeKbEntry; the caller keeps its kb-write event.
+ */
+async function ensureKbCapability() {
+  const { capabilityRegistry } = await import(
+    "@/lib/server/capabilities/registry"
+  );
+  const reg = capabilityRegistry();
+  if (!reg.has("kb.write")) {
+    reg.register({
+      kind: "sync",
+      id: "kb.write",
+      audit: "event",
+      doc: "Write a knowledge-base entry from an agent directive.",
+      run: (input) => writeKbEntry(input as Parameters<typeof writeKbEntry>[0]),
     });
   }
   return reg;
