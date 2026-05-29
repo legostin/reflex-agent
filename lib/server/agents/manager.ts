@@ -18,6 +18,7 @@ import {
   addAlwaysAllow,
 } from "./runtime/permission-bridge";
 import { ensureWorkDirs, drainOutbox } from "./outbox";
+import { synthesizeSpeech } from "@/lib/server/audio/tts";
 import { runCodex } from "./runtime/codex";
 import { runOllama } from "./runtime/ollama";
 import { runImageGen } from "./runtime/image-gen";
@@ -165,6 +166,12 @@ export interface InvokeArgs {
    * fallback so the image actually appears. Holds the user's request text.
    */
   imageFallbackPrompt?: string;
+  /**
+   * Set when the user explicitly asked for speech/audio. If the turn delivers
+   * no real audio, the manager synthesizes it (Reflex-side `say`, unsandboxed)
+   * from this text — the safety net behind the `<name>.tts.txt` convention.
+   */
+  ttsFallbackText?: string;
 }
 
 interface AgentRuntimeState {
@@ -358,9 +365,13 @@ class AgentManager {
       // Drain the outbox: surface any deliverable the agent dropped there
       // (audio/video/file) as an `artifact` event — BEFORE turn-end so it
       // lands in the current bubble. Marker-free, so it works on Codex.
+      let deliveredAudio = false;
       try {
         const delivered = await drainOutbox(state.meta.rootId, state.rootPath);
         for (const f of delivered) {
+          // >2KB filters out the empty/silent files a sandboxed `say` attempt
+          // leaves behind, so the TTS fallback below still fires for those.
+          if (f.kind === "audio" && f.size > 2048) deliveredAudio = true;
           await this.emit({
             type: "artifact",
             kind: f.kind,
@@ -383,6 +394,38 @@ class AgentManager {
           ts: now(),
           seq: 0,
         });
+      }
+      // TTS fallback: the user asked for audio but the turn produced none real
+      // (the agent ignored the .tts.txt convention or its sandboxed attempt
+      // was silent). Synthesize it ourselves, unsandboxed, so audio happens.
+      if (args.ttsFallbackText && !deliveredAudio) {
+        try {
+          const stored = await synthesizeSpeech({
+            rootId: state.meta.rootId,
+            text: args.ttsFallbackText,
+          });
+          await this.emit({
+            type: "artifact",
+            kind: stored.kind,
+            url: stored.urlPath,
+            name: stored.name,
+            mime: stored.mime,
+            size: stored.size,
+            agentId: args.agentId,
+            ts: now(),
+            seq: 0,
+          });
+        } catch (err) {
+          await this.emit({
+            type: "assistant-delta",
+            text: `\n\n_Не удалось синтезировать аудио: ${
+              err instanceof Error ? err.message : String(err)
+            }_\n`,
+            agentId: args.agentId,
+            ts: now(),
+            seq: 0,
+          });
+        }
       }
       // Snapshot the turn's text now (fully streamed) — the `finally` deletes
       // the live buffer, so this is what invoke() returns.

@@ -279,6 +279,12 @@ export async function startOrchestratorTurn(args: {
         ...(isImageRequest(args.message)
           ? { imageFallbackPrompt: args.message }
           : {}),
+        // Safety net behind the `.tts.txt` outbox convention: if the user
+        // asked for speech and the turn delivers no real audio, the manager
+        // synthesizes it (unsandboxed) from the extracted text.
+        ...(isAudioRequest(args.message)
+          ? { ttsFallbackText: extractSpeechText(args.message) }
+          : {}),
       });
       // A web-typed dispatcher turn isn't visible on Telegram (the bridge only
       // streams TG-initiated turns). Mirror it so both surfaces share one
@@ -558,6 +564,39 @@ function isImageRequest(message: string): boolean {
       m,
     );
   return genVerb && imageNoun;
+}
+
+/** Does this message explicitly ask for speech / audio (TTS)? */
+function isAudioRequest(message: string): boolean {
+  const m = message.toLowerCase();
+  if (
+    /(озвуч|проговор|сделай\s+аудио|синтез[а-я]*\s+реч|голос[аеом]|text[- ]?to[- ]?speech|\btts\b|narrate|voice[- ]?over|read .*\baloud)/.test(
+      m,
+    )
+  )
+    return true;
+  // "скажи …" only counts as TTS when paired with a voice/audio cue.
+  return /\bскажи\b/.test(m) && /(голос|вслух|аудио)/.test(m);
+}
+
+/** Best-effort extraction of the text to speak from a TTS request — only used
+ *  by the fallback; the primary path is the agent writing clean text into a
+ *  `.tts.txt` outbox file. */
+function extractSpeechText(message: string): string {
+  const quoted = /[«"“”']([^«»"“”']{2,})[»"“”']/.exec(message);
+  if (quoted) return quoted[1]!.trim();
+  const colon = message.indexOf(":");
+  if (colon >= 0 && colon < message.length - 2) {
+    return message.slice(colon + 1).trim();
+  }
+  return (
+    message
+      .replace(
+        /^[\s,.]*\b(озвучь|проговори|сделай\s+аудио|скажи|narrate|say|speak|read\s+aloud)\b[:,\s]*/i,
+        "",
+      )
+      .trim() || message.trim()
+  );
 }
 
 function renderUserBlock(message: string, attachments?: Attachment[]): string {

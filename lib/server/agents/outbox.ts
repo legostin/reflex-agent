@@ -2,6 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { ingestFile, type StoredFile } from "@/lib/server/assets/file-store";
+import { synthesizeSpeech, parseTtsFile } from "@/lib/server/audio/tts";
 
 /**
  * The "outbox": a per-root drop zone the agent writes deliverables into
@@ -54,6 +55,24 @@ export async function drainOutbox(
     try {
       const stat = await fs.stat(abs);
       if (!stat.isFile()) continue;
+      // `<name>.tts.txt` → Reflex synthesizes real audio (the agent's sandbox
+      // can't), and we deliver the AUDIO, not the text file.
+      if (/\.tts\.txt$/i.test(name)) {
+        const { text, voice } = parseTtsFile(await fs.readFile(abs, "utf8"));
+        if (text) {
+          const base = name.replace(/\.tts\.txt$/i, "") || "speech";
+          out.push(
+            await synthesizeSpeech({
+              rootId,
+              text,
+              ...(voice ? { voice } : {}),
+              name: `${base}.m4a`,
+            }),
+          );
+        }
+        await fs.unlink(abs).catch(() => {});
+        continue;
+      }
       const stored = await ingestFile(rootId, abs, name);
       out.push(stored);
       await fs.unlink(abs).catch(() => {});
