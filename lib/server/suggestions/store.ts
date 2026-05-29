@@ -1,8 +1,8 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
 import { suggestionsFile } from "@/lib/reflex/paths";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 
 /**
  * Per-project list of agent-proposed actions awaiting user decision.
@@ -70,9 +70,7 @@ async function writeFile(
   rootPath: string,
   file: SuggestionsFile,
 ): Promise<void> {
-  const p = suggestionsPath(rootPath);
-  await fs.mkdir(path.dirname(p), { recursive: true });
-  await fs.writeFile(p, JSON.stringify(file, null, 2) + "\n", "utf8");
+  await writeJsonFile(suggestionsPath(rootPath), file);
 }
 
 export async function listSuggestions(

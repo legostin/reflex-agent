@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { reflexHome } from "@/lib/reflex/home";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 import type { UtilityScope } from "./types";
 
 /**
@@ -63,18 +64,8 @@ async function readFile(p: string): Promise<SecretsFile> {
 }
 
 async function writeFile(p: string, data: SecretsFile): Promise<void> {
-  await fs.mkdir(path.dirname(p), { recursive: true });
-  // Restrictive perms: owner read/write only.
-  await fs.writeFile(p, JSON.stringify(data, null, 2) + "\n", {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  // Tighten in case the file existed with looser perms.
-  try {
-    await fs.chmod(p, 0o600);
-  } catch {
-    // best effort
-  }
+  // Owner read/write only — atomic + serialized via the shared json-store.
+  await writeJsonFile(p, data, { mode: 0o600 });
 }
 
 export async function getSecret(

@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexRoot } from "@/lib/reflex/paths";
 import { sanitizeIdDash } from "@/lib/reflex/ids";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 import type {
   DashboardLayout,
   WidgetData,
@@ -83,12 +84,7 @@ export async function writeWidget(
       `Invalid widget record (id=${record.id}, kind=${record.kind})`,
     );
   }
-  await fs.mkdir(widgetsDir(rootPath), { recursive: true });
-  await fs.writeFile(
-    widgetFile(rootPath, record.id),
-    JSON.stringify(record, null, 2) + "\n",
-    "utf8",
-  );
+  await writeJsonFile(widgetFile(rootPath, record.id), record);
 }
 
 /**
@@ -165,12 +161,7 @@ export async function writeLayout(
   rootPath: string,
   layout: DashboardLayout,
 ): Promise<void> {
-  await fs.mkdir(reflexRoot(rootPath), { recursive: true });
-  await fs.writeFile(
-    layoutFile(rootPath),
-    JSON.stringify(layout, null, 2) + "\n",
-    "utf8",
-  );
+  await writeJsonFile(layoutFile(rootPath), layout);
 }
 
 /**

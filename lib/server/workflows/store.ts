@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexRoot } from "@/lib/reflex/paths";
 import { sanitizeIdDash } from "@/lib/reflex/ids";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 import type { WorkflowDef, WorkflowRun } from "./types";
 
 const WORKFLOWS_DIR = "workflows";
@@ -72,12 +73,7 @@ export async function writeWorkflow(
   if (!validate(wf as unknown)) {
     throw new Error(`Invalid workflow (id=${wf.id})`);
   }
-  await fs.mkdir(workflowsDir(rootPath), { recursive: true });
-  await fs.writeFile(
-    workflowFile(rootPath, wf.id),
-    JSON.stringify(wf, null, 2) + "\n",
-    "utf8",
-  );
+  await writeJsonFile(workflowFile(rootPath, wf.id), wf);
 }
 
 export async function deleteWorkflow(
@@ -102,12 +98,7 @@ export async function writeRun(
   rootPath: string,
   run: WorkflowRun,
 ): Promise<void> {
-  await fs.mkdir(runsDir(rootPath, run.workflowId), { recursive: true });
-  await fs.writeFile(
-    runFile(rootPath, run.workflowId, run.id),
-    JSON.stringify(run, null, 2) + "\n",
-    "utf8",
-  );
+  await writeJsonFile(runFile(rootPath, run.workflowId, run.id), run);
 }
 
 /**
