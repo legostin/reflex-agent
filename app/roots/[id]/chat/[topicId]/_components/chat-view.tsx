@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Download, Loader2, Send, Sparkles, Wifi, WifiOff } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  Pause,
+  Play,
+  Send,
+  Sparkles,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1091,6 +1100,118 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function fmtTime(s: number): string {
+  if (!isFinite(s) || s < 0) return "0:00";
+  const m = Math.floor(s / 60);
+  return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+}
+
+// Deterministic pseudo-waveform bar heights (0.3–1.0) — gives the player a
+// waveform look without decoding the audio.
+const WAVEFORM = Array.from(
+  { length: 44 },
+  (_, i) => 0.3 + 0.7 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.55) + 0.15),
+).map((h) => Math.min(1, h));
+
+/** Custom audio player widget — circular play/pause, seekable waveform,
+ *  elapsed/total time, and a download. Replaces the bare <audio controls>. */
+function AudioPlayer({
+  url,
+  name,
+  size,
+}: {
+  url: string;
+  name: string;
+  size: number;
+}) {
+  const ref = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const pct = duration ? current / duration : 0;
+
+  const toggle = () => {
+    const a = ref.current;
+    if (!a) return;
+    if (a.paused) void a.play();
+    else a.pause();
+  };
+  const seekToClientX = (clientX: number, el: HTMLElement) => {
+    const a = ref.current;
+    if (!a || !duration) return;
+    const r = el.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
+    a.currentTime = ratio * duration;
+    setCurrent(a.currentTime);
+  };
+
+  return (
+    <div className="flex w-full max-w-md items-center gap-3 rounded-xl border bg-card px-3 py-2.5 shadow-sm">
+      <audio
+        ref={ref}
+        src={url}
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+        onTimeUpdate={(e) => setCurrent(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
+      />
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={playing ? "Pause" : "Play"}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white shadow transition hover:bg-violet-700 active:scale-95"
+      >
+        {playing ? (
+          <Pause className="h-4 w-4" />
+        ) : (
+          <Play className="h-4 w-4 translate-x-px" />
+        )}
+      </button>
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <span className="truncate text-xs font-medium" title={name}>
+            {name}
+          </span>
+          <a
+            href={url}
+            download={name}
+            aria-label="Download"
+            className="shrink-0 text-muted-foreground transition hover:text-foreground"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </a>
+        </div>
+        <div
+          className="flex h-7 cursor-pointer items-center gap-[2px]"
+          onClick={(e) => seekToClientX(e.clientX, e.currentTarget)}
+          role="slider"
+          aria-label="Seek"
+          aria-valuenow={Math.round(pct * 100)}
+          tabIndex={0}
+        >
+          {WAVEFORM.map((h, i) => (
+            <span
+              key={i}
+              className={`flex-1 rounded-full ${
+                i / WAVEFORM.length <= pct
+                  ? "bg-violet-500"
+                  : "bg-muted-foreground/25"
+              }`}
+              style={{ height: `${Math.round(h * 100)}%` }}
+            />
+          ))}
+        </div>
+        <div className="mt-0.5 flex items-center justify-between text-[10px] tabular-nums text-muted-foreground">
+          <span>{fmtTime(current)}</span>
+          <span>{duration ? fmtTime(duration) : formatBytes(size)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** Render an agent-delivered artifact (audio / video / image / file). */
 function ArtifactView({
   artifact,
@@ -1113,18 +1234,7 @@ function ArtifactView({
     );
   }
   if (kind === "audio") {
-    return (
-      <div className="space-y-1">
-        <audio controls src={url} className="w-full max-w-md" />
-        <a
-          href={url}
-          download={name}
-          className="block text-xs text-muted-foreground hover:underline"
-        >
-          {name} · {formatBytes(size)}
-        </a>
-      </div>
-    );
+    return <AudioPlayer url={url} name={name} size={size} />;
   }
   if (kind === "video") {
     return (
