@@ -869,15 +869,43 @@ function ownedByProvider(createdBy: unknown, provider: string): boolean {
   );
 }
 
+/**
+ * Thrown by the Share Plane host methods when a consumer lacks a grant. Carries
+ * structured `grantRequest` detail so the iframe bridge can render a just-in-
+ * time consent prompt (the message string is unchanged so existing callers /
+ * tests that match `grant_required` still work).
+ */
+export class GrantRequiredError extends Error {
+  readonly grantRequest: {
+    consumer: string;
+    plane: SharePlane;
+    provider: string;
+    selector: string;
+    scope: string;
+  };
+  constructor(
+    consumer: string,
+    plane: SharePlane,
+    provider: string,
+    selector: string,
+    scope: string,
+  ) {
+    super(
+      `grant_required: utility "${consumer}" needs a ${plane} grant for ${provider}/${selector}`,
+    );
+    this.name = "GrantRequiredError";
+    this.grantRequest = { consumer, plane, provider, selector, scope };
+  }
+}
+
 function grantRequired(
   consumer: string,
   plane: SharePlane,
   provider: string,
   selector: string,
-): Error {
-  return new Error(
-    `grant_required: utility "${consumer}" needs a ${plane} grant for ${provider}/${selector}`,
-  );
+  scope: string,
+): GrantRequiredError {
+  return new GrantRequiredError(consumer, plane, provider, selector, scope);
 }
 
 function ensureConsume(ctx: HostContext): void {
@@ -967,7 +995,13 @@ async function kbScopedList(
     scope: targetRoot.id,
   });
   if (!grant)
-    throw grantRequired(ctx.utility.manifest.id, "data", args.provider, args.kind);
+    throw grantRequired(
+      ctx.utility.manifest.id,
+      "data",
+      args.provider,
+      args.kind,
+      targetRoot.id,
+    );
   const files = await listKbFiles(targetRoot.path);
   const q = args.query?.toLowerCase();
   return files
@@ -1003,7 +1037,13 @@ async function kbScopedRead(
     scope: targetRoot.id,
   });
   if (!grant)
-    throw grantRequired(ctx.utility.manifest.id, "data", args.provider, args.kind);
+    throw grantRequired(
+      ctx.utility.manifest.id,
+      "data",
+      args.provider,
+      args.kind,
+      targetRoot.id,
+    );
   const dir = args.relPath.split("/")[0];
   if (dir !== args.kind) {
     throw new Error(
@@ -1080,6 +1120,7 @@ async function capabilitiesInvoke(
       "capability",
       args.provider,
       args.verb,
+      targetRoot.id,
     );
   await syncProviderDirectory(targetRoot.id);
   const found = await findProviderCapability(

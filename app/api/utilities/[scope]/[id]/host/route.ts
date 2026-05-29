@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dispatchHostCall } from "@/lib/server/utilities/host-api";
+import {
+  dispatchHostCall,
+  GrantRequiredError,
+} from "@/lib/server/utilities/host-api";
 import { getUtility } from "@/lib/server/utilities/store";
 import type { UtilityScope } from "@/lib/server/utilities/types";
 
@@ -41,6 +44,13 @@ export async function POST(
     );
     return json({ ok: true, result });
   } catch (err) {
+    if (err instanceof GrantRequiredError) {
+      // Structured detail lets the iframe bridge raise a JIT consent prompt.
+      return json(
+        { ok: false, error: err.message, grantRequest: err.grantRequest },
+        400,
+      );
+    }
     return json(
       { ok: false, error: err instanceof Error ? err.message : String(err) },
       400,

@@ -1,6 +1,12 @@
 "use server";
 
-import { listGrantViews, revokeGrant, type GrantView } from "./grant-store";
+import {
+  listGrantViews,
+  revokeGrant,
+  createGrant,
+  type GrantView,
+  type SharePlane,
+} from "./grant-store";
 import { listProviders, type ProviderEntry } from "./provider-directory";
 
 /**
@@ -21,4 +27,25 @@ export async function revokeGrantAction(id: string): Promise<{ ok: boolean }> {
 
 export async function listProvidersAction(): Promise<ProviderEntry[]> {
   return listProviders();
+}
+
+/**
+ * Create a grant after the user approves a just-in-time consent prompt
+ * (the host-rendered dialog in the utility iframe wrapper). The UI consent IS
+ * the authorization here — this is a single-user, local-first app, and the
+ * prompt is rendered by the host, not the requesting utility, so it can't be
+ * spoofed. Idempotent via the underlying store.
+ */
+export async function requestGrantAction(input: {
+  consumer: string;
+  provider: string;
+  plane: SharePlane;
+  selector: string;
+  scope: string;
+}): Promise<{ ok: boolean }> {
+  if (input.plane !== "data" && input.plane !== "capability") {
+    return { ok: false };
+  }
+  await createGrant(input);
+  return { ok: true };
 }

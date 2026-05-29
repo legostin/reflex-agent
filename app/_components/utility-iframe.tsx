@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ShieldQuestion } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { requestGrantAction } from "@/lib/server/utilities/sharing-actions";
 import { UtilityAskLauncher } from "./utility-ask-launcher";
 
 interface Props {
@@ -20,10 +23,34 @@ interface Props {
   utilityName?: string;
 }
 
+interface GrantRequest {
+  consumer: string;
+  provider: string;
+  plane: "data" | "capability";
+  selector: string;
+  scope: string;
+}
+
+interface ConsentReq {
+  rpcId: number;
+  method: string;
+  args: unknown;
+  grantRequest: GrantRequest;
+}
+
+type HostResult =
+  | { ok: true; result: unknown }
+  | { ok: false; error: string; grantRequest?: GrantRequest };
+
 /**
  * Hosts a utility iframe and bridges its `host-rpc` postMessage calls to
  * the server's `/host` endpoint. Replies are posted back to the iframe
  * with the same id so the in-iframe Promise can resolve.
+ *
+ * When a Share Plane call returns `grant_required`, the bridge raises a
+ * host-rendered consent prompt (unspoofable — the requesting utility never
+ * draws it). On approval it records the grant and retries the original call
+ * transparently, so the utility's own code never has to handle consent.
  *
  * When `agentChat` is on, the iframe is wrapped in a flex row + the
  * AI sidebar. The sidebar can request a snapshot from the iframe via
@@ -50,9 +77,19 @@ export function UtilityIframe({
     resolve: (value: unknown) => void;
     timer: ReturnType<typeof setTimeout>;
   } | null>(null);
+  const [consent, setConsent] = useState<ConsentReq | null>(null);
   const qs = rootId ? `?rootId=${encodeURIComponent(rootId)}` : "";
   const src = `/api/utilities/${scope}/${id}/iframe${qs}`;
   const hostUrl = `/api/utilities/${scope}/${id}/host${qs}`;
+
+  const postResult = (rpcId: number, payload: HostResult) => {
+    iframeRef.current?.contentWindow?.postMessage(
+      payload.ok
+        ? { type: "host-rpc-result", id: rpcId, ok: true, result: payload.result }
+        : { type: "host-rpc-result", id: rpcId, ok: false, error: payload.error },
+      "*",
+    );
+  };
 
   useEffect(() => {
     const listener = async (e: MessageEvent) => {
@@ -81,35 +118,79 @@ export function UtilityIframe({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ method: data.method, args: data.args }),
         });
-        const body = (await res.json()) as
-          | { ok: true; result: unknown }
-          | { ok: false; error: string };
-        iframeRef.current?.contentWindow?.postMessage(
-          body.ok
-            ? { type: "host-rpc-result", id: rpcId, ok: true, result: body.result }
-            : {
-                type: "host-rpc-result",
-                id: rpcId,
-                ok: false,
-                error: body.error ?? `HTTP ${res.status}`,
-              },
-          "*",
-        );
+        const body = (await res.json()) as HostResult;
+        // A Share Plane call that needs consent → raise the host prompt instead
+        // of bubbling the error; the original rpc stays unresolved until the
+        // user decides, then we retry (approve) or reject (deny).
+        if (
+          !body.ok &&
+          body.grantRequest &&
+          typeof rpcId === "number" &&
+          typeof data.method === "string"
+        ) {
+          setConsent({
+            rpcId,
+            method: data.method,
+            args: data.args,
+            grantRequest: body.grantRequest,
+          });
+          return;
+        }
+        if (typeof rpcId === "number") {
+          postResult(
+            rpcId,
+            body.ok
+              ? { ok: true, result: body.result }
+              : { ok: false, error: body.error ?? `HTTP ${res.status}` },
+          );
+        }
       } catch (err) {
-        iframeRef.current?.contentWindow?.postMessage(
-          {
-            type: "host-rpc-result",
-            id: rpcId,
+        if (typeof rpcId === "number") {
+          postResult(rpcId, {
             ok: false,
             error: err instanceof Error ? err.message : String(err),
-          },
-          "*",
-        );
+          });
+        }
       }
     };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
   }, [hostUrl]);
+
+  const approveConsent = async () => {
+    const c = consent;
+    if (!c) return;
+    setConsent(null);
+    try {
+      const r = await requestGrantAction(c.grantRequest);
+      if (!r.ok) throw new Error("could not record the grant");
+      // Retry the original call now that the grant exists.
+      const res = await fetch(hostUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: c.method, args: c.args }),
+      });
+      const body = (await res.json()) as HostResult;
+      postResult(
+        c.rpcId,
+        body.ok
+          ? { ok: true, result: body.result }
+          : { ok: false, error: body.error ?? `HTTP ${res.status}` },
+      );
+    } catch (err) {
+      postResult(c.rpcId, {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
+  const denyConsent = () => {
+    const c = consent;
+    if (!c) return;
+    setConsent(null);
+    postResult(c.rpcId, { ok: false, error: "access denied by user" });
+  };
 
   const requestSnapshot = (): Promise<unknown> => {
     const win = iframeRef.current?.contentWindow;
@@ -138,6 +219,59 @@ export function UtilityIframe({
     });
   };
 
+  const consentDialog = consent ? (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-lg border bg-background p-5 shadow-xl">
+        <div className="mb-2 flex items-center gap-2">
+          <ShieldQuestion className="h-5 w-5 text-violet-500" />
+          <h3 className="text-sm font-semibold">Cross-utility access</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          <span className="font-mono text-foreground">
+            {consent.grantRequest.consumer}
+          </span>{" "}
+          {consent.grantRequest.plane === "data" ? (
+            <>
+              wants to read your{" "}
+              <span className="font-mono text-foreground">
+                {consent.grantRequest.selector}
+              </span>{" "}
+              data from{" "}
+              <span className="font-mono text-foreground">
+                {consent.grantRequest.provider}
+              </span>
+              .
+            </>
+          ) : (
+            <>
+              wants to run{" "}
+              <span className="font-mono text-foreground">
+                {consent.grantRequest.provider}
+              </span>
+              &apos;s{" "}
+              <span className="font-mono text-foreground">
+                {consent.grantRequest.selector}
+              </span>{" "}
+              action.
+            </>
+          )}
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          It only gets what you allow here — nothing else. Revoke any time in
+          Settings → Sharing.
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={denyConsent}>
+            Deny
+          </Button>
+          <Button size="sm" onClick={() => void approveConsent()}>
+            Allow
+          </Button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   const iframe = (
     <iframe
       ref={iframeRef}
@@ -149,7 +283,12 @@ export function UtilityIframe({
   );
 
   if (!agentChat) {
-    return iframe;
+    return (
+      <>
+        {iframe}
+        {consentDialog}
+      </>
+    );
   }
 
   // Iframe fills the space; the ask-launcher floats over its bottom-right
@@ -163,6 +302,7 @@ export function UtilityIframe({
         {...(rootId ? { rootId } : {})}
         requestSnapshot={requestSnapshot}
       />
+      {consentDialog}
     </div>
   );
 }
