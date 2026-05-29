@@ -1309,6 +1309,7 @@ class AgentManager {
     rootPath: string,
   ): Promise<void> {
     const writes = extractMemoryWrites(buf);
+    const reg = await ensureMemoryCapability();
     for (const w of writes) {
       try {
         if (!isMemoryScope(w.scope) || !isMemoryFile(w.file) || !isMemoryOp(w.op)) {
@@ -1325,10 +1326,19 @@ class AgentManager {
           w.scope === "global"
             ? ({ scope: "global" } as const)
             : ({ scope: "project", rootPath } as const);
-        const res = await writeMemory(ctx, w.file, w.op, {
-          ...(w.content !== undefined ? { content: w.content } : {}),
-          ...(w.match !== undefined ? { match: w.match } : {}),
-        });
+        // Phase 4: route the write through the unified `memory.write`
+        // capability (behavior-identical; validation + events stay here).
+        const res = await reg.invoke<Awaited<ReturnType<typeof writeMemory>>>(
+          "memory.write",
+          {
+            ctx,
+            file: w.file,
+            op: w.op,
+            ...(w.content !== undefined ? { content: w.content } : {}),
+            ...(w.match !== undefined ? { match: w.match } : {}),
+          },
+          { caller: "agent", rootPath },
+        );
         if (!res.ok) {
           await this.emit({
             type: "error",
@@ -2212,6 +2222,40 @@ async function ensureNotifyCapability() {
       audit: "always",
       doc: "Send a notification to the user's channels (Telegram, push).",
       run: (input) => notify(input as NotifyPayload),
+    });
+  }
+  return reg;
+}
+
+/**
+ * Register the `memory.write` capability (Phase 4 marker convergence). Wraps
+ * the same writeMemory() and returns its result; the caller keeps the marker's
+ * validation + domain-event emission, so behavior is identical.
+ */
+async function ensureMemoryCapability() {
+  const { capabilityRegistry } = await import(
+    "@/lib/server/capabilities/registry"
+  );
+  const reg = capabilityRegistry();
+  if (!reg.has("memory.write")) {
+    reg.register({
+      kind: "sync",
+      id: "memory.write",
+      audit: "event",
+      doc: "Write to the user's memory taxonomy (global or project scope).",
+      run: (input) => {
+        const i = input as {
+          ctx: Parameters<typeof writeMemory>[0];
+          file: Parameters<typeof writeMemory>[1];
+          op: Parameters<typeof writeMemory>[2];
+          content?: string;
+          match?: string;
+        };
+        return writeMemory(i.ctx, i.file, i.op, {
+          ...(i.content !== undefined ? { content: i.content } : {}),
+          ...(i.match !== undefined ? { match: i.match } : {}),
+        });
+      },
     });
   }
   return reg;
