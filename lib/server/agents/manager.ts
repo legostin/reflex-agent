@@ -187,6 +187,8 @@ class AgentManager {
     string,
     { agentId: string; directive: McpAddDirective }
   >();
+  /** Guards one-time registration of the interactive directives (Phase 4). */
+  private interactiveRegistered = false;
 
   // ---------------------------------------------------------------------
   // creation
@@ -975,6 +977,158 @@ class AgentManager {
   }
 
   /**
+   * Register permission/question/mcp-add as InteractiveDirectives on the shared
+   * CapabilityRegistry (Phase 4). The `open` closures emit the request (the
+   * former inline marker-emission, verbatim); the `resolve` closures delegate
+   * to the unchanged respondPermission/Question/McpAdd. Closures capture `this`,
+   * so private state (pendingMcpAdds) + emit stay reachable — behavior-identical
+   * to the inline path. Idempotent; safe to call from emission and resolve sites.
+   */
+  async ensureInteractiveDirectives() {
+    const { capabilityRegistry } = await import(
+      "@/lib/server/capabilities/registry"
+    );
+    const reg = capabilityRegistry();
+    if (this.interactiveRegistered) return reg;
+    this.interactiveRegistered = true;
+
+    if (!reg.has("permission")) {
+      reg.register({
+        kind: "interactive",
+        id: "permission",
+        doc: "Request permission to run a tool/action; suspends the turn.",
+        open: async (input, ctx) => {
+          const p = input as ReturnType<typeof extractPermissions>[number];
+          const requestId = p.id ?? shortId();
+          await this.emit({
+            type: "permission-request",
+            requestId,
+            ...(p.tool ? { tool: p.tool } : {}),
+            ...(p.action ? { action: p.action } : {}),
+            ...(p.input !== undefined ? { input: p.input } : {}),
+            ...(p.description ? { description: p.description } : {}),
+            agentId: ctx.agentId as string,
+            ts: now(),
+            seq: 0,
+          });
+          return { requestId };
+        },
+        resolve: async (requestId, response, ctx) => {
+          const r = response as {
+            decision: "allow" | "deny";
+            scope?: "once" | "always";
+            tool?: string;
+          };
+          await this.respondPermission(ctx.agentId as string, {
+            requestId,
+            decision: r.decision,
+            ...(r.scope ? { scope: r.scope } : {}),
+            ...(r.tool ? { tool: r.tool } : {}),
+          });
+        },
+      });
+    }
+
+    if (!reg.has("question")) {
+      reg.register({
+        kind: "interactive",
+        id: "question",
+        doc: "Ask the user a question (choices or open-ended); suspends the turn.",
+        open: async (input, ctx) => {
+          const q = input as ReturnType<typeof extractQuestions>[number];
+          const questionId = q.id ?? shortId();
+          await this.emit({
+            type: "question",
+            questionId,
+            prompt: q.prompt,
+            ...(q.header ? { header: q.header } : {}),
+            ...(q.multiSelect ? { multiSelect: true } : {}),
+            ...(q.choices ? { choices: q.choices } : {}),
+            ...(q.options ? { options: q.options } : {}),
+            agentId: ctx.agentId as string,
+            ts: now(),
+            seq: 0,
+          });
+          return { requestId: questionId };
+        },
+        resolve: async (requestId, response, ctx) => {
+          const r = response as { answer: string };
+          await this.respondQuestion(ctx.agentId as string, {
+            questionId: requestId,
+            answer: r.answer,
+          });
+        },
+      });
+    }
+
+    if (!reg.has("mcp-add")) {
+      reg.register({
+        kind: "interactive",
+        id: "mcp-add",
+        doc: "Propose adding an MCP server (with optional secrets); suspends the turn.",
+        open: async (input, ctx) => {
+          const m = input as McpAddDirective;
+          const agentId = ctx.agentId as string;
+          const requestId = m.id ?? shortId();
+          const state = this.agents.get(agentId);
+          // Park the proposal (in-memory + disk) so respondMcpAdd can recover it.
+          this.pendingMcpAdds.set(requestId, { agentId, directive: m });
+          if (state) {
+            await savePendingMcpAdd({
+              requestId,
+              agentId,
+              topicId: state.meta.topicId,
+              rootPath: state.rootPath,
+              directive: m,
+            });
+          }
+          await this.emit({
+            type: "mcp-add-request",
+            requestId,
+            server: m.server,
+            label: m.label,
+            ...(m.description ? { description: m.description } : {}),
+            config: redactConfigSecrets(m.config, m.secrets ?? []),
+            ...(m.secrets && m.secrets.length > 0 ? { secrets: m.secrets } : {}),
+            agentId,
+            ts: now(),
+            seq: 0,
+          });
+          return { requestId };
+        },
+        resolve: async (requestId, response, ctx) => {
+          const r = response as {
+            decision: "approve" | "reject";
+            secretValues?: Record<string, string>;
+          };
+          await this.respondMcpAdd(ctx.agentId as string, {
+            requestId,
+            decision: r.decision,
+            ...(r.secretValues ? { secretValues: r.secretValues } : {}),
+          });
+        },
+      });
+    }
+    return reg;
+  }
+
+  /**
+   * Resolve an interactive directive through the CapabilityRegistry (Phase 4).
+   * Thin entry for the web-API + Telegram callers: ensures the directives are
+   * registered, then routes to registry.resolve → the directive's resolve →
+   * the unchanged respondPermission/Question/McpAdd. Behavior-identical.
+   */
+  async resolveInteractive(
+    id: "permission" | "question" | "mcp-add",
+    requestId: string,
+    response: unknown,
+    agentId: string,
+  ): Promise<void> {
+    const reg = await this.ensureInteractiveDirectives();
+    await reg.resolve(id, requestId, response, { caller: "user", agentId });
+  }
+
+  /**
    * Scan the accumulated assistant text for protocol markers. Returns:
    *   - `writtenViaKb`: abs-paths written via `<<reflex:kb>>` (so the reindex
    *     pass can skip them).
@@ -993,64 +1147,18 @@ class AgentManager {
     const buf = this.turnText.get(agentId) ?? "";
     if (!buf) return { writtenViaKb, dispatches: [], youtubeSummaries: [] };
     const state = this.agents.get(agentId);
-    const perms = extractPermissions(buf);
-    for (const p of perms) {
-      await this.emit({
-        type: "permission-request",
-        requestId: p.id ?? shortId(),
-        ...(p.tool ? { tool: p.tool } : {}),
-        ...(p.action ? { action: p.action } : {}),
-        ...(p.input !== undefined ? { input: p.input } : {}),
-        ...(p.description ? { description: p.description } : {}),
-        agentId,
-        ts: now(),
-        seq: 0,
-      });
+    // Phase 4: the interactive directives' emission now flows through the
+    // CapabilityRegistry's open() (same logic, in the registered closures).
+    const ireg = await this.ensureInteractiveDirectives();
+    const ictx = { caller: "agent" as const, agentId };
+    for (const p of extractPermissions(buf)) {
+      await ireg.open("permission", p, ictx);
     }
-    const questions = extractQuestions(buf);
-    for (const q of questions) {
-      await this.emit({
-        type: "question",
-        questionId: q.id ?? shortId(),
-        prompt: q.prompt,
-        ...(q.header ? { header: q.header } : {}),
-        ...(q.multiSelect ? { multiSelect: true } : {}),
-        ...(q.choices ? { choices: q.choices } : {}),
-        ...(q.options ? { options: q.options } : {}),
-        agentId,
-        ts: now(),
-        seq: 0,
-      });
+    for (const q of extractQuestions(buf)) {
+      await ireg.open("question", q, ictx);
     }
-    const mcpAdds = extractMcpAdds(buf);
-    for (const m of mcpAdds) {
-      const requestId = m.id ?? shortId();
-      // Stash the original proposal so respondMcpAdd can recover it when the
-      // user approves. The directive isn't yet trusted/saved — just parked.
-      // Also persisted to disk so HMR / dev-server restarts don't strand
-      // the user with an un-approvable card ("Agent not found").
-      this.pendingMcpAdds.set(requestId, { agentId, directive: m });
-      if (state) {
-        await savePendingMcpAdd({
-          requestId,
-          agentId,
-          topicId: state.meta.topicId,
-          rootPath: state.rootPath,
-          directive: m,
-        });
-      }
-      await this.emit({
-        type: "mcp-add-request",
-        requestId,
-        server: m.server,
-        label: m.label,
-        ...(m.description ? { description: m.description } : {}),
-        config: redactConfigSecrets(m.config, m.secrets ?? []),
-        ...(m.secrets && m.secrets.length > 0 ? { secrets: m.secrets } : {}),
-        agentId,
-        ts: now(),
-        seq: 0,
-      });
+    for (const m of extractMcpAdds(buf)) {
+      await ireg.open("mcp-add", m, ictx);
     }
     if (state) {
       const kbEntries = extractKbEntries(buf);

@@ -49,12 +49,12 @@ export async function POST(
           { status: 400 },
         );
       }
-      await agentManager.respondPermission(agentId, {
-        requestId: body.requestId,
+      // Phase 4: resolve through the unified CapabilityRegistry.
+      await agentManager.resolveInteractive("permission", body.requestId, {
         decision: body.decision,
         ...(body.scope ? { scope: body.scope } : {}),
         ...(body.tool ? { tool: body.tool } : {}),
-      });
+      }, agentId);
       return Response.json({ ok: true }, { status: 202 });
     }
     if (body.kind === "answer") {
@@ -64,10 +64,12 @@ export async function POST(
           { status: 400 },
         );
       }
-      await agentManager.respondQuestion(agentId, {
-        questionId: body.questionId,
-        answer: body.answer,
-      });
+      await agentManager.resolveInteractive(
+        "question",
+        body.questionId,
+        { answer: body.answer },
+        agentId,
+      );
       return Response.json({ ok: true }, { status: 202 });
     }
     if (body.kind === "mcp-add") {
@@ -77,11 +79,10 @@ export async function POST(
           { status: 400 },
         );
       }
-      await agentManager.respondMcpAdd(agentId, {
-        requestId: body.requestId,
+      await agentManager.resolveInteractive("mcp-add", body.requestId, {
         decision: body.decision,
         ...(body.secretValues ? { secretValues: body.secretValues } : {}),
-      });
+      }, agentId);
       return Response.json({ ok: true }, { status: 202 });
     }
     return Response.json(

@@ -25,6 +25,9 @@ export interface CapabilityContext {
   rootId?: string;
   rootPath?: string;
   topicId?: string;
+  /** The agent whose turn this invocation belongs to (interactive directives
+   *  resolve against it). */
+  agentId?: string;
   /** Links the invocation across the audit trail. */
   correlationId?: string;
   /**

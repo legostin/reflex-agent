@@ -674,11 +674,10 @@ async function handleCallback(
     if (kind === "p") {
       const decision = suffix === "deny" ? "deny" : "allow";
       const scope = suffix === "always" ? "always" : suffix === "once" ? "once" : undefined;
-      await agentManager.respondPermission(agentId, {
-        requestId,
+      await agentManager.resolveInteractive("permission", requestId, {
         decision,
         ...(scope ? { scope } : {}),
-      });
+      }, agentId);
       if (msgId) {
         const label =
           decision === "deny"
@@ -699,13 +698,13 @@ async function handleCallback(
         Boolean,
       );
       const answer = labels[Number(suffix)] ?? "";
-      await agentManager.respondQuestion(agentId, { questionId: requestId, answer });
+      await agentManager.resolveInteractive("question", requestId, { answer }, agentId);
       if (msgId) {
         await resolveKeyboardMessage(cfg.botToken, chat, msgId, `✅ ${answer}`);
       }
     } else if (kind === "m") {
       if (suffix === "reject") {
-        await agentManager.respondMcpAdd(agentId, { requestId, decision: "reject" });
+        await agentManager.resolveInteractive("mcp-add", requestId, { decision: "reject" }, agentId);
         if (msgId) {
           await resolveKeyboardMessage(cfg.botToken, chat, msgId, "❌ Skipped");
         }
@@ -812,10 +811,7 @@ async function handleReplyInput(
   pendingReplies.delete(chatId);
   if (waiting.kind === "answer") {
     await agentManager
-      .respondQuestion(waiting.agentId, {
-        questionId: waiting.requestId,
-        answer: text,
-      })
+      .resolveInteractive("question", waiting.requestId, { answer: text }, waiting.agentId)
       .catch((err) => console.error("[telegram] respondQuestion:", err));
     return;
   }
@@ -848,11 +844,12 @@ async function handleReplyInput(
 
   // All collected → approve the mcp-add with the secret values.
   await agentManager
-    .respondMcpAdd(waiting.agentId, {
-      requestId: waiting.requestId,
-      decision: "approve",
-      secretValues: collected,
-    })
+    .resolveInteractive(
+      "mcp-add",
+      waiting.requestId,
+      { decision: "approve", secretValues: collected },
+      waiting.agentId,
+    )
     .catch((err) => console.error("[telegram] respondMcpAdd:", err));
   await sendMessage(cfg.botToken, chatId, "✅ Connected.");
 }
@@ -882,11 +879,12 @@ async function beginSecretCollection(
     .map((s) => s.envKey);
   if (keys.length === 0) {
     await agentManager
-      .respondMcpAdd(entry.agentId, {
-        requestId: entry.requestId,
-        decision: "approve",
-        secretValues: {},
-      })
+      .resolveInteractive(
+        "mcp-add",
+        entry.requestId,
+        { decision: "approve", secretValues: {} },
+        entry.agentId,
+      )
       .catch((err) => console.error("[telegram] respondMcpAdd:", err));
     await sendMessage(cfg.botToken, entry.chatId, "✅ Connected.");
     return;
