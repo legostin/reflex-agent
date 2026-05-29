@@ -18,10 +18,14 @@ const SRC = fileURLToPath(
 
 function extractMethodIds(): string[] {
   const src = readFileSync(SRC, "utf8");
+  // Phase 4: dispatch is a data table (HOST_METHODS) — extract its keys.
+  const start = src.indexOf("export const HOST_METHODS");
+  const end = src.indexOf("\n};", start);
+  const block = start >= 0 && end > start ? src.slice(start, end) : "";
   const ids = new Set<string>();
-  const re = /case\s+"([^"]+)"\s*:/g;
+  const re = /"([^"]+)":\s*\(/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(src)) !== null) ids.add(m[1]!);
+  while ((m = re.exec(block)) !== null) ids.add(m[1]!);
   return [...ids].sort((a, b) => a.localeCompare(b));
 }
 

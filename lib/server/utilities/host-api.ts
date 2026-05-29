@@ -340,6 +340,75 @@ const CardsUpdateSchema = z.object({
 
 const HOSTS_NEEDING_LLM = new Set<TaskId>(["chat", "quick", "rag", "embed"]);
 
+/**
+ * The host-method dispatch table (north-star Phase 4 — collapse the stringly-
+ * typed switch into one data-driven registry). Each entry is the VERBATIM body
+ * of its former `case`, so behavior is identical; the id set is pinned by the
+ * golden-id ABI test (test/host-api-surface.test.ts) + test/host-methods-
+ * table.test.ts. This table is what a future describe()/proxy generator
+ * iterates, and the bridge the Layer-2 CapabilityRegistry will absorb.
+ */
+type HostMethod = (
+  ctx: HostContext,
+  rawArgs: unknown,
+  correlationId: string,
+) => unknown;
+
+export const HOST_METHODS: Record<string, HostMethod> = {
+  "llm.complete": (ctx, raw) => llmComplete(ctx, LlmCompleteSchema.parse(raw)),
+  "kb.add": (ctx, raw) => kbAdd(ctx, KbAddSchema.parse(raw)),
+  "kb.list": (ctx, raw) => kbList(ctx, KbListSchema.parse(raw)),
+  "kb.read": (ctx, raw) => kbRead(ctx, KbReadSchema.parse(raw)),
+  "fs.read": (ctx, raw) => fsRead(ctx, FsArgSchema.parse(raw)),
+  "fs.write": (ctx, raw) => fsWrite(ctx, FsArgSchema.parse(raw)),
+  "fs.list": (ctx, raw) => fsList(ctx, FsArgSchema.parse(raw)),
+  "web.fetch": (ctx, raw) => webFetch(ctx, WebFetchSchema.parse(raw)),
+  "web.search": (ctx, raw) => webSearch(ctx, WebSearchSchema.parse(raw)),
+  "audit.log": (ctx, raw, cid) =>
+    auditFreeform(ctx, AuditLogSchema.parse(raw), cid),
+  "actions.invoke": (ctx, raw, cid) =>
+    actionsInvoke(ctx, ActionInvokeSchema.parse(raw), cid),
+  "mcp.call": (ctx, raw) => mcpCall(ctx, McpCallSchema.parse(raw)),
+  "mcp.listServers": (ctx) => mcpListServers(ctx),
+  "mcp.listTools": (ctx, raw) => mcpListTools(ctx, McpListToolsSchema.parse(raw)),
+  "secrets.get": (ctx, raw) => secretsGet(ctx, SecretsGetSchema.parse(raw)),
+  "secrets.list": (ctx) => secretsList(ctx),
+  "agent.invoke": (ctx, raw) => agentInvoke(ctx, AgentInvokeSchema.parse(raw)),
+  "workflow.list": (ctx, raw) => workflowList(ctx, WorkflowListSchema.parse(raw)),
+  "workflow.read": (ctx, raw) => workflowRead(ctx, WorkflowReadSchema.parse(raw)),
+  "workflow.run": (ctx, raw) => workflowRun(ctx, WorkflowRunSchema.parse(raw)),
+  "cards.update": (ctx, raw) => cardsUpdate(ctx, CardsUpdateSchema.parse(raw)),
+  "images.generate": (ctx, raw) =>
+    imagesGenerate(ctx, ImagesGenerateSchema.parse(raw)),
+  "images.search": (ctx, raw) => imagesSearch(ctx, ImagesSearchSchema.parse(raw)),
+  "images.attach": (ctx, raw) => imagesAttach(ctx, ImagesAttachSchema.parse(raw)),
+  "images.pickBest": (ctx, raw) =>
+    imagesPickBest(ctx, ImagesPickBestSchema.parse(raw)),
+  "mermaid.validate": (ctx, raw) =>
+    mermaidValidate(ctx, MermaidValidateSchema.parse(raw)),
+  "tasks.create": (ctx, raw) => tasksCreate(ctx, TaskCreateSchema.parse(raw)),
+  "tasks.update": (ctx, raw) => tasksUpdate(ctx, TaskUpdateSchema.parse(raw)),
+  "tasks.delete": (ctx, raw) => tasksDelete(ctx, TaskIdSchema.parse(raw)),
+  "tasks.get": (ctx, raw) => tasksGet(ctx, TaskIdSchema.parse(raw)),
+  "tasks.list": (ctx) => tasksList(ctx),
+  "tasks.dispatch": (ctx, raw) => tasksDispatch(ctx, TaskDispatchSchema.parse(raw)),
+  "tasks.observe": (ctx, raw) => tasksObserve(ctx, TaskIdSchema.parse(raw)),
+  "tasks.complete": (ctx, raw) =>
+    tasksComplete(ctx, TaskCompleteSchema.parse(raw)),
+  "git.isRepo": (ctx) => gitIsRepo(ctx),
+  "git.hasRemote": (ctx) => gitHasRemote(ctx),
+  "git.hasGhCli": () => gitHasGhCli(),
+  "git.worktree.create": (ctx, raw) =>
+    worktreeCreate(ctx, WorktreeCreateSchema.parse(raw)),
+  "git.worktree.merge": (ctx, raw) =>
+    worktreeMerge(ctx, WorktreeMergeSchema.parse(raw)),
+  "git.worktree.remove": (ctx, raw) =>
+    worktreeRemove(ctx, WorktreeRemoveSchema.parse(raw)),
+  "git.worktree.list": (ctx) => worktreeList(ctx),
+  "sessions.search": (ctx, raw) =>
+    sessionsSearch(ctx, SessionsSearchSchema.parse(raw)),
+};
+
 export async function dispatchHostCall(
   ctx: HostContext,
   method: string,
@@ -356,94 +425,9 @@ export async function dispatchHostCall(
       : {}),
   };
   return auditCall(meta, async (correlationId) => {
-    switch (method) {
-      case "llm.complete":
-        return llmComplete(ctx, LlmCompleteSchema.parse(rawArgs));
-      case "kb.add":
-        return kbAdd(ctx, KbAddSchema.parse(rawArgs));
-      case "kb.list":
-        return kbList(ctx, KbListSchema.parse(rawArgs));
-      case "kb.read":
-        return kbRead(ctx, KbReadSchema.parse(rawArgs));
-      case "fs.read":
-        return fsRead(ctx, FsArgSchema.parse(rawArgs));
-      case "fs.write":
-        return fsWrite(ctx, FsArgSchema.parse(rawArgs));
-      case "fs.list":
-        return fsList(ctx, FsArgSchema.parse(rawArgs));
-      case "web.fetch":
-        return webFetch(ctx, WebFetchSchema.parse(rawArgs));
-      case "web.search":
-        return webSearch(ctx, WebSearchSchema.parse(rawArgs));
-      case "audit.log":
-        return auditFreeform(ctx, AuditLogSchema.parse(rawArgs), correlationId);
-      case "actions.invoke":
-        return actionsInvoke(ctx, ActionInvokeSchema.parse(rawArgs), correlationId);
-      case "mcp.call":
-        return mcpCall(ctx, McpCallSchema.parse(rawArgs));
-      case "mcp.listServers":
-        return mcpListServers(ctx);
-      case "mcp.listTools":
-        return mcpListTools(ctx, McpListToolsSchema.parse(rawArgs));
-      case "secrets.get":
-        return secretsGet(ctx, SecretsGetSchema.parse(rawArgs));
-      case "secrets.list":
-        return secretsList(ctx);
-      case "agent.invoke":
-        return agentInvoke(ctx, AgentInvokeSchema.parse(rawArgs));
-      case "workflow.list":
-        return workflowList(ctx, WorkflowListSchema.parse(rawArgs));
-      case "workflow.read":
-        return workflowRead(ctx, WorkflowReadSchema.parse(rawArgs));
-      case "workflow.run":
-        return workflowRun(ctx, WorkflowRunSchema.parse(rawArgs));
-      case "cards.update":
-        return cardsUpdate(ctx, CardsUpdateSchema.parse(rawArgs));
-      case "images.generate":
-        return imagesGenerate(ctx, ImagesGenerateSchema.parse(rawArgs));
-      case "images.search":
-        return imagesSearch(ctx, ImagesSearchSchema.parse(rawArgs));
-      case "images.attach":
-        return imagesAttach(ctx, ImagesAttachSchema.parse(rawArgs));
-      case "images.pickBest":
-        return imagesPickBest(ctx, ImagesPickBestSchema.parse(rawArgs));
-      case "mermaid.validate":
-        return mermaidValidate(ctx, MermaidValidateSchema.parse(rawArgs));
-      case "tasks.create":
-        return tasksCreate(ctx, TaskCreateSchema.parse(rawArgs));
-      case "tasks.update":
-        return tasksUpdate(ctx, TaskUpdateSchema.parse(rawArgs));
-      case "tasks.delete":
-        return tasksDelete(ctx, TaskIdSchema.parse(rawArgs));
-      case "tasks.get":
-        return tasksGet(ctx, TaskIdSchema.parse(rawArgs));
-      case "tasks.list":
-        return tasksList(ctx);
-      case "tasks.dispatch":
-        return tasksDispatch(ctx, TaskDispatchSchema.parse(rawArgs));
-      case "tasks.observe":
-        return tasksObserve(ctx, TaskIdSchema.parse(rawArgs));
-      case "tasks.complete":
-        return tasksComplete(ctx, TaskCompleteSchema.parse(rawArgs));
-      case "git.isRepo":
-        return gitIsRepo(ctx);
-      case "git.hasRemote":
-        return gitHasRemote(ctx);
-      case "git.hasGhCli":
-        return gitHasGhCli();
-      case "git.worktree.create":
-        return worktreeCreate(ctx, WorktreeCreateSchema.parse(rawArgs));
-      case "git.worktree.merge":
-        return worktreeMerge(ctx, WorktreeMergeSchema.parse(rawArgs));
-      case "git.worktree.remove":
-        return worktreeRemove(ctx, WorktreeRemoveSchema.parse(rawArgs));
-      case "git.worktree.list":
-        return worktreeList(ctx);
-      case "sessions.search":
-        return sessionsSearch(ctx, SessionsSearchSchema.parse(rawArgs));
-      default:
-        throw new Error(`Unknown host method: ${method}`);
-    }
+    const fn = HOST_METHODS[method];
+    if (!fn) throw new Error(`Unknown host method: ${method}`);
+    return fn(ctx, rawArgs, correlationId);
   });
 }
 
