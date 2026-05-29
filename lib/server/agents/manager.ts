@@ -1839,6 +1839,7 @@ class AgentManager {
     const layout = await readLayout(rootPath);
     const newOrder = [...layout.order];
     const newHidden = [...layout.hidden];
+    const reg = await ensureWidgetCapability();
     for (const d of [...creates, ...updates]) {
       const isUpdate = updates.includes(d);
       try {
@@ -1856,7 +1857,12 @@ class AgentManager {
           ...(d.memory !== undefined ? { memory: d.memory } : {}),
           ...(d.memoryFile ? { memoryFile: d.memoryFile } : {}),
         });
-        await writeWidget(rootPath, record);
+        // Phase 4: route the write through the unified `widget.upsert`.
+        await reg.invoke("widget.upsert", { rootPath, record }, {
+          caller: "agent",
+          rootPath,
+          topicId,
+        });
         // New widget → goes into hidden (library) by default. User pins it
         // to the dashboard via the chat preview card or the widget library.
         // Existing → leave layout untouched (already placed somewhere).
@@ -2378,6 +2384,34 @@ async function ensureKbCapability() {
       audit: "event",
       doc: "Write a knowledge-base entry from an agent directive.",
       run: (input) => writeKbEntry(input as Parameters<typeof writeKbEntry>[0]),
+    });
+  }
+  return reg;
+}
+
+/**
+ * Register `widget.upsert` (Phase 4 marker convergence). Wraps the core
+ * writeWidget; the caller keeps the WidgetRecord build, layout reconcile, and
+ * widget-event emission — so behavior is identical. No host-api id collision.
+ */
+async function ensureWidgetCapability() {
+  const { capabilityRegistry } = await import(
+    "@/lib/server/capabilities/registry"
+  );
+  const reg = capabilityRegistry();
+  if (!reg.has("widget.upsert")) {
+    reg.register({
+      kind: "sync",
+      id: "widget.upsert",
+      audit: "event",
+      doc: "Create or update a dashboard widget record.",
+      run: (input) => {
+        const i = input as {
+          rootPath: string;
+          record: Parameters<typeof writeWidget>[1];
+        };
+        return writeWidget(i.rootPath, i.record);
+      },
     });
   }
   return reg;
