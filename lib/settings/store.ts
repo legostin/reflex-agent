@@ -7,6 +7,7 @@ import {
   type Settings,
 } from "./schema";
 import { reflexHome } from "../reflex/home.js";
+import { writeJsonFile } from "../reflex/store/json-store.js";
 
 const SETTINGS_DIR = reflexHome();
 const SETTINGS_FILE = path.join(SETTINGS_DIR, "settings.json");
@@ -25,12 +26,9 @@ export async function loadSettings(): Promise<Settings> {
 
 export async function saveSettings(settings: Settings): Promise<void> {
   const validated = SettingsSchema.parse(settings);
-  await fs.mkdir(SETTINGS_DIR, { recursive: true });
-  await fs.writeFile(
-    SETTINGS_FILE,
-    JSON.stringify(validated, null, 2) + "\n",
-    "utf8",
-  );
+  // Atomic + 0o600 — settings.json holds the Telegram bot token, so it must
+  // never be left half-written and must not be world-readable.
+  await writeJsonFile(SETTINGS_FILE, validated, { mode: 0o600 });
 }
 
 function isNotFound(err: unknown): boolean {
