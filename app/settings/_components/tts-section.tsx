@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getSettingsAction, saveTtsAction } from "@/lib/server/settings-actions";
+import { listGeminiModelsAction } from "@/lib/server/youtube-actions";
 
 // Static lists (kept client-side; the server gemini-tts module is server-only).
 const VOICES = [
@@ -22,7 +23,10 @@ const VOICES = [
   "Alnilam", "Schedar", "Gacrux", "Pulcherrima", "Achird", "Zubenelgenubi",
   "Vindemiatrix", "Sadachbia", "Sadaltager", "Sulafat",
 ];
-const MODELS = [
+// Fallback when the live model list can't be fetched (no key yet). The real
+// list is pulled from Gemini `models.list` and filtered to TTS models, so new
+// versions show up without a code change.
+const FALLBACK_MODELS = [
   "gemini-2.5-flash-preview-tts",
   "gemini-2.5-pro-preview-tts",
 ];
@@ -37,7 +41,8 @@ type Provider = "system" | "gemini";
 export function TtsSection() {
   const [provider, setProvider] = useState<Provider>("system");
   const [voice, setVoice] = useState("Kore");
-  const [model, setModel] = useState(MODELS[0]!);
+  const [model, setModel] = useState(FALLBACK_MODELS[0]!);
+  const [models, setModels] = useState<string[]>(FALLBACK_MODELS);
   const [loaded, setLoaded] = useState(false);
   const [saving, startSave] = useTransition();
 
@@ -52,6 +57,19 @@ export function TtsSection() {
       setLoaded(true);
     })();
   }, []);
+
+  // Pull the live Gemini model list (filtered to TTS) once Gemini is selected,
+  // so the dropdown tracks Google's current versions instead of a hardcoded
+  // set. Falls back to FALLBACK_MODELS when no key / fetch fails.
+  useEffect(() => {
+    if (provider !== "gemini") return;
+    void (async () => {
+      const r = await listGeminiModelsAction(false);
+      if (!r.ok) return; // no key yet → keep fallback list
+      const tts = r.models.map((m) => m.id).filter((id) => /tts/i.test(id));
+      if (tts.length > 0) setModels(tts);
+    })();
+  }, [provider]);
 
   const persist = (next: {
     provider: Provider;
@@ -149,7 +167,7 @@ export function TtsSection() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {MODELS.map((m) => (
+                  {[...new Set([model, ...models].filter(Boolean))].map((m) => (
                     <SelectItem key={m} value={m}>
                       <span className="font-mono text-xs">{m}</span>
                     </SelectItem>
