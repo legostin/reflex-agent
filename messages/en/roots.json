@@ -133,6 +133,7 @@
     "waitForCurrentAnswer": "Wait for the current answer to finish",
     "errorPrefix": "error: {message}",
     "thinking": "thinking…",
+    "generatingImage": "Generating image…",
     "subAgentWorking": "working…",
     "subAgentError": "error",
     "subAgentDone": "done",

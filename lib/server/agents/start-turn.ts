@@ -67,6 +67,13 @@ export async function startOrchestratorTurn(args: {
   harness?: import("./types").AgentHarnessId;
   /** Optional model override; companion to `harness`. */
   model?: string;
+  /**
+   * Where the turn was initiated. A "web" turn on the dispatcher is mirrored
+   * to the channels (Telegram) on completion so the shared thread reads the
+   * same on every surface; "telegram" turns are already streamed live by the
+   * bridge. Programmatic callers leave this unset (no mirror).
+   */
+  origin?: "web" | "telegram";
 }): Promise<{ agentId: string } | { error: string; status?: number }> {
   const entry = await getRoot(args.rootId);
   if (!entry) return { error: "Root not found", status: 404 };
@@ -266,7 +273,29 @@ export async function startOrchestratorTurn(args: {
         // userMessage NOT passed here — we already emitted user-message
         // synchronously above so the bubble shows up immediately.
         allowedTools: assignment.allowedTools,
+        // Safety net: if the user clearly asked for an image and the turn
+        // doesn't produce one (e.g. Codex narrates "готово" without the
+        // marker), the manager generates it from the agent's description.
+        ...(isImageRequest(args.message)
+          ? { imageFallbackPrompt: args.message }
+          : {}),
       });
+      // A web-typed dispatcher turn isn't visible on Telegram (the bridge only
+      // streams TG-initiated turns). Mirror it so both surfaces share one
+      // conversation. Gated to the home/dispatcher root; idempotent.
+      if (args.origin === "web") {
+        try {
+          const { isHomeRoot } = await import("@/lib/registry");
+          if (isHomeRoot(args.rootId)) {
+            const { mirrorDispatcherTurnToTelegram } = await import(
+              "@/lib/server/notify/telegram"
+            );
+            await mirrorDispatcherTurnToTelegram();
+          }
+        } catch {
+          /* best-effort mirror */
+        }
+      }
     } catch (err) {
       await agentManager.emit({
         type: "error",
@@ -508,6 +537,27 @@ function focusFileInstructions(
     "4. Don't guess: if neither the open file nor its neighbours contain the answer, say so explicitly and suggest where to look.",
     "5. When citing, use rel-paths from the KB root (same convention as the open file).",
   ].join("\n");
+}
+
+/**
+ * Heuristic: does this message explicitly ask for an image to be generated?
+ * Used to arm the image fallback (manager.applyImageFallback) so an image
+ * request still yields an image even when the harness won't emit the marker.
+ * A strong draw verb (нарисуй / draw / paint) suffices on its own; weaker
+ * generate verbs require an image noun so "сгенерируй план" doesn't trigger.
+ */
+function isImageRequest(message: string): boolean {
+  const m = message.toLowerCase();
+  if (/(нарису|рису[йе]|draw\b|paint\b|illustrate\b)/.test(m)) return true;
+  const genVerb =
+    /(сгенерир|генерир|сдела(?:й|ть)|созда(?:й|ть)|generate|make\b|create\b|render\b)/.test(
+      m,
+    );
+  const imageNoun =
+    /(картинк|картин|изображен|иллюстрац|рисун|пейзаж|портрет|логотип|постер|обои|фотк|фото|wallpaper|\bimage|\bpicture|\bphoto|illustration|drawing|\blogo|poster|artwork)/.test(
+      m,
+    );
+  return genVerb && imageNoun;
 }
 
 function renderUserBlock(message: string, attachments?: Attachment[]): string {

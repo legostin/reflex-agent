@@ -23,6 +23,7 @@ export async function sendToDispatcherAction(
         topicId: d.topicId,
         message,
         attachments,
+        origin: "web",
       });
       if ("error" in res) return { ok: false, error: res.error };
     }

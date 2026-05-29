@@ -427,13 +427,31 @@ function TurnView({
       {turn.segments?.map((seg, i) => {
         if (seg.kind === "text") {
           const cleaned = stripProtocolMarkers(seg.text);
-          return cleaned.trim() ? (
-            <MarkdownView
-              key={i}
-              source={cleaned}
-              onSendToChat={sendSummaryToChat}
-            />
-          ) : null;
+          // While images generate, the manager streams <<reflex:image-loading>>
+          // markers (stripped above). Show one spinner per still-pending image,
+          // and ONLY while the turn is live — so a finished/failed turn clears
+          // the placeholder (leaving the image, or the error text).
+          const loadingCount = (
+            seg.text.match(/<{1,2}reflex:image-loading>{1,2}/g) ?? []
+          ).length;
+          const imageCount = (cleaned.match(/!\[[^\]]*\]\([^)]+\)/g) ?? []).length;
+          const pendingImages = turn.pending
+            ? Math.max(0, loadingCount - imageCount)
+            : 0;
+          if (!cleaned.trim() && pendingImages === 0) return null;
+          return (
+            <div key={i} className="space-y-2">
+              {cleaned.trim() && (
+                <MarkdownView source={cleaned} onSendToChat={sendSummaryToChat} />
+              )}
+              {Array.from({ length: pendingImages }).map((_, k) => (
+                <ImageLoadingPlaceholder
+                  key={k}
+                  label={t("chat.generatingImage")}
+                />
+              ))}
+            </div>
+          );
         }
         if (seg.kind === "tool") {
           return (
@@ -1033,6 +1051,17 @@ function SystemUserTurn({ system }: { system: SystemUserMessage }) {
         {system.details}
       </pre>
     </details>
+  );
+}
+
+/** Spinner placeholder shown where a generated image will land while the
+ *  manager generates it under the hood (see `<<reflex:image-loading>>`). */
+function ImageLoadingPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="flex aspect-video w-full max-w-md items-center justify-center gap-2 rounded-lg border border-dashed bg-muted/40 text-sm text-muted-foreground">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      <span>{label}</span>
+    </div>
   );
 }
 

@@ -995,7 +995,9 @@ async function runTurn(
   attachments: Attachment[] = [],
 ): Promise<void> {
   const before = (await readEvents(rootPath, topicId)).length;
-  const res = await startOrchestratorTurn({ rootId, topicId, message, attachments });
+  // origin:"telegram" — this turn is streamed to TG live below, so the
+  // web-turn mirror must NOT also re-send it.
+  const res = await startOrchestratorTurn({ rootId, topicId, message, attachments, origin: "telegram" });
   if ("error" in res) {
     await sendMessage(token, chatId, `⚠️ ${res.error}`);
     return;
@@ -1391,6 +1393,75 @@ async function catchUpDispatcher(cfg: TelegramConfig): Promise<void> {
       "[telegram] catchUp:",
       err instanceof Error ? err.message : err,
     );
+  }
+}
+
+let mirroringTurn = false;
+
+/**
+ * Mirror a completed WEB-initiated dispatcher turn (the user's message + the
+ * assistant's reply) out to Telegram, so the dispatcher reads as ONE shared
+ * conversation across both surfaces. Telegram-initiated turns are streamed
+ * live by `runTurn` (which advances `deliveredCount`), so this only ever has
+ * web turns left to deliver. Idempotent via `deliveredCount`; sends only
+ * user-message + assistant text — notifications are mirrored separately by
+ * `mirrorDispatcher` on its own cursor, so the two never overlap.
+ */
+export async function mirrorDispatcherTurnToTelegram(): Promise<void> {
+  if (mirroringTurn) return;
+  mirroringTurn = true;
+  try {
+    const cfg = (await loadSettings()).notify?.telegram ?? null;
+    if (!cfg?.enabled || !cfg.botToken || !cfg.chatId) return;
+    const { getDispatcherTopic } = await import("@/lib/server/home/dispatcher");
+    const d = await getDispatcherTopic();
+    if (agentManager.isActive(d.topicId)) return; // a turn still owns delivery
+    const events = await readEvents(d.rootPath, d.topicId);
+    const state = await readState();
+    // First ever: seed silently so a fresh cursor never dumps backlog.
+    if (state.deliveredCount === undefined) {
+      await setDeliveredCount(events.length);
+      return;
+    }
+    const from = state.deliveredCount;
+    if (from >= events.length) return;
+    if ((await loadSettings()).notify?.mirrorDispatcher === false) {
+      await setDeliveredCount(events.length); // stay caught up while disabled
+      return;
+    }
+    // Advance BEFORE sending (at-most-once across a crash).
+    await setDeliveredCount(events.length);
+
+    const chat = cfg.chatId;
+    const token = cfg.botToken;
+    const send = async (s: string): Promise<void> => {
+      for (let i = 0; i < s.length; i += TG_MAX) {
+        await sendFormatted(token, chat, s.slice(i, i + TG_MAX));
+      }
+    };
+    // Render in chronological order: each web user message, then its reply.
+    let buf = "";
+    const flush = async (): Promise<void> => {
+      const t = stripMarkers(buf);
+      buf = "";
+      if (t.trim()) await send(t);
+    };
+    for (const e of events.slice(from)) {
+      if (e.type === "assistant-delta") {
+        buf += e.text;
+      } else if (e.type === "user-message" && e.text.trim()) {
+        await flush();
+        await send(`🧑 ${e.text.trim()}`);
+      }
+    }
+    await flush();
+  } catch (err) {
+    console.error(
+      "[telegram] mirror-turn:",
+      err instanceof Error ? err.message : err,
+    );
+  } finally {
+    mirroringTurn = false;
   }
 }
 

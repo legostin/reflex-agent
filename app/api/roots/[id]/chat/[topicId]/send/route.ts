@@ -55,6 +55,7 @@ export async function POST(
     topicId,
     message,
     attachments,
+    origin: "web",
   });
   if ("error" in result) {
     return Response.json(

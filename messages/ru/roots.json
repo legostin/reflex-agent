@@ -133,6 +133,7 @@
     "waitForCurrentAnswer": "Дождись окончания текущего ответа",
     "errorPrefix": "ошибка: {message}",
     "thinking": "thinking…",
+    "generatingImage": "Генерирую изображение…",
     "subAgentWorking": "работает…",
     "subAgentError": "ошибка",
     "subAgentDone": "готово",

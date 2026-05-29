@@ -156,6 +156,14 @@ export interface InvokeArgs {
   userMessage?: string;
   /** Tools the runtime is allowed to invoke without prompting. */
   allowedTools?: string[];
+  /**
+   * Set when the user explicitly asked for an image. If the turn produces no
+   * image of its own (no `<<reflex:image-gen>>` marker — common with
+   * coding-model harnesses like Codex that don't follow the marker
+   * convention and just narrate "готово"), the manager generates one as a
+   * fallback so the image actually appears. Holds the user's request text.
+   */
+  imageFallbackPrompt?: string;
 }
 
 interface AgentRuntimeState {
@@ -336,6 +344,12 @@ class AgentManager {
       // BEFORE turn-end, so the image appears inside the current assistant
       // bubble (not as a separate bubble below).
       await this.applyImageGenDirectives(args.agentId);
+      // Fallback: the user asked for an image but the turn didn't produce one
+      // (the agent narrated "готово" without emitting the marker — typical of
+      // coding-model harnesses). Generate it ourselves so the image appears.
+      if (args.imageFallbackPrompt) {
+        await this.applyImageFallback(args.agentId, args.imageFallbackPrompt);
+      }
       // Snapshot the turn's text now (fully streamed) — the `finally` deletes
       // the live buffer, so this is what invoke() returns.
       turnResult = (this.turnText.get(args.agentId) ?? "").trim();
@@ -1524,6 +1538,73 @@ class AgentManager {
   }
 
   /**
+   * Fallback image generation for harnesses that won't emit the
+   * `<<reflex:image-gen>>` marker (e.g. Codex narrates "готово" without
+   * triggering anything). Fires only when the user explicitly asked for an
+   * image AND the turn produced none. Generates from the agent's own
+   * description (its reply is usually a solid image prompt), appended to the
+   * current bubble — so the claimed image actually appears. Uses Codex's
+   * `$imagegen` when the orchestrator runs on Codex (what the user expects),
+   * else Gemini.
+   */
+  private async applyImageFallback(
+    agentId: string,
+    request: string,
+  ): Promise<void> {
+    const state = this.agents.get(agentId);
+    if (!state) return;
+    const buf = this.turnText.get(agentId) ?? "";
+    // Already produced an image this turn (marker handled it, or a markdown
+    // image is already in the text) → nothing to do.
+    if (buf.includes("reflex:image-gen")) return;
+    if (/!\[[^\]]*\]\([^)]+\)/.test(buf)) return;
+    // Prefer the agent's own description (its reply, markers stripped); fall
+    // back to the user's request. Cap length so a long reply doesn't bloat
+    // the image prompt.
+    const described = buf
+      .replace(/<{1,2}reflex:[a-z-]+>{1,2}[\s\S]*?<{1,2}\/reflex:[a-z-]+>{1,2}/g, "")
+      .trim()
+      .slice(0, 600);
+    const prompt = described.length >= 12 ? `${request}\n\n${described}` : request;
+    const provider: "codex" | "gemini" =
+      state.meta.harness === "codex" ? "codex" : "gemini";
+    const alt = request.replace(/[[\]\n]/g, " ").slice(0, 200);
+    // Stream a loading marker so the chat shows a spinner placeholder while
+    // the (multi-second) generation runs; the image-delta below replaces it.
+    await this.emit({
+      type: "assistant-delta",
+      text: `\n\n<<reflex:image-loading>>${alt}<</reflex:image-loading>>\n`,
+      agentId,
+      ts: now(),
+      seq: 0,
+    });
+    try {
+      const result = await generateImage({
+        rootId: state.meta.rootId,
+        prompt,
+        provider,
+      });
+      await this.emit({
+        type: "assistant-delta",
+        text: `\n\n![${alt}](${result.urlPath})\n`,
+        agentId,
+        ts: now(),
+        seq: 0,
+      });
+    } catch (err) {
+      await this.emit({
+        type: "assistant-delta",
+        text: `\n\n_Не удалось сгенерировать изображение: ${
+          err instanceof Error ? err.message : String(err)
+        }_\n`,
+        agentId,
+        ts: now(),
+        seq: 0,
+      });
+    }
+  }
+
+  /**
    * Inline image generation. For each `<<reflex:image-gen>>` directive in
    * the current turn's text:
    *   1. Call the image service (gemini / codex) and persist bytes into
@@ -1544,6 +1625,18 @@ class AgentManager {
     const directives = extractImageGens(buf);
     if (directives.length === 0) return;
     for (const d of directives) {
+      const alt = (d.caption || d.prompt)
+        .replace(/[\[\]\n]/g, " ")
+        .slice(0, 200);
+      // Spinner placeholder while this image generates (replaced by the
+      // image-delta below; cleared at turn-end if it fails).
+      await this.emit({
+        type: "assistant-delta",
+        text: `\n\n<<reflex:image-loading>>${alt}<</reflex:image-loading>>\n`,
+        agentId,
+        ts: now(),
+        seq: 0,
+      });
       try {
         const result = await generateImage({
           rootId: state.meta.rootId,
@@ -1555,9 +1648,6 @@ class AgentManager {
             ? { referenceImageUrls: d.referenceImageUrls }
             : {}),
         });
-        const alt = (d.caption || d.prompt)
-          .replace(/[\[\]\n]/g, " ")
-          .slice(0, 200);
         await this.emit({
           type: "assistant-delta",
           text: `\n\n![${alt}](${result.urlPath})\n`,
