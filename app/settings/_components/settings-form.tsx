@@ -49,6 +49,7 @@ import { GeminiSection } from "./gemini-section";
 import { ImageSearchSection } from "./image-search-section";
 import { MapServicesSection } from "./map-services-section";
 import { NgrokSection } from "./ngrok-section";
+import { SharingSection } from "./sharing-section";
 import { TelegramSection } from "./telegram-section";
 import type { ModelInfo, ProbeResult } from "@/lib/harnesses/types";
 import {
@@ -658,6 +659,18 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
           {t("ngrok.description")}
         </p>
         <NgrokSection
+          settings={settings}
+          onChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}
+        />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Cross-utility sharing</h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          Review and revoke the data + capability grants utilities hold on each
+          other (the Share Plane), and tighten the read posture.
+        </p>
+        <SharingSection
           settings={settings}
           onChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}
         />
