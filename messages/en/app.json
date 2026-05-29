@@ -282,9 +282,9 @@
     "manualLink": "manually",
     "pickSpace": "Pick a space",
     "in": "in",
-    "label": "Ask Reflex",
-    "placeholder": "Ask a question or give a command…",
-    "submitLabel": "Start",
-    "pendingLabel": "Starting"
+    "label": "Dispatcher",
+    "placeholder": "Message the dispatcher…",
+    "submitLabel": "Send",
+    "pendingLabel": "Sending"
   }
 }

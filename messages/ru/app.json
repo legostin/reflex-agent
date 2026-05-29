@@ -282,9 +282,9 @@
     "manualLink": "вручную",
     "pickSpace": "Выбрать пространство",
     "in": "в",
-    "label": "Спроси Reflex",
-    "placeholder": "Задай вопрос или дай команду…",
-    "submitLabel": "Начать",
-    "pendingLabel": "Старт"
+    "label": "Диспетчер",
+    "placeholder": "Сообщение диспетчеру…",
+    "submitLabel": "Отправить",
+    "pendingLabel": "Отправка"
   }
 }

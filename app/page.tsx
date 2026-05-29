@@ -234,7 +234,7 @@ export default async function HomePage() {
           </Section>
         </div>
       </div>
-      <UniversalChatBar spaces={snapshot.spaces.map((s) => ({ id: s.rootId, label: s.label }))} />
+      <UniversalChatBar />
     </main>
   );
 }
