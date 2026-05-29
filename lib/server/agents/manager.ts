@@ -1687,6 +1687,7 @@ class AgentManager {
     topicId: string,
   ): Promise<void> {
     const items = extractSuggestions(buf);
+    const reg = await ensureSuggestionCapability();
     for (const s of items) {
       try {
         if (
@@ -1703,13 +1704,21 @@ class AgentManager {
           });
           continue;
         }
-        const saved = await addSuggestion(rootPath, {
-          kind: s.kind,
-          title: s.title,
-          description: s.description ?? "",
-          prompt: s.prompt,
-          sourceTopicId: topicId,
-        });
+        // Phase 4: route through the unified `suggestion.add` capability.
+        const saved = await reg.invoke<Awaited<ReturnType<typeof addSuggestion>>>(
+          "suggestion.add",
+          {
+            rootPath,
+            entry: {
+              kind: s.kind,
+              title: s.title,
+              description: s.description ?? "",
+              prompt: s.prompt,
+              sourceTopicId: topicId,
+            },
+          },
+          { caller: "agent", rootPath, topicId },
+        );
         await this.emit({
           type: "suggestion-added",
           suggestionId: saved.id,
@@ -2255,6 +2264,34 @@ async function ensureMemoryCapability() {
           ...(i.content !== undefined ? { content: i.content } : {}),
           ...(i.match !== undefined ? { match: i.match } : {}),
         });
+      },
+    });
+  }
+  return reg;
+}
+
+/**
+ * Register the `suggestion.add` capability (Phase 4 marker convergence). Wraps
+ * the same addSuggestion(); the caller keeps the marker's validation +
+ * suggestion-added event, so behavior is identical. No host-api collision.
+ */
+async function ensureSuggestionCapability() {
+  const { capabilityRegistry } = await import(
+    "@/lib/server/capabilities/registry"
+  );
+  const reg = capabilityRegistry();
+  if (!reg.has("suggestion.add")) {
+    reg.register({
+      kind: "sync",
+      id: "suggestion.add",
+      audit: "event",
+      doc: "Add a suggestion card to a project's dashboard.",
+      run: (input) => {
+        const i = input as {
+          rootPath: string;
+          entry: Parameters<typeof addSuggestion>[1];
+        };
+        return addSuggestion(i.rootPath, i.entry);
       },
     });
   }
