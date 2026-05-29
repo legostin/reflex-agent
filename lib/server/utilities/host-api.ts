@@ -10,6 +10,7 @@ import type {
 } from "./types";
 import { auditCall, appendAudit } from "./audit";
 import { utilityFile } from "./store";
+import { capabilityRegistry } from "@/lib/server/capabilities/registry";
 import { quickComplete } from "@/lib/server/quick";
 import { writeKbEntry } from "@/lib/server/agents/kb-writer";
 import { listKbFiles, readKbFile } from "@/lib/server/kb";
@@ -409,11 +410,35 @@ export const HOST_METHODS: Record<string, HostMethod> = {
     sessionsSearch(ctx, SessionsSearchSchema.parse(raw)),
 };
 
+/**
+ * Register every host method on the shared CapabilityRegistry (Phase 4 — one
+ * registry across agents/utilities/workflows). Each capability wraps the exact
+ * HOST_METHODS table fn, so routing through the registry is behavior-identical
+ * to calling the table; this just makes the host surface visible to
+ * registry.describe() (proxy/prompt/step-picker generation). Idempotent.
+ */
+let hostMethodsRegistered = false;
+function ensureHostMethodsRegistered(): void {
+  if (hostMethodsRegistered) return;
+  hostMethodsRegistered = true;
+  const reg = capabilityRegistry();
+  for (const [id, fn] of Object.entries(HOST_METHODS)) {
+    if (reg.has(id)) continue;
+    reg.register({
+      kind: "sync",
+      id,
+      run: (input, capCtx) =>
+        fn(capCtx.host as HostContext, input, capCtx.correlationId ?? ""),
+    });
+  }
+}
+
 export async function dispatchHostCall(
   ctx: HostContext,
   method: string,
   rawArgs: unknown,
 ): Promise<unknown> {
+  ensureHostMethodsRegistered();
   const meta = {
     utilityId: ctx.utility.manifest.id,
     scope: ctx.utility.scope,
@@ -425,9 +450,16 @@ export async function dispatchHostCall(
       : {}),
   };
   return auditCall(meta, async (correlationId) => {
-    const fn = HOST_METHODS[method];
-    if (!fn) throw new Error(`Unknown host method: ${method}`);
-    return fn(ctx, rawArgs, correlationId);
+    if (!capabilityRegistry().has(method)) {
+      throw new Error(`Unknown host method: ${method}`);
+    }
+    // Route through the unified CapabilityRegistry. The registered run wraps
+    // the same HOST_METHODS fn, so this is behavior-identical to the table.
+    return capabilityRegistry().invoke(method, rawArgs, {
+      caller: "utility",
+      host: ctx,
+      correlationId,
+    });
   });
 }
 

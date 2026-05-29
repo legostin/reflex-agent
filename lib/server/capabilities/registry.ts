@@ -27,6 +27,13 @@ export interface CapabilityContext {
   topicId?: string;
   /** Links the invocation across the audit trail. */
   correlationId?: string;
+  /**
+   * Caller-specific execution context the capability needs but the registry
+   * shouldn't be typed against (e.g. the utility host's `HostContext`). An
+   * untyped bridge while the host-api / marker / node paths converge onto the
+   * registry; capabilities that use it cast at the edge.
+   */
+  host?: unknown;
 }
 
 /** How an invocation is recorded. */
