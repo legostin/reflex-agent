@@ -12,7 +12,13 @@ import matter from "gray-matter";
 import { auditCall, appendAudit } from "./audit";
 import { utilityFile, listUtilities, resolveUtility } from "./store";
 import { capabilityRegistry } from "@/lib/server/capabilities/registry";
-import { findGrant, type SharePlane } from "./grant-store";
+import {
+  findGrant,
+  listGrants,
+  grantActive,
+  grantCoversScope,
+  type SharePlane,
+} from "./grant-store";
 import {
   listProviders as listProviderEntries,
   findProviderCapability,
@@ -798,12 +804,19 @@ async function kbList(
   );
   const targetRoot = await resolveTargetRoot(ctx, args.rootId);
   const files = await listKbFiles(targetRoot.path);
+  const guard = await buildScopedReadGuard(ctx.utility.manifest.id, targetRoot.id);
   const q = args.query?.toLowerCase();
   return files
     .filter((f) => {
       if (args.kind) {
         const dir = f.rel.split("/")[0];
         if (dir !== args.kind && f.meta.kind !== args.kind) return false;
+      }
+      if (
+        guard.enabled &&
+        !guard.allowed(f.meta.data.createdBy, f.meta.kind ?? f.rel.split("/")[0])
+      ) {
+        return false;
       }
       if (q) {
         const hay = `${f.rel} ${f.meta.title ?? ""}`.toLowerCase();
@@ -830,6 +843,17 @@ async function kbRead(
   );
   const targetRoot = await resolveTargetRoot(ctx, args.rootId);
   const content = await readKbFile(targetRoot.path, args.relPath);
+  const guard = await buildScopedReadGuard(ctx.utility.manifest.id, targetRoot.id);
+  if (guard.enabled) {
+    const fm = matter(content).data as Record<string, unknown>;
+    const kind =
+      typeof fm.kind === "string" ? fm.kind : args.relPath.split("/")[0];
+    if (!guard.allowed(fm.createdBy, kind)) {
+      throw new Error(
+        `kb.read denied: requireScopedReads is on and "${args.relPath}" is neither self-owned nor granted`,
+      );
+    }
+  }
   return { content };
 }
 
@@ -862,6 +886,51 @@ function ensureConsume(ctx: HostContext): void {
     !!ctx.utility.manifest.permissions.shares?.consume,
     "shares.consume not granted",
   );
+}
+
+/**
+ * Stage 3 posture (docs/sharing.md): when `requireScopedReads` is on, blanket
+ * kb.read / kb.list are narrowed to the caller's OWN entries plus those it
+ * holds a live data grant for, closing the blanket-read backdoor. Off → an
+ * always-allow guard (no behavior change). Grants are loaded once per call.
+ */
+async function buildScopedReadGuard(
+  self: string,
+  scope: string,
+): Promise<{
+  enabled: boolean;
+  allowed: (createdBy: unknown, kind?: string) => boolean;
+}> {
+  const settings = await loadSettings();
+  if (!settings.sharing?.requireScopedReads) {
+    return { enabled: false, allowed: () => true };
+  }
+  const granted = new Set(
+    (await listGrants())
+      .filter(
+        (g) =>
+          g.consumer === self &&
+          g.plane === "data" &&
+          grantActive(g) &&
+          grantCoversScope(g, scope),
+      )
+      .map((g) => `${g.provider}:${g.selector}`),
+  );
+  return {
+    enabled: true,
+    allowed: (createdBy, kind) => {
+      if (ownedByProvider(createdBy, self)) return true;
+      if (
+        typeof createdBy === "string" &&
+        createdBy.startsWith("utility:") &&
+        kind
+      ) {
+        const provider = createdBy.slice("utility:".length).split("@")[0]!;
+        if (granted.has(`${provider}:${kind}`)) return true;
+      }
+      return false;
+    },
+  };
 }
 
 /**

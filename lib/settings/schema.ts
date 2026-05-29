@@ -107,6 +107,18 @@ export const SettingsSchema = z.object({
    * "advanced" shows the full settings surface. Default "simple".
    */
   uiMode: z.enum(["simple", "advanced"]).default("simple"),
+  /**
+   * Share Plane posture (docs/sharing.md). When `requireScopedReads` is on,
+   * blanket `kb.read` / `kb.list` are narrowed to the calling utility's OWN
+   * entries plus those it holds a data grant for — pushing utilities onto the
+   * granular `kb.scoped*` path and closing the blanket-read backdoor. Default
+   * off for back-compat (existing utilities keep working unchanged).
+   */
+  sharing: z
+    .object({
+      requireScopedReads: z.boolean().default(false),
+    })
+    .default({ requireScopedReads: false }),
   imageProcessing: ImageProcessingSchema.default({
     enabled: true,
     maxDimension: 2000,
