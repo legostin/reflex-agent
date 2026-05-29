@@ -58,7 +58,7 @@ const INLINE_BASELINE: CuratedUtility[] = [
     category: "productivity",
     description:
       "Ask your entire past from chat, and get abandoned threads surfaced every morning — built on Reflex's cross-conversation search.",
-    github: "github:reflex-agent/rflx-recall@v0.1.0",
+    github: "github:reflex-agent/rflx-recall@v0.1.1",
     suggestedScope: "project",
     author: "reflex-agent",
   },
