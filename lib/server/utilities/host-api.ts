@@ -433,6 +433,35 @@ function ensureHostMethodsRegistered(): void {
   }
 }
 
+/**
+ * Sensitive host methods that spawn subprocess agents (tasks.dispatch → a real
+ * Claude Code / Codex child process) or mutate the user's real git repository
+ * (git.worktree.*). docs/host-api.md documents these as "task-board utility
+ * only", but the handlers carried NO id/permission check, so any installed
+ * utility could call them — a privilege-escalation hole. This restores the
+ * documented gate at the single utility entry point (dispatchHostCall covers
+ * both the iframe route and the worker proxy). Read-only git.isRepo /
+ * hasRemote / hasGhCli stay open (documented as "always").
+ *
+ * TEMPORARY: replace with real permission slots (permissions.tasks /
+ * permissions.worktree) + install-time consent — see the core roadmap. Until
+ * then this hard-coded id-gate is the security boundary.
+ */
+const TASK_BOARD_ONLY_METHODS = new Set([
+  "tasks.create",
+  "tasks.update",
+  "tasks.delete",
+  "tasks.get",
+  "tasks.list",
+  "tasks.dispatch",
+  "tasks.observe",
+  "tasks.complete",
+  "git.worktree.create",
+  "git.worktree.merge",
+  "git.worktree.remove",
+  "git.worktree.list",
+]);
+
 export async function dispatchHostCall(
   ctx: HostContext,
   method: string,
@@ -452,6 +481,16 @@ export async function dispatchHostCall(
   return auditCall(meta, async (correlationId) => {
     if (!capabilityRegistry().has(method)) {
       throw new Error(`Unknown host method: ${method}`);
+    }
+    // Restore the documented "task-board utility only" gate (see
+    // TASK_BOARD_ONLY_METHODS above). The denied call is still audited.
+    if (
+      TASK_BOARD_ONLY_METHODS.has(method) &&
+      ctx.utility.manifest.id !== "task-board"
+    ) {
+      throw new Error(
+        `utility "${ctx.utility.manifest.id}" is not allowed to call ${method} (restricted to the task-board utility)`,
+      );
     }
     // Route through the unified CapabilityRegistry. The registered run wraps
     // the same HOST_METHODS fn, so this is behavior-identical to the table.

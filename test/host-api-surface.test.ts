@@ -82,3 +82,47 @@ describe("host-api method surface (utility ABI golden snapshot)", () => {
     expect(extractMethodIds()).toEqual(FROZEN_METHOD_IDS);
   });
 });
+
+/**
+ * Security regression: tasks.* and git.worktree.* spawn subprocess agents and
+ * mutate the user's real git repo. They are documented (docs/host-api.md) as
+ * "task-board utility only" and must be hard-gated at dispatchHostCall until
+ * real permission slots replace the id check. A regression here = any installed
+ * utility regains the privilege-escalation path. Source-extracted (no import)
+ * to match the snapshot test above.
+ */
+function extractGatedMethods(): string[] {
+  const src = readFileSync(SRC, "utf8");
+  const start = src.indexOf("const TASK_BOARD_ONLY_METHODS = new Set([");
+  const end = src.indexOf("]);", start);
+  const block = start >= 0 && end > start ? src.slice(start, end) : "";
+  const ids = new Set<string>();
+  const re = /"([^"]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(block)) !== null) ids.add(m[1]!);
+  return [...ids].sort((a, b) => a.localeCompare(b));
+}
+
+describe("host-api sensitive-capability gate (security)", () => {
+  it("gates exactly every tasks.* and git.worktree.* method", () => {
+    const expected = FROZEN_METHOD_IDS.filter(
+      (id) => id.startsWith("tasks.") || id.startsWith("git.worktree."),
+    );
+    expect(extractGatedMethods()).toEqual(expected);
+  });
+
+  it("leaves read-only git.isRepo / hasRemote / hasGhCli ungated", () => {
+    const gated = new Set(extractGatedMethods());
+    expect(gated.has("git.isRepo")).toBe(false);
+    expect(gated.has("git.hasRemote")).toBe(false);
+    expect(gated.has("git.hasGhCli")).toBe(false);
+  });
+
+  it("enforces the gate in dispatchHostCall with a task-board id check", () => {
+    const src = readFileSync(SRC, "utf8");
+    expect(src).toMatch(/TASK_BOARD_ONLY_METHODS\.has\(method\)/);
+    expect(src).toMatch(
+      /ctx\.utility\.manifest\.id\s*!==\s*"task-board"/,
+    );
+  });
+});
