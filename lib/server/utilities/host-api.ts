@@ -8,9 +8,17 @@ import type {
   Manifest,
   ServerAction,
 } from "./types";
+import matter from "gray-matter";
 import { auditCall, appendAudit } from "./audit";
-import { utilityFile } from "./store";
+import { utilityFile, listUtilities, resolveUtility } from "./store";
 import { capabilityRegistry } from "@/lib/server/capabilities/registry";
+import { findGrant, type SharePlane } from "./grant-store";
+import {
+  listProviders as listProviderEntries,
+  findProviderCapability,
+  rebuildProviderDirectory,
+  type ProviderInput,
+} from "./provider-directory";
 import { quickComplete } from "@/lib/server/quick";
 import { writeKbEntry } from "@/lib/server/agents/kb-writer";
 import { listKbFiles, readKbFile } from "@/lib/server/kb";
@@ -355,6 +363,30 @@ type HostMethod = (
   correlationId: string,
 ) => unknown;
 
+// Share Plane schemas (cross-utility data + capabilities — see docs/sharing.md).
+const ScopedListSchema = z.object({
+  provider: z.string().min(1).max(80),
+  kind: z.string().min(1).max(64),
+  rootId: z.string().optional(),
+  query: z.string().optional(),
+});
+const ScopedReadSchema = z.object({
+  provider: z.string().min(1).max(80),
+  kind: z.string().min(1).max(64),
+  relPath: z.string().min(1),
+  rootId: z.string().optional(),
+});
+const ListProvidersSchema = z.object({
+  kind: z.string().optional(),
+  verb: z.string().optional(),
+});
+const CapabilitiesInvokeSchema = z.object({
+  provider: z.string().min(1).max(80),
+  verb: z.string().min(1).max(64),
+  input: z.unknown().optional(),
+  rootId: z.string().optional(),
+});
+
 export const HOST_METHODS: Record<string, HostMethod> = {
   "llm.complete": (ctx, raw) => llmComplete(ctx, LlmCompleteSchema.parse(raw)),
   "kb.add": (ctx, raw) => kbAdd(ctx, KbAddSchema.parse(raw)),
@@ -408,6 +440,12 @@ export const HOST_METHODS: Record<string, HostMethod> = {
   "git.worktree.list": (ctx) => worktreeList(ctx),
   "sessions.search": (ctx, raw) =>
     sessionsSearch(ctx, SessionsSearchSchema.parse(raw)),
+  "kb.scopedList": (ctx, raw) => kbScopedList(ctx, ScopedListSchema.parse(raw)),
+  "kb.scopedRead": (ctx, raw) => kbScopedRead(ctx, ScopedReadSchema.parse(raw)),
+  "capabilities.listProviders": (ctx, raw) =>
+    capabilitiesListProviders(ctx, ListProvidersSchema.parse(raw)),
+  "capabilities.invoke": (ctx, raw, cid) =>
+    capabilitiesInvoke(ctx, CapabilitiesInvokeSchema.parse(raw), cid),
 };
 
 /**
@@ -755,6 +793,222 @@ async function kbRead(
   const targetRoot = await resolveTargetRoot(ctx, args.rootId);
   const content = await readKbFile(targetRoot.path, args.relPath);
   return { content };
+}
+
+// ---------------------------------------------------------------------------
+// Share Plane — cross-utility data (kb.scoped*) + capabilities. See docs/sharing.md.
+
+/** True iff a KB entry's host-stamped `createdBy` marks it owned by `provider`. */
+function ownedByProvider(createdBy: unknown, provider: string): boolean {
+  if (typeof createdBy !== "string") return false;
+  return (
+    createdBy === `utility:${provider}` ||
+    createdBy.startsWith(`utility:${provider}@`)
+  );
+}
+
+function grantRequired(
+  consumer: string,
+  plane: SharePlane,
+  provider: string,
+  selector: string,
+): Error {
+  return new Error(
+    `grant_required: utility "${consumer}" needs a ${plane} grant for ${provider}/${selector}`,
+  );
+}
+
+function ensureConsume(ctx: HostContext): void {
+  ensurePermission(
+    ctx.utility.manifest,
+    !!ctx.utility.manifest.permissions.shares?.consume,
+    "shares.consume not granted",
+  );
+}
+
+/**
+ * Rebuild the provider directory from the currently-installed utilities so
+ * discovery + capability resolution are always fresh (ownership is preserved
+ * across rebuilds). The install/uninstall hooks also refresh it; this keeps the
+ * host methods correct regardless of that wiring.
+ */
+async function syncProviderDirectory(rootId?: string): Promise<void> {
+  const utils = await listUtilities(rootId ? { rootId } : {});
+  const inputs: ProviderInput[] = utils.map((u) => ({
+    id: u.manifest.id,
+    scope: u.scope,
+    ...(u.rootId ? { rootId: u.rootId } : {}),
+    version: u.manifest.version,
+    provides: u.manifest.provides,
+  }));
+  await rebuildProviderDirectory(inputs);
+}
+
+async function kbScopedList(
+  ctx: HostContext,
+  args: z.infer<typeof ScopedListSchema>,
+): Promise<
+  Array<{ relPath: string; title?: string; kind?: string; modifiedAt: string }>
+> {
+  ensureConsume(ctx);
+  const targetRoot = await resolveTargetRoot(ctx, args.rootId);
+  const grant = await findGrant({
+    consumer: ctx.utility.manifest.id,
+    provider: args.provider,
+    plane: "data",
+    selector: args.kind,
+    scope: targetRoot.id,
+  });
+  if (!grant)
+    throw grantRequired(ctx.utility.manifest.id, "data", args.provider, args.kind);
+  const files = await listKbFiles(targetRoot.path);
+  const q = args.query?.toLowerCase();
+  return files
+    .filter((f) => {
+      const dir = f.rel.split("/")[0];
+      if (dir !== args.kind && f.meta.kind !== args.kind) return false;
+      if (!ownedByProvider(f.meta.data.createdBy, args.provider)) return false;
+      if (q) {
+        const hay = `${f.rel} ${f.meta.title ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    })
+    .map((f) => ({
+      relPath: f.rel,
+      title: f.meta.title,
+      kind: f.meta.kind,
+      modifiedAt: f.modifiedAt,
+    }));
+}
+
+async function kbScopedRead(
+  ctx: HostContext,
+  args: z.infer<typeof ScopedReadSchema>,
+): Promise<{ content: string }> {
+  ensureConsume(ctx);
+  const targetRoot = await resolveTargetRoot(ctx, args.rootId);
+  const grant = await findGrant({
+    consumer: ctx.utility.manifest.id,
+    provider: args.provider,
+    plane: "data",
+    selector: args.kind,
+    scope: targetRoot.id,
+  });
+  if (!grant)
+    throw grantRequired(ctx.utility.manifest.id, "data", args.provider, args.kind);
+  const dir = args.relPath.split("/")[0];
+  if (dir !== args.kind) {
+    throw new Error(
+      `kb.scopedRead: relPath is not under the granted kind "${args.kind}"`,
+    );
+  }
+  // readKbFile guards path traversal under .reflex/.
+  const content = await readKbFile(targetRoot.path, args.relPath);
+  const fm = matter(content).data as Record<string, unknown>;
+  if (!ownedByProvider(fm.createdBy, args.provider)) {
+    throw new Error(
+      `kb.scopedRead: "${args.relPath}" is not owned by provider "${args.provider}"`,
+    );
+  }
+  return { content };
+}
+
+async function capabilitiesListProviders(
+  ctx: HostContext,
+  args: z.infer<typeof ListProvidersSchema>,
+): Promise<unknown[]> {
+  ensureConsume(ctx);
+  await syncProviderDirectory(ctx.utility.rootId);
+  const filter =
+    args.kind || args.verb
+      ? {
+          ...(args.kind ? { kind: args.kind } : {}),
+          ...(args.verb ? { verb: args.verb } : {}),
+        }
+      : undefined;
+  const entries = await listProviderEntries(filter);
+  // Metadata only — never payloads.
+  return entries.map((e) => ({
+    provider: e.provider,
+    version: e.version,
+    scope: e.scope,
+    data: e.data.map((d) => ({ kind: d.kind, ...(d.doc ? { doc: d.doc } : {}) })),
+    capabilities: e.capabilities.map((c) => ({
+      verb: c.verb,
+      ...(c.doc ? { doc: c.doc } : {}),
+      sideEffects: c.sideEffects,
+      input: c.input,
+      output: c.output,
+    })),
+  }));
+}
+
+async function capabilitiesInvoke(
+  ctx: HostContext,
+  args: z.infer<typeof CapabilitiesInvokeSchema>,
+  correlationId: string,
+): Promise<unknown> {
+  ensureConsume(ctx);
+  // Anti-confused-deputy: the consumer must have DECLARED the import.
+  const declared = (ctx.utility.manifest.consumes?.capabilities ?? []).some(
+    (c) => c.verb === args.verb && (!c.provider || c.provider === args.provider),
+  );
+  if (!declared) {
+    throw new Error(
+      `capabilities.invoke: "${args.verb}" from "${args.provider}" is not declared in manifest.consumes.capabilities`,
+    );
+  }
+  const targetRoot = await resolveTargetRoot(ctx, args.rootId);
+  const grant = await findGrant({
+    consumer: ctx.utility.manifest.id,
+    provider: args.provider,
+    plane: "capability",
+    selector: args.verb,
+    scope: targetRoot.id,
+  });
+  if (!grant)
+    throw grantRequired(
+      ctx.utility.manifest.id,
+      "capability",
+      args.provider,
+      args.verb,
+    );
+  await syncProviderDirectory(targetRoot.id);
+  const found = await findProviderCapability(
+    args.provider,
+    args.verb,
+    targetRoot.id,
+  );
+  if (!found) {
+    throw new Error(
+      `capabilities.invoke: provider "${args.provider}" does not export verb "${args.verb}"`,
+    );
+  }
+  const providerUtil = await resolveUtility(args.provider, targetRoot.id);
+  if (!providerUtil) {
+    throw new Error(
+      `capabilities.invoke: provider "${args.provider}" is not installed`,
+    );
+  }
+  const action = providerUtil.manifest.serverActions.find(
+    (a) => a.name === found.capability.action,
+  );
+  if (!action) {
+    throw new Error(
+      `capabilities.invoke: provider action "${found.capability.action}" not found in "${args.provider}"`,
+    );
+  }
+  // Runs in the PROVIDER's sandbox (its dir/data/secrets) — runServerAction
+  // keys identity off the passed utility. Dynamic import breaks the
+  // host-api <-> worker-pool import cycle.
+  const { runServerAction } = await import("./worker-pool");
+  return runServerAction({
+    utility: providerUtil,
+    action,
+    args: args.input,
+    parentCorrelationId: correlationId,
+  });
 }
 
 // ---------------------------------------------------------------------------
