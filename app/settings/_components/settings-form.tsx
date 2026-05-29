@@ -692,6 +692,29 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
           Reach you outside the app — scheduler, workflow, and agent output
           delivered to Telegram, where you can also chat back.
         </p>
+        <Card className="mb-3">
+          <CardContent className="pt-5 pb-5 flex items-start justify-between gap-4">
+            <div>
+              <div className="text-sm font-medium">Mirror dispatcher to channels</div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Forward everything that lands in the dispatcher (workflow /
+                scheduler / utility notifications, Space-agent reports) out to
+                your channels. Off → it&apos;s still recorded in the app, just
+                not pushed. Replies to messages you send the bot directly are
+                always answered, regardless of this.
+              </p>
+            </div>
+            <Switch
+              checked={settings.notify?.mirrorDispatcher ?? true}
+              onCheckedChange={(v) =>
+                setSettings((s) => ({
+                  ...s,
+                  notify: { ...s.notify, mirrorDispatcher: v },
+                }))
+              }
+            />
+          </CardContent>
+        </Card>
         <TelegramSection
           settings={settings}
           onChange={(patch) => setSettings((s) => ({ ...s, ...patch }))}

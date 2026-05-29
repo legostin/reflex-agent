@@ -20,39 +20,15 @@ export async function relayToDispatcher(args: {
       : args.status === "question" || args.status === "blocked"
         ? "❓"
         : "📨";
-  const title = `${icon} ${args.spaceName}`;
 
-  // Push to channels (Telegram etc.) — the "весточка".
-  try {
-    const { notify } = await import("@/lib/server/notify");
-    await notify({
-      title,
-      body: args.body,
-      ...(args.link ? { link: args.link } : {}),
-    });
-  } catch {
-    /* notify is best-effort */
-  }
-
-  // Record it in the dispatcher thread so the web chat shows it and the
-  // dispatcher has it as context on its next turn.
-  try {
-    const { getDispatcherTopic } = await import("./dispatcher");
-    const { appendEventSeq } = await import("@/lib/server/agents/events-log");
-    const d = await getDispatcherTopic();
-    // Same seq authority as the agent emit path — the dispatcher topic has two
-    // writers (agent turns + this relay), so both MUST share it or they mint
-    // colliding seqs on the dispatcher's log.
-    await appendEventSeq(d.rootPath, d.topicId, {
-      type: "system",
-      text: `[${args.spaceName}] ${args.body}`,
-      agentId: "dispatcher-relay",
-      ts: new Date().toISOString(),
-      seq: 0,
-    });
-  } catch {
-    /* best-effort */
-  }
+  // One funnel: record in the dispatcher thread + mirror to channels (gated by
+  // settings.notify.mirrorDispatcher). Same path as every other pushed notice.
+  const { dispatch } = await import("./dispatch");
+  await dispatch({
+    title: `${icon} ${args.spaceName}`,
+    body: args.body,
+    ...(args.link ? { link: args.link } : {}),
+  });
 }
 
 export function spaceNameFromPath(rootPath: string): string {

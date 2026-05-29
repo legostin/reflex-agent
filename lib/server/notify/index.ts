@@ -35,14 +35,14 @@ export async function notify(payload: NotifyPayload): Promise<NotifyResult> {
   }
 
   const settings = await loadSettings();
-  const tg = settings.notify?.telegram;
-  if (tg?.enabled && tg.botToken && tg.chatId) {
+  const { channels } = await import("./channel");
+  for (const ch of channels()) {
+    if (!ch.isEnabled(settings)) continue;
     try {
-      const { sendTelegram } = await import("./telegram");
-      await sendTelegram(tg, payload);
-      delivered.push("telegram");
+      await ch.send(settings, payload);
+      delivered.push(ch.id);
     } catch (err) {
-      errors.telegram = err instanceof Error ? err.message : String(err);
+      errors[ch.id] = err instanceof Error ? err.message : String(err);
     }
   }
 

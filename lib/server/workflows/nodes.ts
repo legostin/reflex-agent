@@ -200,13 +200,14 @@ export const NODE_HANDLERS: Record<WorkflowStepKind, NodeHandler> = {
   },
 
   notify: async (params) => {
-    // Deliver to the user's configured channels (Telegram, …). Body
-    // defaults to the previous step's output so "summarise X → notify"
-    // needs no glue step.
+    // Push through the dispatcher: it records a line in the dispatcher thread
+    // (visible in-app) and the mirror forwards it to the user's channels
+    // (Telegram, …) when mirroring is enabled. Body defaults to the previous
+    // step's output so "summarise X → notify" needs no glue step.
     const body = stringOr(params.body, stringOr(params.text, "")).trim();
     if (!body) throw new Error("notify: body is empty");
-    const { notify } = await import("@/lib/server/notify");
-    const res = await notify({
+    const { dispatch } = await import("@/lib/server/home/dispatch");
+    await dispatch({
       body,
       ...(typeof params.title === "string" && params.title
         ? { title: params.title }
@@ -215,7 +216,7 @@ export const NODE_HANDLERS: Record<WorkflowStepKind, NodeHandler> = {
         ? { link: params.link }
         : {}),
     });
-    return { delivered: res.delivered, errors: res.errors };
+    return { dispatched: true };
   },
 };
 

@@ -228,8 +228,20 @@ export const SettingsSchema = z.object({
           rootId: z.string().default(""),
         })
         .default({ enabled: false, botToken: "", chatId: "", rootId: "" }),
+      /**
+       * Mirror the dispatcher to the configured channel(s). When on, every
+       * pushed notification that lands in the dispatcher thread (workflow /
+       * scheduler / utility / Space-agent reports) is forwarded to Telegram
+       * (Slack, …). Off → the dispatcher still records everything in-app, but
+       * nothing is pushed out. Does NOT affect replies to messages you send
+       * the bot directly (that's an interactive conversation, always answered).
+       */
+      mirrorDispatcher: z.boolean().default(true),
     })
-    .default({ telegram: { enabled: false, botToken: "", chatId: "", rootId: "" } }),
+    .default({
+      telegram: { enabled: false, botToken: "", chatId: "", rootId: "" },
+      mirrorDispatcher: true,
+    }),
 });
 
 export type Settings = z.infer<typeof SettingsSchema>;

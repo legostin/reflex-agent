@@ -84,6 +84,16 @@ async function tick(handle: SchedulerHandle): Promise<void> {
         `[scheduler] dispatcher compaction failed: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+    // Safety net for the dispatcher → channel mirror: dispatch() fires it
+    // inline on each push, but a missed/raced inline run is flushed here.
+    try {
+      const { mirrorDispatcher } = await import("@/lib/server/home/dispatch");
+      await mirrorDispatcher();
+    } catch (err) {
+      console.error(
+        `[scheduler] dispatcher mirror failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   } finally {
     handle.running = false;
   }

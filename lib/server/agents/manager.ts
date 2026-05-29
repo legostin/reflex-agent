@@ -2355,13 +2355,16 @@ async function ensureNotifyCapability() {
   );
   const reg = capabilityRegistry();
   if (!reg.has("notify")) {
-    const { notify } = await import("@/lib/server/notify");
+    const { dispatch } = await import("@/lib/server/home/dispatch");
     reg.register({
       kind: "sync",
       id: "notify",
       audit: "always",
-      doc: "Send a notification to the user's channels (Telegram, push).",
-      run: (input) => notify(input as NotifyPayload),
+      doc: "Notify the user: records a line in the dispatcher and mirrors it to the user's channels (Telegram, …).",
+      run: async (input) => {
+        await dispatch(input as NotifyPayload);
+        return { dispatched: true };
+      },
     });
   }
   return reg;
