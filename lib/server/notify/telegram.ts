@@ -569,6 +569,7 @@ async function handleMessage(cfg: TelegramConfig, msg: TgMessage): Promise<void>
   if (chatId === undefined) return;
   const photos = msg.photo ?? [];
   let text = (msg.text ?? msg.caption ?? "").trim();
+  const typedText = text; // what the user actually typed, before any default
 
   let allowedChatId = cfg.chatId;
   // First-message auto-bind (unchanged): connect on first text.
@@ -608,6 +609,25 @@ async function handleMessage(cfg: TelegramConfig, msg: TgMessage): Promise<void>
 
   const { getDispatcherTopic } = await import("@/lib/server/home/dispatcher");
   const d = await getDispatcherTopic();
+
+  // The agent is blocked on a permission request and the user typed instead of
+  // tapping: per their choice, a typed reply IS a refusal — deny the pending
+  // request(s), forwarding the text to the agent as guidance, and do NOT start
+  // a new turn (the agent resumes from the deny).
+  if (typedText) {
+    const blockedAgent = agentIdForTopic(d.topicId);
+    if (blockedAgent && agentManager.hasPendingPermission(blockedAgent)) {
+      const n = await agentManager.denyPendingPermissions(blockedAgent, typedText);
+      await sendPlain(
+        cfg.botToken,
+        allowedChatId,
+        n > 1
+          ? `❌ Denied ${n} requests — passed your note to the agent.`
+          : "❌ Denied — passed your note to the agent.",
+      );
+      return;
+    }
+  }
 
   const attachments: Attachment[] = [];
   if (photos.length > 0) {
@@ -674,17 +694,32 @@ async function handleCallback(
     if (kind === "p") {
       const decision = suffix === "deny" ? "deny" : "allow";
       const scope = suffix === "always" ? "always" : suffix === "once" ? "once" : undefined;
+      // Recover the tool name from the originating request — for the persist
+      // path and so the resolved label says WHAT was approved.
+      let tool: string | undefined;
+      try {
+        const events = await readEvents(d.rootPath, d.topicId);
+        const req = events.find(
+          (e): e is Extract<(typeof events)[number], { type: "permission-request" }> =>
+            e.type === "permission-request" && e.requestId === requestId,
+        );
+        tool = req?.tool;
+      } catch {
+        /* ignore — label just omits the tool */
+      }
       await agentManager.resolveInteractive("permission", requestId, {
         decision,
         ...(scope ? { scope } : {}),
+        ...(tool ? { tool } : {}),
       }, agentId);
       if (msgId) {
+        const what = tool ? `\`${tool}\` ` : "";
         const label =
           decision === "deny"
-            ? "❌ Denied"
+            ? `❌ ${what}denied`
             : scope === "always"
-              ? "✅ Allowed (always)"
-              : "✅ Allowed once";
+              ? `✅ ${what}allowed (always)`
+              : `✅ ${what}allowed once`;
         await resolveKeyboardMessage(cfg.botToken, chat, msgId, label);
       }
     } else if (kind === "q") {

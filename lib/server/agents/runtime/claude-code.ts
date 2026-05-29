@@ -3,6 +3,11 @@ import { execa } from "execa";
 import crypto from "node:crypto";
 import type { AgentEvent } from "../types";
 import { writeClaudeMcpConfig } from "./mcp-config-file";
+import {
+  ensurePermissionRuntime,
+  cleanupAgentPerm,
+  PERM_TIMEOUT_MS,
+} from "./permission-bridge";
 
 /**
  * Run an agent backed by the local `claude` CLI in headless stream-json mode.
@@ -99,6 +104,11 @@ export async function runClaudeCode(rt: Runtime): Promise<void> {
   const tools = mcpCfg
     ? [...baseTools, ...mcpCfg.serverIds.map((id) => `mcp__${id}__*`)]
     : baseTools;
+  // True blocking permissions: a PreToolUse hook (via --settings) pauses the
+  // agent on any tool NOT in `tools` until the user decides — see
+  // ./permission-bridge. Pre-approved tools are allowed by the hook instantly
+  // (no IPC), so only genuinely gated calls block.
+  const perm = await ensurePermissionRuntime(rt.meta.id);
   const args = [
     "-p",
     rt.args.prompt,
@@ -108,6 +118,8 @@ export async function runClaudeCode(rt: Runtime): Promise<void> {
     "default",
     "--allowedTools",
     tools.join(","),
+    "--settings",
+    perm.settingsPath,
     "--add-dir",
     rt.args.reflexScope,
     "--output-format",
@@ -121,6 +133,14 @@ export async function runClaudeCode(rt: Runtime): Promise<void> {
     cwd: rt.args.rootPath,
     buffer: false,
     stdin: "ignore",
+    // Inherits process.env (extendEnv defaults true); these reach the hook
+    // child claude spawns for each tool call.
+    env: {
+      REFLEX_PERM_DIR: perm.permDir,
+      REFLEX_AGENT_ID: rt.meta.id,
+      REFLEX_ALLOWED: tools.join(","),
+      REFLEX_PERM_TIMEOUT_MS: String(PERM_TIMEOUT_MS),
+    },
   });
   // Let the manager kill this subprocess when the user grants "Always
   // allow" mid-stream — only way to get claude to pick up the new
@@ -166,6 +186,7 @@ export async function runClaudeCode(rt: Runtime): Promise<void> {
   } finally {
     rt.manager.clearKiller?.(rt.meta.id);
     if (mcpCfg) await mcpCfg.cleanup();
+    await cleanupAgentPerm(rt.meta.id);
   }
 }
 

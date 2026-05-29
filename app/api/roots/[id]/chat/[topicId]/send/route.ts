@@ -37,6 +37,19 @@ export async function POST(
   if (!topic) {
     return Response.json({ ok: false, error: "Topic not found" }, { status: 404 });
   }
+  // If the orchestrator is blocked on a permission request, a typed message is
+  // a refusal (per the user's choice): deny the pending request(s) with the
+  // text as guidance and resume the agent — don't start a competing turn.
+  if (message) {
+    const { agentManager } = await import("@/lib/server/agents/manager");
+    if (agentManager.hasPendingPermissionForTopic(topicId)) {
+      const denied = await agentManager.denyPendingPermissionsForTopic(
+        topicId,
+        message,
+      );
+      return Response.json({ ok: true, denied }, { status: 202 });
+    }
+  }
   const result = await startOrchestratorTurn({
     rootId,
     topicId,

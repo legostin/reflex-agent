@@ -12,6 +12,11 @@ import type {
 } from "./types";
 import type { TaskId } from "@/lib/settings";
 import { runClaudeCode } from "./runtime/claude-code";
+import {
+  readOpenRequests,
+  writeDecision,
+  addAlwaysAllow,
+} from "./runtime/permission-bridge";
 import { runCodex } from "./runtime/codex";
 import { runOllama } from "./runtime/ollama";
 import { runImageGen } from "./runtime/image-gen";
@@ -189,6 +194,14 @@ class AgentManager {
   >();
   /** Guards one-time registration of the interactive directives (Phase 4). */
   private interactiveRegistered = false;
+  /** Gated tool calls blocked in a claude PreToolUse hook, awaiting the user.
+   *  requestId (= tool_use_id) → owning agent + tool. Populated by the
+   *  permission poller, consumed by respondPermission (writes the decision
+   *  file the hook is polling). See ./runtime/permission-bridge. */
+  private pendingBridge = new Map<
+    string,
+    { agentId: string; tool: string }
+  >();
 
   // ---------------------------------------------------------------------
   // creation
@@ -204,6 +217,7 @@ class AgentManager {
   }
 
   private async createAgent(args: EnsureAgentArgs): Promise<AgentMeta> {
+    this.ensurePermissionPoller();
     const id = shortId();
     const meta: AgentMeta = {
       id,
@@ -440,10 +454,23 @@ class AgentManager {
       decision: "allow" | "deny";
       scope?: "once" | "always";
       tool?: string;
+      /** Deny reason / guidance surfaced to the agent (e.g. a typed reply). */
+      message?: string;
     },
   ): Promise<void> {
     const state = this.agents.get(agentId);
     if (!state) throw new Error("Agent not found");
+    // Bridged gating: the agent is blocked live inside its PreToolUse hook.
+    // Write the decision file the hook is polling and let it RESUME the same
+    // tool call — no kill, no respawn, no continuation turn. The OWNER of the
+    // request (`bridged.agentId`) may differ from the caller's `agentId` — a
+    // sub-agent's card resolves through the orchestrator's id in Telegram, but
+    // the decision file must land in the sub-agent's dir.
+    const bridged = this.pendingBridge.get(args.requestId);
+    if (bridged) {
+      await this.resolveBridgedPermission(bridged.agentId, bridged.tool, args);
+      return;
+    }
     // Note: do NOT bail when status === "running". The harness can emit
     // multiple permission-request cards inside a single turn (each blocked
     // tool call ⇒ new card); the user must be able to answer them while
@@ -539,6 +566,175 @@ class AgentManager {
     // completion and a `continueTurn` call would race the in-flight invoke.
     if (!wasRunning) {
       await this.continueTurn(agentId, userMessage);
+    }
+  }
+
+  /** True if `agentId` is blocked on at least one gated tool call. */
+  hasPendingPermission(agentId: string): boolean {
+    for (const v of this.pendingBridge.values()) {
+      if (v.agentId === agentId) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Deny every gated tool call the agent is currently blocked on, using
+   * `reason` as the guidance the agent receives. This is how a *typed* reply
+   * (in Telegram or the web chat) — which the user opted to treat as a refusal
+   * — unblocks the agent without granting the tool.
+   */
+  async denyPendingPermissions(agentId: string, reason: string): Promise<number> {
+    const ids = [...this.pendingBridge.entries()]
+      .filter(([, v]) => v.agentId === agentId)
+      .map(([id]) => id);
+    for (const id of ids) {
+      await this.respondPermission(agentId, {
+        requestId: id,
+        decision: "deny",
+        ...(reason ? { message: reason } : {}),
+      });
+    }
+    return ids.length;
+  }
+
+  private pendingPermissionAgentsForTopic(topicId: string): string[] {
+    const out = new Set<string>();
+    for (const v of this.pendingBridge.values()) {
+      const st = this.agents.get(v.agentId);
+      if (st && st.meta.topicId === topicId) out.add(v.agentId);
+    }
+    return [...out];
+  }
+
+  /** True if any agent on `topicId` is blocked on a permission request. */
+  hasPendingPermissionForTopic(topicId: string): boolean {
+    return this.pendingPermissionAgentsForTopic(topicId).length > 0;
+  }
+
+  /** Deny every pending permission on `topicId` with `reason` (a typed reply
+   *  the user chose to treat as a refusal). Returns the count denied. */
+  async denyPendingPermissionsForTopic(
+    topicId: string,
+    reason: string,
+  ): Promise<number> {
+    let n = 0;
+    for (const agentId of this.pendingPermissionAgentsForTopic(topicId)) {
+      n += await this.denyPendingPermissions(agentId, reason);
+    }
+    return n;
+  }
+
+  /** Resolve a bridged (hook-blocked) permission by writing the decision file
+   *  the PreToolUse hook is polling. The live process resumes the same tool
+   *  call — no kill, no respawn. */
+  private async resolveBridgedPermission(
+    ownerAgentId: string,
+    tool: string,
+    args: {
+      requestId: string;
+      decision: "allow" | "deny";
+      scope?: "once" | "always";
+      message?: string;
+    },
+  ): Promise<void> {
+    const owner = this.agents.get(ownerAgentId);
+    if (args.decision === "allow") {
+      if (args.scope === "always" && tool) {
+        // Stop the live process re-asking, and pre-approve for future turns.
+        await addAlwaysAllow(ownerAgentId, tool).catch(() => {});
+        try {
+          const settings = await loadSettings();
+          const taskKey = owner?.meta.task;
+          const assignment = taskKey ? settings.assignments[taskKey] : undefined;
+          if (assignment && !assignment.allowedTools.includes(tool)) {
+            assignment.allowedTools = [...assignment.allowedTools, tool];
+            await saveSettings(settings);
+          }
+        } catch (err) {
+          await this.emit({
+            type: "error",
+            message:
+              "Failed to persist allowed tool: " +
+              (err instanceof Error ? err.message : String(err)),
+            agentId: ownerAgentId,
+            ts: now(),
+            seq: 0,
+          });
+        }
+      }
+      await writeDecision(ownerAgentId, args.requestId, { behavior: "allow" });
+    } else {
+      await writeDecision(ownerAgentId, args.requestId, {
+        behavior: "deny",
+        message: args.message?.trim() || "Denied by user.",
+      });
+    }
+    // The decision file now exists → the poller treats this request as resolved
+    // and won't re-surface it. Safe to drop the in-memory entry + clear the UI
+    // card (permission-response) only now.
+    this.pendingBridge.delete(args.requestId);
+    if (owner) {
+      await this.emit({
+        type: "permission-response",
+        requestId: args.requestId,
+        decision: args.decision,
+        ...(args.scope ? { scope: args.scope } : {}),
+        agentId: ownerAgentId,
+        ts: now(),
+        seq: 0,
+      });
+    }
+  }
+
+  /** Lazily start the singleton poller that turns hook requests written to
+   *  disk into permission-request events (surfaced in Telegram + the web UI). */
+  private ensurePermissionPoller(): void {
+    const g = globalThis as typeof globalThis & {
+      __reflexPermPoller?: ReturnType<typeof setInterval>;
+    };
+    if (g.__reflexPermPoller) return;
+    const timer = setInterval(() => {
+      void this.scanBridgeRequests();
+    }, 300);
+    timer.unref?.();
+    g.__reflexPermPoller = timer;
+  }
+
+  private async scanBridgeRequests(): Promise<void> {
+    let reqs: Awaited<ReturnType<typeof readOpenRequests>>;
+    try {
+      reqs = await readOpenRequests();
+    } catch {
+      return; // never let the poller throw
+    }
+    // Prune entries whose request vanished from disk — the agent's turn ended
+    // and its perm dir was cleaned while a call was still notionally pending.
+    const openIds = new Set(reqs.map((r) => r.requestId));
+    for (const id of [...this.pendingBridge.keys()]) {
+      if (!openIds.has(id)) this.pendingBridge.delete(id);
+    }
+    for (const req of reqs) {
+      if (this.pendingBridge.has(req.requestId)) continue;
+      if (!this.agents.has(req.agentId)) continue; // not (yet) known — retry
+      this.pendingBridge.set(req.requestId, {
+        agentId: req.agentId,
+        tool: req.tool,
+      });
+      try {
+        await this.emit({
+          type: "permission-request",
+          requestId: req.requestId,
+          tool: req.tool,
+          action: "tool-prompt",
+          ...(req.input !== undefined ? { input: req.input } : {}),
+          description: describeGatedTool(req.tool, req.input),
+          agentId: req.agentId,
+          ts: now(),
+          seq: 0,
+        });
+      } catch {
+        this.pendingBridge.delete(req.requestId); // emit raced agent teardown
+      }
     }
   }
 
@@ -1026,12 +1222,14 @@ class AgentManager {
             decision: "allow" | "deny";
             scope?: "once" | "always";
             tool?: string;
+            message?: string;
           };
           await this.respondPermission(ctx.agentId as string, {
             requestId,
             decision: r.decision,
             ...(r.scope ? { scope: r.scope } : {}),
             ...(r.tool ? { tool: r.tool } : {}),
+            ...(r.message ? { message: r.message } : {}),
           });
         },
       });
@@ -2115,6 +2313,9 @@ class AgentManager {
     this.agents.delete(agentId);
     this.turnText.delete(agentId);
     this.lastInvoke.delete(agentId);
+    for (const [id, v] of this.pendingBridge) {
+      if (v.agentId === agentId) this.pendingBridge.delete(id);
+    }
     const roleMap = this.byTopicRole.get(state.meta.topicId);
     if (roleMap) {
       for (const [role, id] of roleMap) {
@@ -2238,6 +2439,22 @@ class AgentManager {
 
 function now(): string {
   return new Date().toISOString();
+}
+
+/** Human-readable card text for a gated tool call (tool + its key argument). */
+function describeGatedTool(tool: string, input: unknown): string {
+  const i = (input ?? {}) as Record<string, unknown>;
+  const str = (v: unknown): string | undefined =>
+    typeof v === "string" && v.trim() ? v.trim() : undefined;
+  let detail: string | undefined;
+  if (tool === "WebFetch") detail = str(i.url);
+  else if (tool === "WebSearch") detail = str(i.query);
+  else if (tool === "Bash") detail = str(i.command);
+  else detail = str(i.file_path) ?? str(i.path) ?? str(i.notebook_path);
+  if (detail && detail.length > 200) detail = `${detail.slice(0, 197)}…`;
+  return detail
+    ? `The agent wants to use \`${tool}\`: ${detail}. Allow?`
+    : `The agent wants to use the "${tool}" tool (not in this task's allowed list). Allow?`;
 }
 
 const KNOWN_HARNESSES: ReadonlySet<string> = new Set<AgentHarnessId>([
