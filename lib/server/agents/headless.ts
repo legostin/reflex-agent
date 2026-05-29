@@ -82,12 +82,39 @@ export async function runHeadlessAgent(
     // return false before the turn has even registered, and we'd bail
     // immediately with an empty transcript.
     await sleep(400);
-    while (Date.now() < deadline) {
-      if (!agentManager.isActive(topic.meta.id)) break;
-      await sleep(400);
-    }
+    // Event-driven wait (Phase 3: push, not poll). Resolve on the topic's
+    // turn-end/agent-end instead of polling isActive every 400ms; race a
+    // deadline timer. The spin-up beat above ensures the turn has registered
+    // before we check, so the "already finished" guard can't fire prematurely.
     if (agentManager.isActive(topic.meta.id)) {
-      timedOut = true;
+      const finished = new Promise<void>((resolve) => {
+        const unsub = agentManager.subscribeTopic(topic.meta.id, (ev) => {
+          if (ev.type === "turn-end" || ev.type === "agent-end") {
+            unsub();
+            resolve();
+          }
+        });
+        // Closed between the isActive check and subscribing → resolve now.
+        if (!agentManager.isActive(topic.meta.id)) {
+          unsub();
+          resolve();
+        }
+      });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timedOutP = new Promise<"timeout">((resolve) => {
+        timer = setTimeout(
+          () => resolve("timeout"),
+          Math.max(0, deadline - Date.now()),
+        );
+      });
+      const outcome = await Promise.race([
+        finished.then(() => "done" as const),
+        timedOutP,
+      ]);
+      if (timer) clearTimeout(timer);
+      if (outcome === "timeout" && agentManager.isActive(topic.meta.id)) {
+        timedOut = true;
+      }
     }
     // Flush window: events.jsonl writes are async; turn-end may be on
     // disk but trailing assistant-delta still in-flight. 400ms covers
