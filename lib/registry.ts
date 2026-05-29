@@ -13,8 +13,13 @@ const REGISTRY_DIR = reflexHome();
 const REGISTRY_FILE = path.join(REGISTRY_DIR, "registry.json");
 
 export interface RegistryEntry {
-  /** Stable id derived from the absolute path. */
+  /** Stable id derived from the absolute path (legacy; changes if re-added at
+   *  a new path). Kept for back-compat — existing topics/widgets/URLs key on it. */
   id: string;
+  /** Path-INDEPENDENT stable ref (rootRef dual-read). Survives a folder move
+   *  via updatePath(). getRoot() resolves by id OR ref, so callers can migrate
+   *  to the ref as the canonical id without breaking id-keyed data. */
+  ref?: string;
   /** Absolute path on disk. */
   path: string;
   /** ISO timestamp when this root was added. */
@@ -60,6 +65,12 @@ export function rootId(absPath: string): string {
     .slice(0, 16);
 }
 
+/** A path-independent stable ref (rootRef). Unlike rootId(), it does not change
+ *  when the Space's folder moves. */
+export function newRef(): string {
+  return crypto.randomBytes(8).toString("hex");
+}
+
 async function readFile(): Promise<RegistryFile> {
   try {
     const raw = await fs.readFile(REGISTRY_FILE, "utf8");
@@ -100,7 +111,8 @@ export async function listRoots(): Promise<RegistryEntry[]> {
 export async function getRoot(id: string): Promise<RegistryEntry | null> {
   if (id === HOME_ROOT_ID) return homeRootEntry();
   const file = await readFile();
-  return file.entries.find((e) => e.id === id) ?? null;
+  // rootRef dual-read: resolve by the legacy path-derived id OR the stable ref.
+  return file.entries.find((e) => e.id === id || e.ref === id) ?? null;
 }
 
 export async function addRoot(absPath: string): Promise<RegistryEntry> {
@@ -111,11 +123,38 @@ export async function addRoot(absPath: string): Promise<RegistryEntry> {
   if (existing) return existing;
   const entry: RegistryEntry = {
     id,
+    ref: newRef(),
     path: resolved,
     addedAt: new Date().toISOString(),
   };
   await writeFile({ ...file, entries: [...file.entries, entry] });
   return entry;
+}
+
+/**
+ * Move a Space to a new path while preserving its identity — keeps `id` and
+ * `ref` so topics/widgets/URLs that key on them keep resolving (rootRef). This
+ * is the safe alternative to remove+re-add, which would mint a new id and
+ * orphan everything. Backfills a `ref` if the entry predates rootRef.
+ */
+export async function updatePath(
+  id: string,
+  newPath: string,
+): Promise<RegistryEntry | null> {
+  const resolved = path.resolve(newPath);
+  const file = await readFile();
+  const idx = file.entries.findIndex((e) => e.id === id || e.ref === id);
+  if (idx < 0) return null;
+  const cur = file.entries[idx]!;
+  const next: RegistryEntry = {
+    ...cur,
+    path: resolved,
+    ...(cur.ref ? {} : { ref: newRef() }),
+  };
+  const updated = [...file.entries];
+  updated[idx] = next;
+  await writeFile({ ...file, entries: updated });
+  return next;
 }
 
 export async function removeRoot(id: string): Promise<void> {
