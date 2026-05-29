@@ -7,6 +7,7 @@ import {
   type McpConfig,
 } from "@/lib/server/utilities/mcp";
 import { reflexHome } from "@/lib/reflex/home";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 
 /**
  * Reflex-wide MCP server registry. One JSON file at
@@ -67,17 +68,7 @@ async function read(): Promise<RegistryFile> {
 }
 
 async function write(data: RegistryFile): Promise<void> {
-  await fs.mkdir(REGISTRY_DIR, { recursive: true });
-  await fs.writeFile(
-    REGISTRY_FILE,
-    JSON.stringify(data, null, 2) + "\n",
-    { encoding: "utf8", mode: 0o600 },
-  );
-  try {
-    await fs.chmod(REGISTRY_FILE, 0o600);
-  } catch {
-    // best effort
-  }
+  await writeJsonFile(REGISTRY_FILE, data, { mode: 0o600 });
 }
 
 export async function listMcpServers(): Promise<McpServerEntry[]> {

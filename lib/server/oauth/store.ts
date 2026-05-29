@@ -6,6 +6,7 @@ import {
   type OAuthProviderId,
 } from "./providers";
 import { reflexHome } from "@/lib/reflex/home";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 
 /**
  * On-disk state for OAuth — two files per provider:
@@ -54,16 +55,7 @@ function tokensPath(id: OAuthProviderId): string {
 }
 
 async function writeJson(p: string, data: unknown): Promise<void> {
-  await fs.mkdir(path.dirname(p), { recursive: true });
-  await fs.writeFile(p, JSON.stringify(data, null, 2) + "\n", {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  try {
-    await fs.chmod(p, 0o600);
-  } catch {
-    // best effort
-  }
+  await writeJsonFile(p, data, { mode: 0o600 });
 }
 
 async function readJson<T>(p: string): Promise<T | null> {

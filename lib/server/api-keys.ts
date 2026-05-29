@@ -2,6 +2,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { reflexHome } from "@/lib/reflex/home";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 
 /**
  * Per-provider API keys (Gemini, OpenAI, Anthropic, …). Each lives in its
@@ -71,17 +72,7 @@ async function writeMeta(
   provider: ApiKeyProvider,
   data: ApiKeyMeta,
 ): Promise<void> {
-  const p = fileFor(provider);
-  await fs.mkdir(path.dirname(p), { recursive: true });
-  await fs.writeFile(p, JSON.stringify(data, null, 2) + "\n", {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  try {
-    await fs.chmod(p, 0o600);
-  } catch {
-    /* best effort */
-  }
+  await writeJsonFile(fileFor(provider), data, { mode: 0o600 });
 }
 
 export async function saveApiKey(

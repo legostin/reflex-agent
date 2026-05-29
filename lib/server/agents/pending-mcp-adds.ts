@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { McpAddDirective } from "./protocol";
 import { reflexHome } from "@/lib/reflex/home";
+import { writeJsonFile } from "@/lib/reflex/store/json-store";
 
 /**
  * Persisted scratch for in-flight `<<reflex:mcp-add>>` proposals so they
@@ -47,16 +48,7 @@ async function read(): Promise<File> {
 }
 
 async function write(file: File): Promise<void> {
-  await fs.mkdir(path.dirname(FILE), { recursive: true });
-  await fs.writeFile(FILE, JSON.stringify(file, null, 2) + "\n", {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  try {
-    await fs.chmod(FILE, 0o600);
-  } catch {
-    /* best effort */
-  }
+  await writeJsonFile(FILE, file, { mode: 0o600 });
 }
 
 function prune(file: File): File {
