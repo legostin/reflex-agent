@@ -3,7 +3,12 @@ import { execa } from "execa";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ingestFile, type StoredFile } from "@/lib/server/assets/file-store";
+import {
+  ingestFile,
+  saveFileBytes,
+  type StoredFile,
+} from "@/lib/server/assets/file-store";
+import { loadSettings } from "@/lib/settings/store";
 
 /**
  * Text-to-speech, run IN the Reflex process (unsandboxed) via macOS `say`.
@@ -25,6 +30,19 @@ export async function synthesizeSpeech(args: {
 }): Promise<StoredFile> {
   const text = args.text.trim();
   if (!text) throw new Error("empty TTS text");
+  const settings = await loadSettings().catch(() => null);
+  // Gemini provider (billed): higher quality + voice selection.
+  if (settings?.tts?.provider === "gemini") {
+    const { geminiTts } = await import("./providers/gemini-tts");
+    const { wav } = await geminiTts({
+      text,
+      voice: settings.tts.geminiVoice,
+      model: settings.tts.geminiModel,
+    });
+    const base = (args.name ?? "speech").replace(/\.[^.]+$/, "") || "speech";
+    return saveFileBytes(args.rootId, wav, "wav", `${base}.wav`);
+  }
+  // Default: macOS `say`, unsandboxed, free.
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "reflex-tts-"));
   const inFile = path.join(dir, "in.txt");
   const outFile = path.join(dir, "speech.m4a");

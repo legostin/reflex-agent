@@ -125,6 +125,24 @@ export const SettingsSchema = z.object({
     quality: 85,
     format: "auto",
   }),
+  /**
+   * Text-to-speech provider for produced audio deliverables.
+   * - "system": macOS `say`, run unsandboxed in the Reflex process — free,
+   *   offline, default.
+   * - "gemini": Gemini TTS — higher quality + many voices, but BILLED to the
+   *   user's Gemini API key (not free). Needs a key in Settings → Gemini.
+   */
+  tts: z
+    .object({
+      provider: z.enum(["system", "gemini"]).default("system"),
+      geminiVoice: z.string().default("Kore"),
+      geminiModel: z.string().default("gemini-2.5-flash-preview-tts"),
+    })
+    .default({
+      provider: "system",
+      geminiVoice: "Kore",
+      geminiModel: "gemini-2.5-flash-preview-tts",
+    }),
   harnesses: HarnessesSchema.default({
     "claude-code": { enabled: true },
     codex: { enabled: true },

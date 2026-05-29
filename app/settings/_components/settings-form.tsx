@@ -47,6 +47,7 @@ import { McpServersSection } from "./mcp-servers-section";
 import { OAuthProvidersSection } from "./oauth-providers-section";
 import { MemoryEditor } from "@/app/_components/memory/memory-editor";
 import { GeminiSection } from "./gemini-section";
+import { TtsSection } from "./tts-section";
 import { ImageSearchSection } from "./image-search-section";
 import { MapServicesSection } from "./map-services-section";
 import { NgrokSection } from "./ngrok-section";
@@ -635,6 +636,11 @@ export function SettingsForm({ initialSettings, harnesses }: Props) {
       <section>
         <h2 className="text-lg font-semibold mb-3">Gemini</h2>
         <GeminiSection />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Text-to-speech</h2>
+        <TtsSection />
       </section>
 
       <section>

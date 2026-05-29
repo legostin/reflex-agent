@@ -115,6 +115,40 @@ async function storeDir(rootId: string): Promise<string> {
 /** Reject anything bigger than this to avoid runaway ingest. */
 const MAX_FILE_BYTES = 100 * 1024 * 1024; // 100 MB
 
+/** Save raw bytes into the per-root file store under the given extension. */
+export async function saveFileBytes(
+  rootId: string,
+  bytes: Buffer | Uint8Array,
+  ext: string,
+  displayName: string,
+): Promise<StoredFile> {
+  const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+  if (buf.byteLength > MAX_FILE_BYTES) {
+    throw new Error(`file too large: ${buf.byteLength} bytes (cap ${MAX_FILE_BYTES})`);
+  }
+  const e = (ext || "bin").toLowerCase().replace(/^\./, "");
+  const sha = crypto.createHash("sha256").update(buf).digest("hex");
+  const dir = await storeDir(rootId);
+  const absPath = path.join(dir, `${sha}.${e}`);
+  try {
+    await fs.access(absPath);
+  } catch {
+    await fs.writeFile(absPath, buf);
+  }
+  const mime = mimeForExt(e);
+  return {
+    sha,
+    ext: e,
+    mime,
+    kind: artifactKind(mime, e),
+    absPath,
+    relPath: path.posix.join(SUBPATH.split(path.sep).join("/"), `${sha}.${e}`),
+    urlPath: `/api/files/${encodeURIComponent(rootId)}/${sha}.${e}`,
+    name: displayName.trim() || `${sha.slice(0, 8)}.${e}`,
+    size: buf.byteLength,
+  };
+}
+
 /** Ingest a file from an absolute path into the per-root file store. */
 export async function ingestFile(
   rootId: string,
@@ -128,26 +162,7 @@ export async function ingestFile(
   }
   const buf = await fs.readFile(sourceAbsPath);
   const ext = (path.extname(sourceAbsPath).slice(1) || "bin").toLowerCase();
-  const sha = crypto.createHash("sha256").update(buf).digest("hex");
-  const dir = await storeDir(rootId);
-  const absPath = path.join(dir, `${sha}.${ext}`);
-  try {
-    await fs.access(absPath);
-  } catch {
-    await fs.writeFile(absPath, buf);
-  }
-  const mime = mimeForExt(ext);
-  return {
-    sha,
-    ext,
-    mime,
-    kind: artifactKind(mime, ext),
-    absPath,
-    relPath: path.posix.join(SUBPATH.split(path.sep).join("/"), `${sha}.${ext}`),
-    urlPath: `/api/files/${encodeURIComponent(rootId)}/${sha}.${ext}`,
-    name: displayName?.trim() || path.basename(sourceAbsPath),
-    size: buf.byteLength,
-  };
+  return saveFileBytes(rootId, buf, ext, displayName?.trim() || path.basename(sourceAbsPath));
 }
 
 /**

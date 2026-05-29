@@ -48,6 +48,29 @@ export async function saveSettingsAction(
   }
 }
 
+/** Patch just the TTS block (provider + Gemini voice/model). */
+export async function saveTtsAction(tts: {
+  provider: "system" | "gemini";
+  geminiVoice: string;
+  geminiModel: string;
+}): Promise<SaveSettingsResult> {
+  try {
+    const cur = await loadSettings();
+    const parsed = SettingsSchema.safeParse({ ...cur, tts });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: parsed.error.issues.map((i) => i.message).join("; "),
+      };
+    }
+    await saveSettings(parsed.data);
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: describe(err) };
+  }
+}
+
 export type ListModelsResult =
   | { ok: true; models: ModelInfo[] }
   | { ok: false; error: string };
