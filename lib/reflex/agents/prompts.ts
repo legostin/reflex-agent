@@ -43,6 +43,7 @@ export async function chatSystemPrompt(scope: ChatScope): Promise<string> {
     widgetInstructions(),
     workflowInstructions(),
     imageGenInstructions(),
+    deliverablesInstructions(scope.reflexScope),
     memoryInstructions(),
     skillAuthoringInstructions(),
     taskAuthoringInstructions(),
@@ -128,6 +129,34 @@ function imageGenInstructions(): string {
     "- You have NO built-in, native, or CLI image tool (no `$imagegen`, no `image_generation` function, nothing). Emitting the marker above is the ONE and ONLY mechanism. Reflex chooses the backend; that is internal plumbing you don't call.",
     "- NEVER write \"готово\" / \"сгенерировал\" / \"here's the image\" / describe the picture in prose UNLESS you emitted the marker in THIS SAME reply. If you claim you made an image without the marker, NOTHING was generated and you have lied to the user.",
     "- So: to fulfil an image request, emit the marker (you may add one short sentence of context). Do not narrate a success you didn't trigger.",
+  ].join("\n");
+}
+
+/**
+ * Proactive deliverables. The agent has a real shell and a writable scratch
+ * dir; when the user wants an artifact (audio, video, a file, a conversion,
+ * a download, a data export), it should DO the work and RETURN the file —
+ * never hand the user a command to run themselves.
+ */
+function deliverablesInstructions(reflexScope: string): string {
+  const outbox = `${reflexScope}/outbox`;
+  const scratch = `${reflexScope}/tmp`;
+  return [
+    "## Producing deliverables (audio / video / files) — DO IT, don't instruct",
+    "",
+    'When the user asks for something you can MAKE — audio ("озвучь", "сделай аудио", TTS), video, a converted/edited media file, a downloaded clip, a generated document/spreadsheet, a data export — actually produce it yourself and return the file. NEVER reply with "here\'s a script/curl you can run" or step-by-step setup instructions for the user to execute. You have a real shell.',
+    "",
+    "How to return a file to the user:",
+    `- Write the finished file into the OUTBOX directory: \`${outbox}\``,
+    "- Anything you place there is automatically delivered to the user as an audio / video / image / file message (no marker, no extra step). Use a clear filename with the right extension (e.g. `answer.mp3`, `clip.mp4`, `report.pdf`).",
+    "",
+    "Working space:",
+    `- Use \`${scratch}\` as scratch for any throwaway scripts you write and run (it's writable and never shown to the user). Keep the outbox for finished deliverables only.`,
+    "- Prefer zero-config local tools when available (e.g. macOS \`say\` for TTS — `say -o out.aiff \"текст\"`, then convert if needed; `ffmpeg` for media; `yt-dlp` for downloads). Check what's installed before assuming.",
+    "",
+    "Keys & parameters:",
+    "- If a task genuinely needs an API key, credential, or a choice you can't infer (voice, format, quality), ASK the user interactively with `<<reflex:question>>` (or `<<reflex:mcp-add>>` for a service+secret) — exactly like everywhere else. Do NOT tell the user to go set up a key themselves; request it, then proceed.",
+    "- Only after producing the file (or after an interactive ask you're genuinely blocked on) should you reply. A one-line summary is enough — the file speaks for itself.",
   ].join("\n");
 }
 

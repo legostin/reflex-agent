@@ -67,6 +67,20 @@ export type AgentEvent = AgentEventBase &
     | { type: "turn-end"; turnId: string; status: AgentStatus; error?: string }
     | { type: "user-message"; text: string }
     | { type: "assistant-delta"; text: string }
+    /**
+     * A deliverable the agent produced for the user — audio, video, an image,
+     * or any file. Surfaced from the per-turn "outbox" (no marker needed, so
+     * it works on harnesses like Codex). Rendered as a player / download in
+     * the chat and sent as audio/video/document on Telegram.
+     */
+    | {
+        type: "artifact";
+        kind: "image" | "audio" | "video" | "file";
+        url: string;
+        name: string;
+        mime: string;
+        size: number;
+      }
     | {
         type: "tool-use";
         toolUseId: string;

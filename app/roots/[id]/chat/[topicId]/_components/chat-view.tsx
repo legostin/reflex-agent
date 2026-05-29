@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Loader2, Send, Sparkles, Wifi, WifiOff } from "lucide-react";
+import { Download, Loader2, Send, Sparkles, Wifi, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +54,16 @@ type Segment =
   | { kind: "question"; question: QuestionState }
   | { kind: "kb"; kb: KbWriteState }
   | { kind: "mcp-add"; entry: McpAddState }
+  | {
+      kind: "artifact";
+      artifact: {
+        kind: "image" | "audio" | "video" | "file";
+        url: string;
+        name: string;
+        mime: string;
+        size: number;
+      };
+    }
   | {
       kind: "utility";
       utility: {
@@ -453,6 +463,9 @@ function TurnView({
             </div>
           );
         }
+        if (seg.kind === "artifact") {
+          return <ArtifactView key={i} artifact={seg.artifact} />;
+        }
         if (seg.kind === "tool") {
           return (
             <ToolCall
@@ -660,6 +673,24 @@ function projectEvents(events: AgentEvent[]): Turn[] {
         tool: { toolUseId: ev.toolUseId, name: ev.name, input: ev.input },
       };
       segments.push(seg);
+      lastSegment = seg;
+      continue;
+    }
+    if (ev.type === "artifact") {
+      const target =
+        (currentAssistant as Turn | null) ?? openAssistant(ev.agentId);
+      if (!target) continue;
+      const seg: Segment = {
+        kind: "artifact",
+        artifact: {
+          kind: ev.kind,
+          url: ev.url,
+          name: ev.name,
+          mime: ev.mime,
+          size: ev.size,
+        },
+      };
+      target.segments!.push(seg);
       lastSegment = seg;
       continue;
     }
@@ -1051,6 +1082,65 @@ function SystemUserTurn({ system }: { system: SystemUserMessage }) {
         {system.details}
       </pre>
     </details>
+  );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** Render an agent-delivered artifact (audio / video / image / file). */
+function ArtifactView({
+  artifact,
+}: {
+  artifact: {
+    kind: "image" | "audio" | "video" | "file";
+    url: string;
+    name: string;
+    mime: string;
+    size: number;
+  };
+}) {
+  const { kind, url, name, size } = artifact;
+  if (kind === "image") {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" className="block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt={name} className="max-w-md rounded-lg border" />
+      </a>
+    );
+  }
+  if (kind === "audio") {
+    return (
+      <div className="space-y-1">
+        <audio controls src={url} className="w-full max-w-md" />
+        <a
+          href={url}
+          download={name}
+          className="block text-xs text-muted-foreground hover:underline"
+        >
+          {name} · {formatBytes(size)}
+        </a>
+      </div>
+    );
+  }
+  if (kind === "video") {
+    return (
+      <video controls src={url} className="max-w-md rounded-lg border" />
+    );
+  }
+  return (
+    <a
+      href={url}
+      download={name}
+      className="inline-flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm hover:bg-accent"
+    >
+      <Download className="h-4 w-4 text-muted-foreground" />
+      <span className="max-w-[16rem] truncate">{name}</span>
+      <span className="text-xs text-muted-foreground">{formatBytes(size)}</span>
+    </a>
   );
 }
 

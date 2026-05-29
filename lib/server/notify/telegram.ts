@@ -10,6 +10,7 @@ import {
 import { agentManager } from "@/lib/server/agents/manager";
 import { readEvents } from "@/lib/server/agents/events-log";
 import { readWidget } from "@/lib/server/widgets/store";
+import { resolveStoredFile } from "@/lib/server/assets/file-store";
 import {
   renderWidget,
   type RenderedWidget,
@@ -77,6 +78,57 @@ async function tgCall(
     };
   } catch {
     return { ok: false };
+  }
+}
+
+// Artifact kind → Telegram upload method + multipart field.
+const TG_ARTIFACT_METHOD: Record<
+  string,
+  { method: string; field: string }
+> = {
+  image: { method: "sendPhoto", field: "photo" },
+  audio: { method: "sendAudio", field: "audio" },
+  video: { method: "sendVideo", field: "video" },
+  file: { method: "sendDocument", field: "document" },
+};
+
+/**
+ * Upload an artifact's bytes to Telegram (the in-app `/api/files/...` URL is
+ * localhost, so we must multipart-upload the file itself). Resolved from the
+ * per-root file store by parsing the url.
+ */
+async function sendArtifactToTelegram(
+  token: string,
+  chatId: string,
+  art: { kind: string; url: string; name: string; mime: string },
+): Promise<void> {
+  const m = /^\/api\/files\/([^/]+)\/([^/?]+)/.exec(art.url);
+  if (!m) return;
+  const resolved = await resolveStoredFile(
+    decodeURIComponent(m[1]!),
+    m[2]!,
+  );
+  if (!resolved) return;
+  const spec = TG_ARTIFACT_METHOD[art.kind] ?? TG_ARTIFACT_METHOD.file!;
+  try {
+    const buf = await fs.readFile(resolved.absPath);
+    const form = new FormData();
+    form.append("chat_id", chatId);
+    form.append(
+      spec.field,
+      new Blob([new Uint8Array(buf)], { type: art.mime || resolved.mime }),
+      art.name,
+    );
+    await fetch(api(token, spec.method), {
+      method: "POST",
+      body: form,
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (err) {
+    console.error(
+      "[telegram] artifact:",
+      err instanceof Error ? err.message : err,
+    );
   }
 }
 
@@ -1090,6 +1142,12 @@ async function runTurn(
     // Surface any widget the dispatcher created/updated this turn as its
     // own message (text + tappable action buttons for utility cards).
     await presentWidgets(token, chatId, rootPath, topicId, before);
+    // Surface any deliverable (audio/video/file) the agent produced this turn.
+    for (const e of (await readEvents(rootPath, topicId)).slice(before)) {
+      if (e.type === "artifact") {
+        await sendArtifactToTelegram(token, chatId, e);
+      }
+    }
     // Advance the delivery cursor so the boot catch-up doesn't re-send
     // what this live watcher just delivered. runTurn only ever runs for
     // the dispatcher topic, which is the only topic catch-up tracks.
@@ -1452,6 +1510,9 @@ export async function mirrorDispatcherTurnToTelegram(): Promise<void> {
       } else if (e.type === "user-message" && e.text.trim()) {
         await flush();
         await send(`🧑 ${e.text.trim()}`);
+      } else if (e.type === "artifact") {
+        await flush();
+        await sendArtifactToTelegram(cfg.botToken, cfg.chatId, e);
       }
     }
     await flush();

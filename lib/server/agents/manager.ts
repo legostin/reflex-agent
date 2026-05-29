@@ -17,6 +17,7 @@ import {
   writeDecision,
   addAlwaysAllow,
 } from "./runtime/permission-bridge";
+import { ensureWorkDirs, drainOutbox } from "./outbox";
 import { runCodex } from "./runtime/codex";
 import { runOllama } from "./runtime/ollama";
 import { runImageGen } from "./runtime/image-gen";
@@ -311,6 +312,10 @@ class AgentManager {
     } catch {
       // best-effort; an unreadable root just disables auto-index for the turn
     }
+    // Ensure the deliverable outbox + scratch-scripts dirs exist (both inside
+    // the agent's writable .reflex scope) so the agent can drop produced
+    // files / temp scripts without first having to mkdir.
+    await ensureWorkDirs(state.rootPath).catch(() => {});
     try {
       const rtCtx = {
         meta: { id: state.meta.id },
@@ -349,6 +354,35 @@ class AgentManager {
       // coding-model harnesses). Generate it ourselves so the image appears.
       if (args.imageFallbackPrompt) {
         await this.applyImageFallback(args.agentId, args.imageFallbackPrompt);
+      }
+      // Drain the outbox: surface any deliverable the agent dropped there
+      // (audio/video/file) as an `artifact` event — BEFORE turn-end so it
+      // lands in the current bubble. Marker-free, so it works on Codex.
+      try {
+        const delivered = await drainOutbox(state.meta.rootId, state.rootPath);
+        for (const f of delivered) {
+          await this.emit({
+            type: "artifact",
+            kind: f.kind,
+            url: f.urlPath,
+            name: f.name,
+            mime: f.mime,
+            size: f.size,
+            agentId: args.agentId,
+            ts: now(),
+            seq: 0,
+          });
+        }
+      } catch (err) {
+        await this.emit({
+          type: "error",
+          message:
+            "outbox delivery failed: " +
+            (err instanceof Error ? err.message : String(err)),
+          agentId: args.agentId,
+          ts: now(),
+          seq: 0,
+        });
       }
       // Snapshot the turn's text now (fully streamed) — the `finally` deletes
       // the live buffer, so this is what invoke() returns.

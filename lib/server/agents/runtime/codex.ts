@@ -32,10 +32,12 @@ export async function runCodex(rt: Runtime): Promise<void> {
   const thread = codex.startThread({
     model: rt.args.model,
     workingDirectory: rt.args.rootPath,
-    sandboxMode: "read-only",
+    // workspace-write (not read-only) so the agent can PROACTIVELY do the
+    // work — run a script, produce audio/video/files — and drop deliverables
+    // into `<root>/.reflex/outbox/` (drained to the user post-turn). Writes
+    // are contained to the workspace + reflexScope; no system-wide access.
+    sandboxMode: "workspace-write",
     additionalDirectories: [rt.args.reflexScope],
-    // Reflex enforces its own approval flow via `<<reflex:permission>>`
-    // markers post-turn; we run Codex non-interactively here.
     approvalPolicy: "never",
     skipGitRepoCheck: true,
   });
