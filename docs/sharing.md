@@ -1,10 +1,20 @@
 # Cross-utility data sharing — the Share Plane
 
-> **Status: proposed / design.** What exists in code today is the *isolation
-> baseline* plus a temporary hard-gate on `tasks.*` / `git.worktree.*` (see
-> `dispatchHostCall` in `lib/server/utilities/host-api.ts`, commit `8ba236d`).
-> Everything under "The Share Plane" below is a north-star design, not yet
-> implemented. This doc is the spec to build against.
+> **Status: core implemented; React UI is the remaining follow-up.** Stages
+> 0–4 of the [migration](#migration) have landed: the manifest schema
+> (`provides`/`consumes` + the `shares`/`tasks`/`worktree` permission slots),
+> the grant ledger (`grants.json`) and provider directory (`providers.json`),
+> the four host methods (`kb.scopedList` / `kb.scopedRead` /
+> `capabilities.invoke` / `capabilities.listProviders`), the permission-slot
+> gate that replaced the task-board id-gate (fix B), owner-enforced `kbAdd`,
+> install/uninstall directory refresh + grant pruning, and the opt-in
+> `requireScopedReads` posture — all unit- and integration-tested. **Not yet
+> built:** the React surfaces — the install-time consent dialog, the
+> just-in-time `grant-request` directive shown in chat, and the
+> Settings → Sharing revoke page (its server actions exist in
+> `sharing-actions.ts`) — plus shipping the `writer-studio` utility and
+> `task-board`'s `provides`/slot declarations in their own repos. Until a
+> provider declares its slots it is grandfathered in by `isLegacyTaskBoard`.
 
 Utilities are sandboxed: each gets its own `fs` data dir, its own secrets, and
 talks to the host only through the permission-gated, audited host API. That

@@ -53,28 +53,41 @@ Source: `lib/server/utilities/host-api.ts`.
 | `images.attach` | `images.attach` + `web.fetch.domains` | `{url, sha}` |
 | `images.pickBest` | `images.search` | The chosen candidate |
 | `mermaid.validate` | always | `{ok, errors[]}` |
-| `tasks.create` | task-board utility only | `{taskId}` |
-| `tasks.update` | task-board utility only | `{ok}` |
-| `tasks.delete` | task-board utility only | `{ok}` |
-| `tasks.get` | task-board utility only | Task entry |
-| `tasks.list` | task-board utility only | Tasks |
-| `tasks.dispatch` | task-board utility only | `{topicId, worktree?}` |
-| `tasks.observe` | task-board utility only | `{status, lastAssistantText, pending, events}` |
-| `tasks.complete` | task-board utility only | `{ok}` |
+| `tasks.create` | sensitive — slot (see below) | `{taskId}` |
+| `tasks.update` | sensitive — slot (see below) | `{ok}` |
+| `tasks.delete` | sensitive — slot (see below) | `{ok}` |
+| `tasks.get` | sensitive — slot (see below) | Task entry |
+| `tasks.list` | sensitive — slot (see below) | Tasks |
+| `tasks.dispatch` | sensitive — slot (see below) | `{topicId, worktree?}` |
+| `tasks.observe` | sensitive — slot (see below) | `{status, lastAssistantText, pending, events}` |
+| `tasks.complete` | sensitive — slot (see below) | `{ok}` |
 | `git.isRepo` | always (read-only) | `boolean` |
 | `git.hasRemote` | always (read-only) | `boolean` |
 | `git.hasGhCli` | always (read-only) | `boolean` |
-| `git.worktree.create` | task-board utility only | `{dir, branch, baseRef}` |
-| `git.worktree.merge` | task-board utility only | `{ok}` or `{conflicts}` |
-| `git.worktree.remove` | task-board utility only | `{ok}` |
-| `git.worktree.list` | task-board utility only | Array |
+| `git.worktree.create` | sensitive — slot (see below) | `{dir, branch, baseRef}` |
+| `git.worktree.merge` | sensitive — slot (see below) | `{ok}` or `{conflicts}` |
+| `git.worktree.remove` | sensitive — slot (see below) | `{ok}` |
+| `git.worktree.list` | sensitive — slot (see below) | Array |
 | `sessions.search` | `sessions.search` | `{hits}` (see [sessions.md](sessions.md)) |
+| `kb.scopedList` | `shares.consume` + DATA grant | Owner-scoped list of a provider's data |
+| `kb.scopedRead` | `shares.consume` + DATA grant | Owner-scoped read |
+| `capabilities.listProviders` | `shares.consume` | Provider directory (metadata only) |
+| `capabilities.invoke` | `shares.consume` + CAPABILITY grant + declared import | The verb's typed output |
 
-"task-board utility only" methods are gated by hard-coded checks on
-`ctx.utility.manifest.id` — task primitives aren't a general
-permission slot yet because their security model (spawning subprocess
-agents, mutating worktrees) is sensitive enough that opening it to
-any utility would need a separate UX pass.
+The `tasks.*` and `git.worktree.*` methods are gated by a **permission slot**
+(fix B — see [sharing.md](sharing.md)), enforced at `dispatchHostCall` before
+execution: `tasks.get`/`list`/`observe` need `permissions.tasks.read`;
+`tasks.create`/`update`/`delete`/`complete` need `permissions.tasks.write`;
+`tasks.dispatch` needs `permissions.tasks.dispatch`; `git.worktree.*` need
+`permissions.worktree`. (Historically these were ungated despite the docs — any
+installed utility could spawn subprocess agents and mutate the user's repo;
+that hole is closed.) An un-upgraded `task-board` that declares none of these
+slots is grandfathered in until it ships its declarations. Read-only
+`git.isRepo`/`hasRemote`/`hasGhCli` need no slot.
+
+Cross-utility sharing — `kb.scopedList`/`kb.scopedRead` (read another utility's
+owned data) and `capabilities.invoke`/`capabilities.listProviders` (call a
+verb a utility exports) — is specified in [sharing.md](sharing.md).
 
 ## Audit trail
 
