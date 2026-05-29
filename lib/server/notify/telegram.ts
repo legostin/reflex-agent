@@ -1031,7 +1031,8 @@ async function runTurn(
       // Keep watching while the agent runs OR an interaction is still
       // waiting for the user. Otherwise the turn is done.
       if (!active && !open) break;
-      await sleep(700);
+      // Wake immediately on new agent output; otherwise re-check in ≤700ms.
+      await waitForTopicEventOr(topicId, 700);
     }
     await sleep(300); // flush trailing deltas
 
@@ -1362,4 +1363,27 @@ async function catchUpDispatcher(cfg: TelegramConfig): Promise<void> {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Resolve on the next event for `topicId`, or after `ms` — whichever first
+ * (Phase 3: push, not poll). Lets the streaming watcher wake immediately on new
+ * agent output instead of a blind fixed sleep, while keeping the timeout as the
+ * reconciliation fallback (so interaction/widget scans still run on cadence
+ * even if a subscription event is missed). Behavior-preserving: worst case it's
+ * the old ≤`ms` poll.
+ */
+function waitForTopicEventOr(topicId: string, ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsub();
+      resolve();
+    };
+    const unsub = agentManager.subscribeTopic(topicId, () => finish());
+    const timer = setTimeout(finish, ms);
+  });
 }
